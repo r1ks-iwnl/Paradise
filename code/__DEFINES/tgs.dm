@@ -106,12 +106,15 @@
 #define TGS_EVENT_WORLD_PRIME 21
 // DMAPI also doesnt implement this
 // #define TGS_EVENT_DREAM_DAEMON_LAUNCH 22
+<<<<<<< HEAD
 /// After a single submodule update is performed. Parameters: Updated submodule name.
 #define TGS_EVENT_REPO_SUBMODULE_UPDATE 23
 /// After CodeModifications are applied, before DreamMaker is run. Parameters: Game directory path, origin commit sha, version string of the used engine.
 #define TGS_EVENT_PRE_DREAM_MAKER 24
 /// Whenever a deployment folder is deleted from disk. Parameters: Game directory path.
 #define TGS_EVENT_DEPLOYMENT_CLEANUP 25
+=======
+>>>>>>> d00f94fff4 (Update TGS DMAPI)
 
 // OTHER ENUMS
 
