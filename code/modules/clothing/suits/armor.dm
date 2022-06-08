@@ -335,27 +335,12 @@
 /obj/item/clothing/suit/armor/reactive/teleport/hit_reaction(mob/living/carbon/human/owner, atom/movable/hitby, attack_text = "the attack", final_block_chance = 0, damage = 0, attack_type = MELEE_ATTACK)
 	if(!active)
 		return 0
-	if(reaction_check(hitby))
+	if(reaction_check(hitby) && is_teleport_allowed(owner.z))
 		var/mob/living/carbon/human/H = owner
-		owner.visible_message("<span class='danger'>The reactive teleport system flings [H] clear of [attack_text]!</span>")
-		var/list/turfs = new/list()
-		for(var/turf/T in orange(tele_range, H))
-			if(istype(T, /turf/space))
-				continue
-			if(T.density)
-				continue
-			if(T.x>world.maxx-tele_range || T.x<tele_range)
-				continue
-			if(T.y>world.maxy-tele_range || T.y<tele_range)
-				continue
-			turfs += T
-		if(!turfs.len)
-			turfs += pick(/turf in orange(tele_range, H))
-		var/turf/picked = pick(turfs)
-		if(!isturf(picked))
-			return
-		H.forceMove(picked)
-		return TRUE
+		if(do_teleport(owner, owner, 6, safe_turf_pick = TRUE)) //Teleport on the same spot with a precision of 6 gets a random tile near the owner.
+			owner.visible_message("<span class='danger'>The reactive teleport system flings [H] clear of [attack_text]!</span>")
+			return TRUE
+		return FALSE
 	return FALSE
 
 /obj/item/clothing/suit/armor/reactive/fire
@@ -444,7 +429,7 @@
 			if(dist_from_user == 0)
 				if(isliving(AM))
 					var/mob/living/M = AM
-					M.Weaken(3)
+					M.Weaken(6 SECONDS)
 					to_chat(M, "<span class='userdanger'>You're slammed into the floor by [owner]'s reactive armor!</span>")
 					add_attack_logs(owner, M, "[M] was thrown by [owner]'s [src]", ATKLOG_ALMOSTALL)
 			else
@@ -456,6 +441,15 @@
 				INVOKE_ASYNC(AM, /atom/movable/.proc/throw_at, throw_target, ((clamp((repulse_power - (clamp(dist_from_user - 2, 0, dist_from_user))), 3, repulse_power))), 1) //So stuff gets tossed around at the same time.
 		disable(rand(2, 5))
 		return TRUE
+
+/obj/item/clothing/suit/armor/reactive/random //Spawner for random reactive armor
+	name = "Random Reactive Armor"
+
+/obj/item/clothing/suit/armor/reactive/random/Initialize(mapload)
+	. = ..()
+	var/spawnpath = pick(subtypesof(/obj/item/clothing/suit/armor/reactive) - /obj/item/clothing/suit/armor/reactive/random)
+	new spawnpath(loc)
+	qdel(src)
 
 //All of the armor below is mostly unused
 

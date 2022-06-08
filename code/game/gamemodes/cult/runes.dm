@@ -176,10 +176,14 @@ structure_check() searches for nearby cultist structures required for the invoca
 
 /obj/effect/rune/proc/invoke(list/invokers)
 	//This proc contains the effects of the rune as well as things that happen afterwards. If you want it to spawn an object and then delete itself, have both here.
+	SHOULD_CALL_PARENT(TRUE)
+	var/ghost_invokers = 0
 	for(var/M in invokers)
 		var/mob/living/L = M
 		if(!L)
 			return
+		if(L.has_status_effect(STATUS_EFFECT_SUMMONEDGHOST))
+			ghost_invokers++
 		if(invocation)
 			if(!L.IsVocal())
 				L.emote("gestures ominously.")
@@ -190,6 +194,9 @@ structure_check() searches for nearby cultist structures required for the invoca
 			L.apply_damage(invoke_damage, BRUTE)
 			to_chat(L, "<span class='cultitalic'>[src] saps your strength!</span>")
 	do_invoke_glow()
+	SSblackbox.record_feedback("nested tally", "runes_invoked", 1, list("[initial(cultist_name)]", "[length(SSticker.mode.cult)]")) // the name of the rune, and the number of cultists in the cult when it was invoked
+	if(ghost_invokers)
+		SSblackbox.record_feedback("nested tally", "runes_invoked_with_ghost", 1, list("[initial(cultist_name)]", "[ghost_invokers]")) //the name of the rune and the number of ghosts used to invoke it.
 
 /**
   * Spawns the phase in/out effects for a cult teleport.
@@ -351,7 +358,7 @@ structure_check() searches for nearby cultist structures required for the invoca
 						crit.cure()
 
 			H.uncuff()
-			H.Silence(3) //Prevent "HALP MAINT CULT" before you realise you're converted
+			H.Silence(6 SECONDS) //Prevent "HALP MAINT CULT" before you realise you're converted
 
 			var/obj/item/melee/cultblade/dagger/D = new(get_turf(src))
 			if(H.equip_to_slot_if_possible(D, slot_in_backpack, FALSE, TRUE))
@@ -903,6 +910,8 @@ structure_check() searches for nearby cultist structures required for the invoca
 	new_human.alpha = 150 //Makes them translucent
 	new_human.equipOutfit(/datum/outfit/ghost_cultist) //give them armor
 	new_human.apply_status_effect(STATUS_EFFECT_SUMMONEDGHOST) //ghosts can't summon more ghosts, also lets you see actual ghosts
+	for(var/obj/item/organ/external/current_organ in new_human.bodyparts)
+		current_organ.limb_flags |= CANNOT_DISMEMBER //you can't chop of the limbs of a ghost, silly
 	ghosts++
 	playsound(src, 'sound/misc/exit_blood.ogg', 50, TRUE)
 	user.visible_message("<span class='warning'>A cloud of red mist forms above [src], and from within steps... a [new_human.gender == FEMALE ? "wo" : ""]man.</span>",
@@ -954,7 +963,7 @@ structure_check() searches for nearby cultist structures required for the invoca
 		if(user.key || QDELETED(src))
 			user.visible_message("<span class='warning'>[user] slowly relaxes, the glow around [user.p_them()] dimming.</span>",
 								"<span class='danger'>You are re-united with your physical form. [src] releases its hold over you.</span>")
-			user.Weaken(3)
+			user.Weaken(6 SECONDS)
 			break
 		if(user.health <= 10)
 			to_chat(ghost, "<span class='cultitalic'>Your body can no longer sustain the connection!</span>")
@@ -1022,8 +1031,12 @@ structure_check() searches for nearby cultist structures required for the invoca
 	used = TRUE
 	color = COLOR_RED
 	..()
-	SEND_SOUND(world, sound('sound/effects/dimensional_rend.ogg'))
-	to_chat(world, "<span class='cultitalic'><b>The veil... <span class='big'>is...</span> <span class='reallybig'>TORN!!!--</span></b></span>")
+
+	for(var/mob/M in GLOB.player_list)
+		if(!isnewplayer(M)) // exclude people in the lobby
+			SEND_SOUND(M, sound('sound/effects/dimensional_rend.ogg'))
+			to_chat(M, "<span class='cultitalic'><b>The veil... <span class='big'>is...</span> <span class='reallybig'>TORN!!!--</span></b></span>")
+
 	icon_state = "rune_large_distorted"
 	var/turf/T = get_turf(src)
 	sleep(40)
