@@ -6,10 +6,10 @@
 	hand_path = /obj/item/melee/touch_attack/mime_malaise
 	school = "transmutation"
 
-	charge_max = 300
-	clothes_req = 1
+	base_cooldown = 300
+	clothes_req = TRUE
 	cooldown_min = 100 //50 deciseconds reduction per rank
-	action_icon_state = "mime"
+	action_icon_state = "mime_curse"
 
 /obj/item/melee/touch_attack/mime_malaise
 	name = "mime hand"
@@ -20,11 +20,11 @@
 	item_state = "fleshtostone"
 
 /obj/item/melee/touch_attack/mime_malaise/afterattack(atom/target, mob/living/carbon/user, proximity)
-	if(!proximity || target == user || !ishuman(target) || !iscarbon(user) || user.lying || user.handcuffed)
+	if(!proximity || target == user || !ishuman(target) || !iscarbon(user) || HAS_TRAIT(user, TRAIT_HANDS_BLOCKED))
 		return
 
 	var/datum/effect_system/smoke_spread/s = new
-	s.set_up(5, 0, target)
+	s.set_up(5, FALSE, target)
 	s.start()
 
 	var/mob/living/carbon/human/H = target
@@ -37,17 +37,17 @@
 		unEquip(wear_mask, TRUE)
 		unEquip(w_uniform, TRUE)
 		unEquip(wear_suit, TRUE)
-		equip_to_slot_if_possible(new /obj/item/clothing/mask/gas/mime, slot_wear_mask, TRUE, TRUE)
-		equip_to_slot_if_possible(new /obj/item/clothing/under/mime, slot_w_uniform, TRUE, TRUE)
-		equip_to_slot_if_possible(new /obj/item/clothing/suit/suspenders, slot_wear_suit, TRUE, TRUE)
+		equip_to_slot_if_possible(new /obj/item/clothing/mask/gas/mime, SLOT_HUD_WEAR_MASK, TRUE, TRUE)
+		equip_to_slot_if_possible(new /obj/item/clothing/under/rank/civilian/mime, SLOT_HUD_JUMPSUIT, TRUE, TRUE)
+		equip_to_slot_if_possible(new /obj/item/clothing/suit/suspenders, SLOT_HUD_OUTER_SUIT, TRUE, TRUE)
 		Silence(14 SECONDS)
 	else
 		qdel(wear_mask)
 		qdel(w_uniform)
 		qdel(wear_suit)
-		equip_to_slot_if_possible(new /obj/item/clothing/mask/gas/mime/nodrop, slot_wear_mask, TRUE, TRUE)
-		equip_to_slot_if_possible(new /obj/item/clothing/under/mime/nodrop, slot_w_uniform, TRUE, TRUE)
-		equip_to_slot_if_possible(new /obj/item/clothing/suit/suspenders/nodrop, slot_wear_suit, TRUE, TRUE)
+		equip_to_slot_if_possible(new /obj/item/clothing/mask/gas/mime/nodrop, SLOT_HUD_WEAR_MASK, TRUE, TRUE)
+		equip_to_slot_if_possible(new /obj/item/clothing/under/rank/civilian/mime/nodrop, SLOT_HUD_JUMPSUIT, TRUE, TRUE)
+		equip_to_slot_if_possible(new /obj/item/clothing/suit/suspenders/nodrop, SLOT_HUD_OUTER_SUIT, TRUE, TRUE)
 		dna.SetSEState(GLOB.muteblock , TRUE, TRUE)
 		singlemutcheck(src, GLOB.muteblock, MUTCHK_FORCED)
 		dna.default_blocks.Add(GLOB.muteblock)

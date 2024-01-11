@@ -15,7 +15,16 @@
 	var/client/C = mymob.client
 	if(!apply_parallax_pref())
 		return
-
+	// this is needed so it blends properly with the space plane and blackness plane.
+	var/obj/screen/plane_master/space/S = plane_masters["[PLANE_SPACE]"]
+	if(C.prefs.toggles2 & PREFTOGGLE_2_PARALLAX_IN_DARKNESS)
+		S.color = rgb(0, 0, 0, 0)
+	else
+		S.color = list(1, 1, 1, 1,
+					1, 1, 1, 1,
+					1, 1, 1, 1,
+					1, 1, 1, 1,)
+	S.appearance_flags |= NO_CLIENT_COLOR
 	if(!length(C.parallax_layers_cached))
 		C.parallax_layers_cached = list()
 		C.parallax_layers_cached += new /obj/screen/parallax_layer/layer_1(null, C.view)
@@ -27,6 +36,12 @@
 
 	C.parallax_layers = C.parallax_layers_cached.Copy()
 
+	var/obj/screen/plane_master/parallax/parallax_plane_master = plane_masters["[PLANE_SPACE_PARALLAX]"]
+	if(C.prefs.toggles2 & PREFTOGGLE_2_PARALLAX_IN_DARKNESS)
+		parallax_plane_master.blend_mode = BLEND_ADD
+	else
+		parallax_plane_master.blend_mode = BLEND_MULTIPLY
+
 	if(length(C.parallax_layers) > C.parallax_layers_max)
 		C.parallax_layers.len = C.parallax_layers_max
 
@@ -36,30 +51,33 @@
 	var/client/C = mymob.client
 	C.screen -= (C.parallax_layers_cached + C.parallax_static_layers_tail)
 	C.parallax_layers = null
+	var/obj/screen/plane_master/space/S = plane_masters["[PLANE_SPACE]"]
+	S.color = null
+	S.appearance_flags &= ~NO_CLIENT_COLOR
 
 /datum/hud/proc/apply_parallax_pref()
 	var/client/C = mymob.client
 	if(C.prefs)
 		var/pref = C.prefs.parallax
-		if (isnull(pref))
+		if(isnull(pref))
 			pref = PARALLAX_HIGH
 		switch(C.prefs.parallax)
-			if (PARALLAX_INSANE)
+			if(PARALLAX_INSANE)
 				C.parallax_throttle = FALSE
 				C.parallax_layers_max = 5
 				return TRUE
 
-			if (PARALLAX_MED)
+			if(PARALLAX_MED)
 				C.parallax_throttle = PARALLAX_DELAY_MED
 				C.parallax_layers_max = 3
 				return TRUE
 
-			if (PARALLAX_LOW)
+			if(PARALLAX_LOW)
 				C.parallax_throttle = PARALLAX_DELAY_LOW
 				C.parallax_layers_max = 1
 				return TRUE
 
-			if (PARALLAX_DISABLE)
+			if(PARALLAX_DISABLE)
 				return FALSE
 
 	//This is high parallax.
@@ -121,7 +139,7 @@
 	C.parallax_movedir = new_parallax_movedir
 	if(C.parallax_animate_timer)
 		deltimer(C.parallax_animate_timer)
-	var/datum/callback/CB = CALLBACK(src, .proc/update_parallax_motionblur, C, animatedir, new_parallax_movedir, newtransform)
+	var/datum/callback/CB = CALLBACK(src, PROC_REF(update_parallax_motionblur), C, animatedir, new_parallax_movedir, newtransform)
 	if(skip_windups)
 		CB.Invoke()
 	else
@@ -150,7 +168,8 @@
 
 		L.transform = newtransform
 
-		animate(L, transform = matrix(), time = T, loop = -1, flags = ANIMATION_END_NOW)
+		animate(L, transform = L.transform, time = 0, loop = -1, flags = ANIMATION_END_NOW)
+		animate(transform = matrix(), time = T)
 
 /datum/hud/proc/update_parallax()
 	var/client/C = mymob.client
@@ -239,17 +258,24 @@
 /obj/screen/parallax_layer/proc/update_o(view)
 	if(!view)
 		view = world.view
-	var/list/new_overlays = list()
-	var/count = CEILING(view/(480/world.icon_size), 1)+1
-	for(var/x in -count to count)
-		for(var/y in -count to count)
+
+	var/static/parallax_scaler = world.icon_size / 480
+
+	// Turn the view size into a grid of correctly scaled overlays
+	var/list/viewscales = getviewsize(view)
+	var/countx = CEILING((viewscales[1] / 2) * parallax_scaler, 1) + 1
+	var/county = CEILING((viewscales[2] / 2) * parallax_scaler, 1) + 1
+	var/list/new_overlays = new
+	for(var/x in -countx to countx)
+		for(var/y in -county to county)
 			if(x == 0 && y == 0)
 				continue
 			var/mutable_appearance/texture_overlay = mutable_appearance(icon, icon_state)
-			texture_overlay.transform = matrix(1, 0, x*480, 0, 1, y*480)
+			texture_overlay.transform = matrix(1, 0, x * 480, 0, 1, y * 480)
 			new_overlays += texture_overlay
-
-	overlays = new_overlays
+	cut_overlays()
+	add_overlay(new_overlays)
+	// Cache this
 	view_sized = view
 
 /obj/screen/parallax_layer/proc/update_status(mob/M)

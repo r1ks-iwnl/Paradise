@@ -14,7 +14,7 @@
 #define USED_MOD_SUIT 2
 
 /obj/item/fluff
-	var/used = 0
+	var/used = FALSE
 
 /obj/item/fluff/tattoo_gun // Generic tattoo gun, make subtypes for different folks
 	name = "disposable tattoo pen"
@@ -42,7 +42,7 @@
 		to_chat(user, "<span class= 'notice'>[src] is out of ink.</span>")
 		return
 
-	if(!istype(M, /mob/living/carbon/human))
+	if(!ishuman(M))
 		to_chat(user, "<span class= 'notice'>You don't think tattooing [M] is the best idea.</span>")
 		return
 
@@ -75,21 +75,18 @@
 		target.change_marking_color(rgb(tattoo_r, tattoo_g, tattoo_b), "body")
 
 		playsound(src.loc, usesound, 20, 1)
-		used = 1
+		used = TRUE
 		update_icon()
 
-/obj/item/fluff/tattoo_gun/update_icon()
-	..()
-
-	overlays.Cut()
-
+/obj/item/fluff/tattoo_gun/update_overlays()
+	. = ..()
 	if(!used)
 		var/image/ink = image(src.icon, src, "ink_overlay")
 		ink.icon += rgb(tattoo_r, tattoo_g, tattoo_b, 190)
-		overlays += ink
+		. += ink
 
-/obj/item/fluff/tattoo_gun/New()
-	..()
+/obj/item/fluff/tattoo_gun/Initialize(mapload)
+	. = ..()
 	update_icon()
 
 /obj/item/fluff/tattoo_gun/elliot_cybernetic_tat
@@ -103,7 +100,7 @@
 /obj/item/fluff/tattoo_gun/elliot_cybernetic_tat/attack_self(mob/user as mob)
 	if(!used)
 		var/ink_color = input("Please select an ink color.", "Tattoo Ink Color", rgb(tattoo_r, tattoo_g, tattoo_b)) as color|null
-		if(ink_color && !(user.incapacitated() || used) )
+		if(ink_color && !(user.incapacitated() || used))
 			tattoo_r = color2R(ink_color)
 			tattoo_g = color2G(ink_color)
 			tattoo_b = color2B(ink_color)
@@ -133,7 +130,7 @@
 	name = "Greenwood's Blade"
 	desc = "A replica claymore with strange markings scratched into the blade."
 	force = 5
-	sharp = 0
+	sharp = FALSE
 
 /obj/item/claymore/fluff/hit_reaction(mob/living/carbon/human/owner, atom/movable/hitby, attack_text = "the attack", final_block_chance = 0, damage = 0, attack_type = MELEE_ATTACK)
 	return 0
@@ -147,9 +144,9 @@
 	lefthand_file = 'icons/mob/inhands/fluff_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/fluff_righthand.dmi'
 	force = 5
-	sharp = 0
+	sharp = FALSE
 	flags = CONDUCT
-	slot_flags = SLOT_BELT
+	slot_flags = SLOT_FLAG_BELT
 	throwforce = 5
 	w_class = WEIGHT_CLASS_NORMAL
 	attack_verb = list("attacked", "slashed", "stabbed", "sliced")
@@ -161,7 +158,7 @@
 
 /obj/item/crowbar/fluff/zelda_creedy_1 // Zomgponies: Griffin Rowley
 	name = "Zelda's Crowbar"
-	desc = "A pink crow bar that has an engraving that reads, 'To Zelda. Love always, Dawn'"
+	desc = "A pink crowbar that has an engraving that reads, 'To Zelda. Love always, Dawn'"
 	icon = 'icons/obj/custom_items.dmi'
 	icon_state = "zeldacrowbar"
 	item_state = "crowbar"
@@ -192,7 +189,7 @@
 	if(!proximity || !ishuman(user) || user.incapacitated())
 		return
 
-	if(istype(target, /obj/structure/chair/wheelchair) && !istype(target, /obj/structure/chair/wheelchair/bike))
+	if(istype(target, /obj/structure/chair/wheelchair))
 		to_chat(user, "<span class='notice'>You modify the appearance of [target].</span>")
 		var/obj/structure/chair/wheelchair/chair = target
 		chair.icon = 'icons/obj/custom_items.dmi'
@@ -205,29 +202,35 @@
 
 	to_chat(user, "<span class='warning'>You can't modify [target]!</span>")
 
+// Custom zippo lighters
+/obj/item/lighter/zippo/fluff
+	name = "custom zippo"
+	desc = "A custom made zippo lighter."
+	icon = 'icons/obj/custom_items.dmi'
+
 /obj/item/lighter/zippo/fluff/purple // GodOfOreos: Jason Conrad
 	name = "purple engraved zippo"
 	desc = "All craftsspacemanship is of the highest quality. It is encrusted with refined plasma sheets. On the item is an image of a dwarf and the words 'Strike the Earth!' etched onto the side."
-	icon = 'icons/obj/custom_items.dmi'
-	icon_state = "purple_zippo_off"
-	icon_on = "purple_zippo_on"
-	icon_off = "purple_zippo_off"
+	icon_state = "zippo-purple"
+	item_state = "zippo-purple"
 
 /obj/item/lighter/zippo/fluff/michael_guess_1 // mrbits: Callista Gold
 	name = "engraved lighter"
 	desc = "A golden lighter, engraved with some ornaments and a G."
-	icon = 'icons/obj/custom_items.dmi'
-	icon_state = "guessip"
-	icon_on = "guessipon"
-	icon_off = "guessip"
+	icon_state = "zippo-guess"
+	item_state = "zippo-gold"
 
 /obj/item/lighter/zippo/fluff/duckchan // Duckchan: Rybys Romney
 	name = "Monogrammed Zippo"
 	desc = " A shiny purple zippo lighter, engraved with Rybys Romney and BuzzPing's name, with a festive green flame."
-	icon = 'icons/obj/custom_items.dmi'
-	icon_state = "rybysfluff"
-	icon_on = "rybysfluffopen"
-	icon_off = "rybysfluff"
+	icon_state = "zippo-duckchan"
+	item_state = "zippo-purple"
+
+/obj/item/lighter/zippo/fluff/warriorstar // Warriorstar: DEADLOCK
+	name = "zippo"
+	desc = "The lighter is made of a pastel purple metal which seems to glimmer even in complete darkness."
+	icon_state = "zippo-warriorstar"
+	item_state = "zippo-purple"
 
 /obj/item/fluff/dogwhistle //phantasmicdream: Zeke Varloss
 	name = "Sax's whistle"
@@ -239,7 +242,7 @@
 
 /obj/item/fluff/dogwhistle/attack_self(mob/user)
 	user.visible_message("<span class='notice'>[user] blows on the whistle, but no sound comes out.</span>",  "<span class='notice'>You blow on the whistle, but don't hear anything.</span>")
-	addtimer(CALLBACK(src, .proc/summon_sax, user), 20)
+	addtimer(CALLBACK(src, PROC_REF(summon_sax), user), 20)
 
 /obj/item/fluff/dogwhistle/proc/summon_sax(mob/user)
 	var/mob/living/simple_animal/pet/dog/corgi/C = new /mob/living/simple_animal/pet/dog/corgi(get_turf(user))
@@ -265,8 +268,7 @@
 	max_combined_w_class = 9
 	storage_slots = 3
 
-/obj/item/storage/toolbox/fluff/lunchbox/New()
-	..()
+/obj/item/storage/toolbox/fluff/lunchbox/populate_contents()
 	new /obj/item/reagent_containers/food/snacks/sandwich(src)
 	new /obj/item/reagent_containers/food/snacks/chips(src)
 	new /obj/item/reagent_containers/food/drinks/cans/cola(src)
@@ -293,7 +295,7 @@
 
 	if(target.change_body_accessory("Jay Wingler Tail"))
 		to_chat(target, "<span class='notice'>You comb your tail with [src].</span>")
-		used = 1
+		used = TRUE
 
 /obj/item/fluff/desolate_coat_kit //DesolateG: Micheal Smith
 	name = "armored jacket conversion kit"
@@ -467,13 +469,13 @@
 	else
 		to_chat(user, "<span class='warning'>You can't modify [target]!</span>")
 
-
+// These two fluff items are commented out due to the transfer to MODsuits breaking these. Sprites are still in custom_items.dmi , but they need a resprite to work with MODsuits.
 /obj/item/fluff/pyro_wintersec_kit //DarkLordpyro: Valthorne Haliber
 	name = "winter sec conversion kit"
 	desc = "A securirty hardsuit conversion kit."
 	icon_state = "modkit"
 	w_class = WEIGHT_CLASS_SMALL
-
+/*
 /obj/item/fluff/pyro_wintersec_kit/afterattack(atom/target, mob/user, proximity)
 	if(!proximity || !ishuman(user) || user.incapacitated())
 		return
@@ -519,14 +521,14 @@
 			H.update_inv_wear_suit()
 		return
 	to_chat(user, "<span class='warning'>You can't modify [target]!</span>")
-
+*/
 
 /obj/item/fluff/sylus_conversion_kit //Decemviri: Sylus Cain
 	name = "cerberus pattern conversion kit"
 	desc = "A securirty hardsuit conversion kit."
 	icon_state = "modkit"
 	w_class = WEIGHT_CLASS_SMALL
-
+/*
 /obj/item/fluff/sylus_conversion_kit/afterattack(atom/target, mob/user, proximity)
 	if(!proximity || !ishuman(user) || user.incapacitated())
 		return
@@ -579,7 +581,7 @@
 
 	to_chat(user, "<span class='warning'>You can't modify [target]!</span>")
 
-
+*/
 //////////////////////////////////
 //////////// Clothing ////////////
 //////////////////////////////////
@@ -639,8 +641,8 @@
 	icon_state = "pirate"
 	item_state = "pirate"
 
-/obj/item/clothing/head/pirate/fluff/stumpy/New()
-	..()
+/obj/item/clothing/head/pirate/fluff/stumpy/Initialize(mapload)
+	. = ..()
 	START_PROCESSING(SSobj, src)
 
 /obj/item/clothing/head/pirate/fluff/stumpy/Destroy()
@@ -702,7 +704,7 @@
 			"mask_flags"	= HIDEMASK|HIDEFACE
 			)
 
-		var/choice = input(user, "How would you like to adjust the helmet?", "Adjust Helmet") as null|anything in options
+		var/choice = tgui_input_list(user, "How would you like to adjust the helmet?", "Adjust Helmet", options)
 
 		if(choice && choice != state && !user.incapacitated() && Adjacent(user))
 			var/list/new_state = options[choice]
@@ -769,7 +771,7 @@
 	options["lime"] ="shazjacket_lime"
 	options["army green"] ="shazjacket_army"
 
-	var/choice = input(user, "What color do you wish your jacket to be?", "Change color") as null|anything in options
+	var/choice = tgui_input_list(user, "What color do you wish your jacket to be?", "Change color", options)
 
 	if(choice && !user.stat && in_range(user, src))
 		if(suit_adjusted)
@@ -1058,6 +1060,15 @@
 	adjust_flavour = "unzip"
 
 //////////// Uniforms ////////////
+
+/obj/item/clothing/under/fluff
+	sprite_sheets = list(
+		"Human" = 'icons/mob/clothing/under/donator.dmi',
+		"Vox" = 'icons/mob/clothing/species/vox/under/donator.dmi',
+		"Drask" = 'icons/mob/clothing/species/drask/under/donator.dmi',
+		"Grey" = 'icons/mob/clothing/species/grey/under/donator.dmi'
+		)
+
 /obj/item/clothing/under/fluff/counterfeitguise_uniform 	// thatdanguy23 : Rissa Williams
 	icon = 'icons/obj/custom_items.dmi'
 	name = "Rissa's hand-me-downs"
@@ -1077,12 +1088,12 @@
 	item_color = "fallout_dress"
 
 /obj/item/clothing/under/fluff/soviet_casual_uniform // Norstead : Natalya Sokolova
-    icon = 'icons/obj/custom_items.dmi'
-    name = "Soviet Casual Uniform"
-    desc = "Female U.S.S.P. casual wear. Dlya Rodiny!"
-    icon_state = "soviet_casual_uniform"
-    item_state = "soviet_casual_uniform"
-    item_color = "soviet_casual_uniform"
+	icon = 'icons/obj/custom_items.dmi'
+	name = "Soviet Casual Uniform"
+	desc = "Female U.S.S.P. casual wear. Dlya Rodiny!"
+	icon_state = "soviet_casual_uniform"
+	item_state = "soviet_casual_uniform"
+	item_color = "soviet_casual_uniform"
 
 /obj/item/clothing/under/fluff/kharshai // Kharshai: Athena Castile
 	name = "Castile formal outfit"
@@ -1109,7 +1120,7 @@
 	icon_state = "elishirt"
 	item_state = "elishirt"
 	item_color = "elishirt"
-	displays_id = 0
+	displays_id = FALSE
 
 /obj/item/clothing/under/fluff/jay_turtleneck // Jayfeather: Jay Wingler
 	name = "Mar's Pattern Custom Turtleneck"
@@ -1118,7 +1129,7 @@
 	icon_state = "jaywingler"
 	item_state = "jaywingler"
 	item_color = "jaywingler"
-	displays_id = 0
+	displays_id = FALSE
 
 /obj/item/clothing/under/psysuit/fluff/isaca_sirius_1 // Xilia: Isaca Sirius
 	name = "Isaca's suit"
@@ -1132,7 +1143,7 @@
 	item_state = "jane_sid_suit"
 	item_color = "jane_sid_suit"
 	has_sensor = 2
-	sensor_mode = 3
+	sensor_mode = SENSOR_COORDS
 
 /obj/item/clothing/under/fluff/jane_sidsuit/verb/toggle_zipper()
 	set name = "Toggle Jumpsuit Zipper"
@@ -1156,11 +1167,11 @@
 /obj/item/clothing/under/fluff/honourable // MrBarrelrolll: Maximus Greenwood
 	name = "Viridi Protegat"
 	desc = "A set of chainmail adorned with a hide mantle. \"Greenwood\" is engraved into the right breast."
-	icon = 'icons/obj/clothing/uniforms.dmi'
+	icon = 'icons/obj/clothing/under/costumes.dmi'
 	icon_state = "roman"
 	item_state = "maximus_armor"
 	item_color = "maximus_armor"
-	displays_id = 0
+	displays_id = FALSE
 	strip_delay = 100
 
 /obj/item/clothing/under/fluff/aegis //PlagueWalker: A.E.G.I.S.
@@ -1172,13 +1183,12 @@
 	icon_state = "aegisuniform"
 	item_state = "aegisuniform"
 	item_color = "aegisuniform"
-	displays_id = 0
+	displays_id = FALSE
 
 /obj/item/clothing/under/fluff/elo_turtleneck // vforcebomber: E.L.O.
 	name = "E.L.O's Turtleneck"
 	desc = "This TurtleNeck belongs to the IPC E.L.O. And has her name sown into the upper left breast, a very wooly jumper."
 	icon = 'icons/obj/custom_items.dmi' // for the floor sprite
-	icon_override = 'icons/obj/custom_items.dmi' // for the mob sprite
 	icon_state = "eloturtleneckfloor"
 	item_color = "eloturtleneck"
 	displays_id = FALSE
@@ -1209,7 +1219,7 @@
 	icon = 'icons/obj/custom_items.dmi'
 	icon_state = "fox_jacket"
 	item_state = "fox_jacket"
-	allowed = list(/obj/item/flashlight, /obj/item/tank/internals/emergency_oxygen, /obj/item/toy, /obj/item/storage/fancy/cigarettes, /obj/item/lighter, /obj/item/gun/projectile/automatic/pistol, /obj/item/gun/projectile/revolver, /obj/item/gun/projectile/revolver/detective)
+	allowed = list(/obj/item/flashlight, /obj/item/tank/internals/emergency_oxygen, /obj/item/toy, /obj/item/storage/fancy/cigarettes, /obj/item/lighter, /obj/item/gun/projectile/automatic/pistol, /obj/item/gun/projectile/revolver, /obj/item/gun/energy/detective)
 	body_parts_covered = UPPER_TORSO|LOWER_TORSO|ARMS
 	cold_protection = UPPER_TORSO|LOWER_TORSO|ARMS
 	min_cold_protection_temperature = FIRE_SUIT_MIN_TEMP_PROTECT
@@ -1237,17 +1247,17 @@
 	actions_types = list(/datum/action/item_action/adjust)
 	var/prompting_change = FALSE
 	var/list/plush_colors = list("red fox plushie" = "redfox", "black fox plushie" = "blackfox", "marble fox plushie" = "marblefox", "blue fox plushie" = "bluefox", "orange fox plushie" = "orangefox",
-								 "coffee fox plushie" = "coffeefox", "pink fox plushie" = "pinkfox", "purple fox plushie" = "purplefox", "crimson fox plushie" = "crimsonfox")
+								"coffee fox plushie" = "coffeefox", "pink fox plushie" = "pinkfox", "purple fox plushie" = "purplefox", "crimson fox plushie" = "crimsonfox")
 
-/obj/item/toy/plushie/fluff/fox/proc/change_color()
+/obj/item/toy/plushie/fluff/fox/proc/change_color(mob/user)
 	if(prompting_change)
 		return
 	prompting_change = TRUE
-	var/plushie_color = input("Select a color", "[src]") as null|anything in plush_colors
+	var/plushie_color = tgui_input_list(user, "Select a color", "[src]", plush_colors)
 	prompting_change = FALSE
 	if(!plushie_color)
 		return
-	if(!Adjacent(usr))
+	if(!Adjacent(user))
 		return
 	name = plushie_color
 	icon_state = plush_colors[plushie_color]
@@ -1256,15 +1266,15 @@
 		var/datum/action/A = X
 		A.UpdateButtonIcon()
 
-/obj/item/toy/plushie/fluff/fox/ui_action_click()
-	change_color()
+/obj/item/toy/plushie/fluff/fox/ui_action_click(mob/user)
+	change_color(user)
 
 
 // TheFlagbearer: Willow Walker
 /obj/item/clothing/under/fluff/arachno_suit
 	name = "Arachno-Man costume"
 	desc = "It's what an evil genius would design if he switched brains with the Amazing Arachno-Man. Actually, he'd probably add weird tentacles that come out the back, too."
-	icon = 'icons/obj/clothing/uniforms.dmi'
+	icon = 'icons/obj/clothing/under/donator.dmi'
 	icon_state = "superior_suit"
 	item_state = "superior_suit"
 	item_color = "superior_suit"
@@ -1358,8 +1368,15 @@
 /obj/item/clothing/under/pants/fluff/combat
 	name = "combat pants"
 	desc = "Medium style tactical pants, for the fashion aware combat units out there."
+	icon = 'icons/obj/custom_items.dmi'
 	icon_state = "chaps"
 	item_color = "combat_pants"
+	sprite_sheets = list(
+		"Human" = 'icons/mob/clothing/under/donator.dmi',
+		"Vox" = 'icons/mob/clothing/species/vox/under/donator.dmi',
+		"Drask" = 'icons/mob/clothing/species/drask/under/donator.dmi',
+		"Grey" = 'icons/mob/clothing/species/grey/under/donator.dmi'
+		)
 
 /obj/item/clothing/suit/jacket/fluff/elliot_windbreaker // DaveTheHeadcrab: Elliot Campbell
 	name = "nylon windbreaker"
@@ -1376,6 +1393,7 @@
 	desc = "A well made satchel for military operations. Totally not made by an enemy corporation"
 	icon = 'icons/obj/custom_items.dmi'
 	icon_state = "rawk_satchel"
+	item_state = null
 	sprite_sheets = null
 
 /obj/item/storage/backpack/fluff/krich_back //lizardzsi: Krichahka
@@ -1383,12 +1401,14 @@
 	desc = "Battered, Sol-made military radio backpack that had its speakers fried from playing Vox opera. The words 'Swift-Talon' are crudely scratched onto its side."
 	icon = 'icons/obj/custom_items.dmi'
 	icon_state = "voxcaster_fluff"
+	item_state = null
 
 /obj/item/storage/backpack/fluff/ssscratches_back //Ssscratches: Lasshy-Bot
 	name = "CatPack"
 	desc = "It's a backpack, but it's also a cat."
 	icon = 'icons/obj/custom_items.dmi'
 	icon_state = "ssscratches_backpack"
+	item_state = null
 
 /obj/item/storage/backpack/fluff/thebrew //Greey: Korala Ice
 	name = "The Brew"
@@ -1419,7 +1439,7 @@
 	options["Syndicate"] = "syndie_witch"
 	options["Nanotrasen"] ="nt_witch"
 
-	var/choice = input(user, "To what form do you wish to Shapeshift this hat?", "Shapeshift Hat") as null|anything in options
+	var/choice = tgui_input_list(user, "To what form do you wish to Shapeshift this hat?", "Shapeshift Hat", options)
 
 	if(choice && !user.stat && in_range(user, src))
 		icon_state = options[choice]
@@ -1456,7 +1476,7 @@
 	icon_state = "fethasnecklace"
 	item_state = "fethasnecklace"
 	item_color = "fethasnecklace"
-	slot_flags = SLOT_MASK | SLOT_TIE
+	slot_flags = SLOT_FLAG_MASK | SLOT_FLAG_TIE
 
 /obj/item/bedsheet/fluff/hugosheet //HugoLuman: Dan Martinez
 	name = "Cosmic space blankie"
@@ -1510,7 +1530,7 @@
 		var/obj/item/clothing/head/helmet/space/plasmaman/lf53_fluff/F = new(P.loc)
 		if(P == H.head)
 			H.unEquip(P, TRUE, TRUE)
-			H.equip_to_slot(F, slot_head, TRUE)
+			H.equip_to_slot(F, SLOT_HUD_HEAD, TRUE)
 			H.update_inv_head()
 		qdel(P)
 
@@ -1579,7 +1599,7 @@
 	icon_state = "panzermedal"
 	item_state = "panzermedal"
 	item_color = "panzermedal"
-	slot_flags = SLOT_TIE
+	slot_flags = SLOT_FLAG_TIE
 
 /obj/item/clothing/accessory/medal/fluff/XannZxiax //Sagrotter: Xann Zxiax
 	name = "Zxiax Garnet"
@@ -1588,23 +1608,15 @@
 	icon_state = "Xann_necklace"
 	item_state = "Xann_necklace"
 	item_color = "Xann_necklace"
-	slot_flags = SLOT_TIE
+	slot_flags = SLOT_FLAG_TIE
 
 /obj/item/clothing/accessory/rbscarf //Rb303: Isthel Eisenwald
-    name = "Old purple scarf"
-    desc = "An old, striped purple scarf. It appears to be hand-knitted and has the name 'Isthel' written on it in bad handwriting."
-    icon = 'icons/obj/custom_items.dmi'
-    icon_state = "rbscarf"
-    item_state = "rbscarf"
-    item_color = "rbscarf"
-
-/obj/item/instrument/accordion/fluff/asmer_accordion //Asmerath: Coloratura
-	name = "Rara's Somber Accordion"
-	desc = "A blue colored accordion with claw indentations on the keys made special for vulpkanins."
+	name = "Old purple scarf"
+	desc = "An old, striped purple scarf. It appears to be hand-knitted and has the name 'Isthel' written on it in bad handwriting."
 	icon = 'icons/obj/custom_items.dmi'
-	icon_state = "asmer_accordion"
-	item_state = "asmer_accordion"
-
+	icon_state = "rbscarf"
+	item_state = "rbscarf"
+	item_color = "rbscarf"
 
 /obj/item/clothing/head/fluff/pinesalad_horns //Pineapple Salad: Dan Jello
 	name = "Bluespace Horns"
@@ -1627,7 +1639,6 @@
 	icon = 'icons/obj/custom_items.dmi'
 	lefthand_file = 'icons/mob/inhands/fluff_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/fluff_righthand.dmi'
-	sprite_sheets = list("Vox" = 'icons/mob/clothing/species/vox/uniform.dmi')
 	icon_state = "kiaoutfit"
 	item_state = "kiaoutfit"
 	item_color = "kiaoutfit"
@@ -1664,7 +1675,7 @@
 	icon = 'icons/obj/custom_items.dmi'
 	fluff_material = TRUE
 
-/obj/item/clothing/gloves/ring/fluff/update_icon()
+/obj/item/clothing/gloves/ring/fluff/update_icon_state()
 	return
 
 /obj/item/clothing/gloves/ring/fluff/attackby(obj/item/I as obj, mob/user as mob, params)
@@ -1683,7 +1694,6 @@
 	desc = "A simple black dress with a white undercoat, tied with a blue ribbon."
 	lefthand_file = 'icons/mob/inhands/fluff_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/fluff_righthand.dmi'
-	sprite_sheets = list("Vox" = 'icons/mob/clothing/species/vox/uniform.dmi')
 	icon = 'icons/obj/custom_items.dmi'
 	icon_state = "kikeridress"
 	item_state = "kikeridress"
@@ -1701,6 +1711,18 @@
 	icon_state = "kikerimask"
 	item_state = "kikerimask"
 	item_color = "kikerimask"
+	species_restricted = list("Vox")
+
+/obj/item/clothing/mask/gas/fluff/yahiyamask //Asmerath: Yahiya
+	name = "Yahiya's Mask"
+	desc = "A dark brown and silver mask resembling that of an eagle. There is a fiery red gem embedded into the forehead."
+	icon = 'icons/obj/custom_items.dmi'
+	lefthand_file = 'icons/mob/inhands/fluff_lefthand.dmi'
+	righthand_file = 'icons/mob/inhands/fluff_righthand.dmi'
+	sprite_sheets = list("Vox" = 'icons/mob/clothing/species/vox/mask.dmi')
+	icon_state = "yahiyamask"
+	item_state = "yahiyamask"
+	item_color = "yahiyamask"
 	species_restricted = list("Vox")
 
 /obj/item/id_decal/aa07

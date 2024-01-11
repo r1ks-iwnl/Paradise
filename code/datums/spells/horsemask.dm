@@ -2,11 +2,9 @@
 	name = "Curse of the Horseman"
 	desc = "This spell triggers a curse on a target, causing them to wield an unremovable horse head mask. They will speak like a horse! Any masks they are wearing will be disintegrated. This spell does not require robes."
 	school = "transmutation"
-	charge_type = "recharge"
-	charge_max = 150
-	charge_counter = 0
+	base_cooldown = 150
 	clothes_req = FALSE
-	stat_allowed = FALSE
+	stat_allowed = CONSCIOUS
 	invocation = "KN'A FTAGHU, PUCK 'BTHNK!"
 	invocation_type = "shout"
 	cooldown_min = 30 //30 deciseconds reduction per rank
@@ -38,6 +36,6 @@
 							"<span class='danger'>Your face burns up, and shortly after the fire you realise you have the face of a horse!</span>")
 	if(!target.unEquip(target.wear_mask))
 		qdel(target.wear_mask)
-	target.equip_to_slot_if_possible(magichead, slot_wear_mask, TRUE, TRUE)
+	target.equip_to_slot_if_possible(magichead, SLOT_HUD_WEAR_MASK, TRUE, TRUE)
 
 	target.flash_eyes()

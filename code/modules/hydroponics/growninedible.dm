@@ -8,8 +8,8 @@
 	resistance_flags = FLAMMABLE
 	var/obj/item/seeds/seed = null // type path, gets converted to item on New(). It's safe to assume it's always a seed item.
 
-/obj/item/grown/New(newloc, obj/item/seeds/new_seed = null)
-	..()
+/obj/item/grown/Initialize(mapload, newloc, obj/item/seeds/new_seed = null)
+	. = ..()
 	create_reagents(50)
 
 	if(new_seed)
@@ -37,8 +37,8 @@
 
 /obj/item/grown/attackby(obj/item/O, mob/user, params)
 	..()
-	if (istype(O, /obj/item/plant_analyzer))
-		var/msg = "<span class='info'>*---------*\n This is \a <span class='name'>[src]</span>\n"
+	if(istype(O, /obj/item/plant_analyzer))
+		var/msg = "<span class='info'>This is \a <span class='name'>[src]</span>\n"
 		if(seed)
 			msg += seed.get_analyzer_text()
 		msg += "</span>"
@@ -61,3 +61,10 @@
 		if(seed)
 			for(var/datum/plant_gene/trait/T in seed.genes)
 				T.on_throw_impact(src, hit_atom)
+
+/obj/item/grown/extinguish_light(force = FALSE)
+	if(!force)
+		return
+	if(seed.get_gene(/datum/plant_gene/trait/glow/shadow))
+		return
+	set_light(0)

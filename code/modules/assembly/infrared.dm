@@ -25,12 +25,10 @@
 		fire_location = null
 	return ..()
 
-/obj/item/assembly/infra/describe()
-	return "The assembly is [secured ? "secure" : "not secure"]. The infrared trigger is [on ? "on" : "off"]."
-
 /obj/item/assembly/infra/examine(mob/user)
 	. = ..()
-	. += describe()
+	. += "The assembly is [secured ? "secure" : "not secure"]. The infrared trigger is [on ? "on" : "off"]."
+	. += "<span class='info'><b>Alt-Click</b> to rotate it.</span>"
 
 /obj/item/assembly/infra/activate()
 	if(!..())
@@ -59,15 +57,14 @@
 /obj/item/assembly/infra/proc/arm() // Forces the device to arm no matter its current state.
 	if(!secured) // Checked because arm() might be called sometime after the object is spawned.
 		toggle_secure()
-	on = 1
+	on = TRUE
 
-/obj/item/assembly/infra/update_icon()
-	overlays.Cut()
+/obj/item/assembly/infra/update_overlays()
+	. = ..()
 	attached_overlays = list()
 	if(on)
-		overlays += "infrared_on"
+		. += "infrared_on"
 		attached_overlays += "infrared_on"
-
 	if(holder)
 		holder.update_icon()
 
@@ -89,7 +86,7 @@
 		emission_cycles = 0
 		var/obj/effect/beam/i_beam/I = new /obj/effect/beam/i_beam(T)
 		I.master = src
-		I.density = 1
+		I.density = TRUE
 		I.dir = dir
 		I.update_icon()
 		first = I
@@ -132,7 +129,7 @@
 	audible_message("[bicon(src)] *beep* *beep*", hearing_distance = 3)
 	if(first)
 		qdel(first)
-	addtimer(CALLBACK(src, .proc/process_cooldown), 10)
+	addtimer(CALLBACK(src, PROC_REF(process_cooldown)), 10)
 
 /obj/item/assembly/infra/interact(mob/user)//TODO: change this this to the wire control panel
 	if(!secured)	return
@@ -151,7 +148,7 @@
 
 /obj/item/assembly/infra/Topic(href, href_list)
 	..()
-	if(!usr.canmove || usr.stat || usr.restrained() || !in_range(loc, usr))
+	if(HAS_TRAIT(usr, TRAIT_HANDS_BLOCKED) || usr.stat || usr.restrained() || !in_range(loc, usr))
 		usr << browse(null, "window=infra")
 		onclose(usr, "infra")
 		return
@@ -163,25 +160,24 @@
 		if(first)
 			first.vis_spread(visible)
 	if(href_list["rotate"])
-		rotate()
+		rotate(usr)
 	if(href_list["close"])
 		usr << browse(null, "window=infra")
 		return
 	if(usr)
 		attack_self(usr)
 
-/obj/item/assembly/infra/verb/rotate()//This could likely be better
-	set name = "Rotate Infrared Laser"
-	set category = "Object"
-	set src in usr
+/obj/item/assembly/infra/AltClick(mob/user)
+	rotate(user)
 
-	if(usr.stat || !usr.canmove || usr.restrained())
+/obj/item/assembly/infra/proc/rotate(mob/user)
+	if(user.stat || HAS_TRAIT(user, TRAIT_HANDS_BLOCKED) || !Adjacent(user))
 		return
 
 	dir = turn(dir, 90)
 
-	if(usr.machine == src)
-		interact(usr)
+	if(user.machine == src)
+		interact(user)
 
 	if(first)
 		qdel(first)
@@ -228,7 +224,7 @@
 	if(next)
 		next.vis_spread(v)
 
-/obj/effect/beam/i_beam/update_icon()
+/obj/effect/beam/i_beam/update_icon_state()
 	transform = turn(matrix(), dir2angle(dir))
 
 /obj/effect/beam/i_beam/process()
@@ -249,7 +245,7 @@
 	if(!next && (limit > 0))
 		var/obj/effect/beam/i_beam/I = new /obj/effect/beam/i_beam(loc)
 		I.master = master
-		I.density = 1
+		I.density = TRUE
 		I.dir = dir
 		I.update_icon()
 		I.previous = src
@@ -271,7 +267,7 @@
 /obj/effect/beam/i_beam/Crossed(atom/movable/AM, oldloc)
 	if(!isobj(AM) && !isliving(AM))
 		return
-	if(istype(AM, /obj/effect))
+	if(iseffect(AM))
 		return
 	hit()
 

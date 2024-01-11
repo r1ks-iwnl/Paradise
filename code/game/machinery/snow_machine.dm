@@ -12,8 +12,8 @@
 	var/lower_temperature_limit = T0C - 10 //Set lower for a bigger freeze
 	var/infinite_snow = FALSE //Set this to have it not use water
 
-/obj/machinery/snow_machine/New()
-	..()
+/obj/machinery/snow_machine/Initialize(mapload)
+	. = ..()
 	create_reagents(300) //Makes 100 snow tiles!
 	reagents.add_reagent("water", 300) //But any reagent will do
 	reagents.flags |= REAGENT_NOREACT //Because a) this doesn't need to process and b) this way we can use any reagents without needing to worry about explosions and shit
@@ -37,7 +37,7 @@
 		power_efficiency += L.rating
 
 /obj/machinery/snow_machine/attack_hand(mob/user)
-	if(!powered() || !anchored)
+	if(!has_power() || !anchored)
 		return
 	if(turn_on_or_off(!active))
 		to_chat(user, "<span class='notice'>You [active ? "turn on" : "turn off"] [src].</span>")
@@ -54,11 +54,10 @@
 
 /obj/machinery/snow_machine/wrench_act(mob/user, obj/item/I)
 	. = TRUE
-	if(!I.use_tool(src, user, 0, volume = I.tool_volume))
+	if(!default_unfasten_wrench(user, I, 0))
 		return
-	anchored = !anchored
-	to_chat(user, "<span class='notice'>You [anchored ? "tighten" : "loosen"] [src]'s wheels.</span>")
-	turn_on_or_off(FALSE)
+	if(!anchored)
+		turn_on_or_off(FALSE)
 
 /obj/machinery/snow_machine/process()
 	if(power_used_this_cycle)
@@ -67,7 +66,7 @@
 		power_used_this_cycle = 0
 	if(!active || !anchored)
 		return
-	if(!powered())
+	if(!has_power())
 		return
 	if(!reagents.has_reagent(reagents.get_master_reagent_id(), 3))
 		return //This means you don't need to top it up constantly to keep the nice snowclouds going
@@ -84,13 +83,13 @@
 		make_snowcloud(TF)
 
 /obj/machinery/snow_machine/power_change()
-	..()
-	if(!powered())
+	if(!..())
+		return
+	if(stat & NOPOWER)
 		turn_on_or_off(FALSE, TRUE)
-	update_icon()
+	update_icon(UPDATE_ICON_STATE)
 
-/obj/machinery/snow_machine/update_icon()
-	..()
+/obj/machinery/snow_machine/update_icon_state()
 	if(panel_open)
 		icon_state = "snow_machine_openpanel"
 	else
@@ -131,5 +130,5 @@
 	if(!active && give_message)
 		visible_message("<span class='warning'>[src] switches off!</span>")
 		playsound(loc, 'sound/machines/buzz-sigh.ogg', 50, FALSE)
-	update_icon()
+	update_icon(UPDATE_ICON_STATE)
 	return TRUE

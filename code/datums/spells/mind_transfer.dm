@@ -3,14 +3,14 @@
 	desc = "This spell allows the user to switch bodies with a target."
 
 	school = "transmutation"
-	charge_max = 600
-	clothes_req = 0
+	base_cooldown = 600
+	clothes_req = FALSE
 	invocation = "GIN'YU CAPAN"
 	invocation_type = "whisper"
 	selection_activated_message = "<span class='notice'>You prepare to transfer your mind. Click on a target to cast the spell.</span>"
 	selection_deactivated_message = "<span class='notice'>You decide that your current form is good enough.</span>"
 	cooldown_min = 200 //100 deciseconds reduction per rank
-	var/list/protected_roles = list("Wizard","Changeling","Cultist") //which roles are immune to the spell
+	var/list/protected_roles = list(SPECIAL_ROLE_WIZARD, SPECIAL_ROLE_CHANGELING, SPECIAL_ROLE_CULTIST) //which roles are immune to the spell
 	var/paralysis_amount_caster = 40 SECONDS //how much the caster is paralysed for after the spell
 	var/paralysis_amount_victim = 40 SECONDS //how much the victim is paralysed for after the spell
 	action_icon_state = "mindswap"
@@ -42,7 +42,7 @@ Also, you never added distance checking after target is selected. I've went ahea
 		to_chat(user, "Their mind is resisting your spell.")
 		return
 
-	if(istype(target, /mob/living/silicon))
+	if(issilicon(target))
 		to_chat(user, "You feel this enslaved being is just as dead as its cold, hard exoskeleton.")
 		return
 
@@ -67,7 +67,7 @@ Also, you never added distance checking after target is selected. I've went ahea
 
 	ghost.mind.transfer_to(caster)
 	if(ghost.key)
-		GLOB.non_respawnable_keys -= ghost.ckey //ghostizing with an argument of 0 will make them unable to respawn forever, which is bad
+		GLOB.non_respawnable_keys -= ghost.ckey
 		caster.key = ghost.key	//have to transfer the key since the mind was not active
 	qdel(ghost)
 

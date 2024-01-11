@@ -38,7 +38,8 @@
 	desc = "A portable microcomputer by Thinktronic Systems, LTD. The surface is coated with polytetrafluoroethylene and banana drippings."
 	ttone = "honk"
 
-/obj/item/pda/clown/ComponentInitialize()
+/obj/item/pda/clown/Initialize(mapload)
+	. = ..()
 	AddComponent(/datum/component/slippery, src, 16 SECONDS, 100)
 
 /obj/item/pda/mime
@@ -74,7 +75,7 @@
 /obj/item/pda/captain
 	default_cartridge = /obj/item/cartridge/captain
 	icon_state = "pda-captain"
-	detonate = 0
+	detonate = FALSE
 	//toff = 1
 
 /obj/item/pda/heads/ntrep
@@ -90,6 +91,8 @@
 	icon_state = "pda-h"
 
 /obj/item/pda/heads/ert
+	default_cartridge = /obj/item/cartridge/centcom
+	detonate = FALSE
 
 /obj/item/pda/heads/ert/engineering
 	icon_state = "pda-engineer"
@@ -100,13 +103,18 @@
 /obj/item/pda/heads/ert/medical
 	icon_state = "pda-medical"
 
+/obj/item/pda/heads/ert/janitor
+	icon_state = "pda-janitor"
+
+/obj/item/pda/heads/ert/paranormal
+	icon_state = "pda-chaplain"
 
 /obj/item/pda/cargo
-	default_cartridge = /obj/item/cartridge/quartermaster
+	default_cartridge = /obj/item/cartridge/cargo
 	icon_state = "pda-cargo"
 
 /obj/item/pda/quartermaster
-	default_cartridge = /obj/item/cartridge/quartermaster
+	default_cartridge = /obj/item/cartridge/qm
 	icon_state = "pda-qm"
 
 /obj/item/pda/shaftminer
@@ -178,25 +186,3 @@
 	var/datum/data/pda/app/messenger/M = find_program(/datum/data/pda/app/messenger)
 	if(M)
 		M.m_hidden = 1
-
-//Some spare PDAs in a box
-/obj/item/storage/box/PDAs
-	name = "spare PDAs"
-	desc = "A box of spare PDA microcomputers."
-	icon = 'icons/obj/pda.dmi'
-	icon_state = "pdabox"
-
-/obj/item/storage/box/PDAs/New()
-	..()
-	new /obj/item/pda(src)
-	new /obj/item/pda(src)
-	new /obj/item/pda(src)
-	new /obj/item/pda(src)
-	new /obj/item/cartridge/head(src)
-
-	var/newcart = pick(	/obj/item/cartridge/engineering,
-						/obj/item/cartridge/security,
-						/obj/item/cartridge/medical,
-						/obj/item/cartridge/signal/toxins,
-						/obj/item/cartridge/quartermaster)
-	new newcart(src)

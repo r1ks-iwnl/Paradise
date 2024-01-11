@@ -137,7 +137,7 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 //adv proc call this, ya nerds
 /world/proc/WrapAdminProcCall(datum/target, procname, list/arguments)
 	if(target == GLOBAL_PROC)
-		return call(procname)(arglist(arguments))
+		return call("/proc/[procname]")(arglist(arguments))
 	else if(target != world)
 		return call(target, procname)(arglist(arguments))
 	else
@@ -185,7 +185,10 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 
 /client/proc/get_callproc_args()
 	var/argnum = input("Number of arguments","Number:",0) as num|null
-	if(!argnum && (argnum!=0))	return
+	if(argnum <= 0)
+		return list() // to allow for calling with 0 args
+
+	argnum = clamp(argnum, 1, 50)
 
 	var/list/lst = list()
 	//TODO: make a list to store whether each argument was initialised as null.
@@ -257,7 +260,7 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 		return
 	var/turf/T = mob.loc
 
-	if(!( istype(T, /turf) ))
+	if(!isturf(T))
 		return
 
 	var/datum/gas_mixture/env = T.return_air()
@@ -281,7 +284,7 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 	if(!SSticker)
 		alert("Wait until the game starts")
 		return
-	if(istype(M, /mob/living/carbon/human))
+	if(ishuman(M))
 		log_admin("[key_name(src)] has robotized [M.key].")
 		spawn(10)
 			M:Robotize()
@@ -328,7 +331,7 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 	var/mob/choice = input("Choose a player to play the pAI", "Spawn pAI") in available
 	if(!choice)
 		return 0
-	if(!istype(choice, /mob/dead/observer))
+	if(!isobserver(choice))
 		var/confirm = input("[choice.key] isn't ghosting right now. Are you sure you want to yank [choice.p_them()] out of [choice.p_their()] body and place [choice.p_them()] in this pAI?", "Spawn pAI Confirmation", "No") in list("Yes", "No")
 		if(confirm != "Yes")
 			return 0
@@ -452,7 +455,7 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 	if(!SSticker)
 		alert("Wait until the game starts")
 		return
-	if(istype(M, /mob/living/carbon/human))
+	if(ishuman(M))
 		var/mob/living/carbon/human/H = M
 		if(H.wear_id)
 			var/obj/item/card/id/id = H.wear_id
@@ -468,7 +471,7 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 			id.registered_name = H.real_name
 			id.assignment = "Captain"
 			id.name = "[id.registered_name]'s ID Card ([id.assignment])"
-			H.equip_to_slot_or_del(id, slot_wear_id)
+			H.equip_to_slot_or_del(id, SLOT_HUD_WEAR_ID)
 			H.update_inv_wear_id()
 	else
 		alert("Invalid mob")
@@ -494,7 +497,7 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 	log_admin("[key_name(usr)] assumed direct control of [M].")
 	var/mob/adminmob = src.mob
 	M.ckey = src.ckey
-	if( isobserver(adminmob) )
+	if(isobserver(adminmob))
 		qdel(adminmob)
 	SSblackbox.record_feedback("tally", "admin_verb", 1, "Assume Direct Control") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
 
@@ -641,7 +644,7 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 			if(alert("Should the items in their pockets be dropped? Selecting \"No\" will delete them.", "Robust quick dress shop", "Yes", "No") == "No")
 				delete_pocket = TRUE
 
-	for (var/obj/item/I in H.get_equipped_items(delete_pocket))
+	for(var/obj/item/I in H.get_equipped_items(delete_pocket))
 		qdel(I)
 	if(dresscode != "Naked")
 		H.equipOutfit(dresscode)
@@ -660,12 +663,12 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 	)
 
 	var/list/outfits = list()
-	var/list/paths = subtypesof(/datum/outfit) - typesof(/datum/outfit/job)
+	var/list/paths = subtypesof(/datum/outfit) - typesof(/datum/outfit/job) - list(/datum/outfit/varedit, /datum/outfit/admin)
 	for(var/path in paths)
 		var/datum/outfit/O = path //not much to initalize here but whatever
 		if(initial(O.can_be_admin_equipped))
 			outfits[initial(O.name)] = path
-	outfits = special_outfits + sortTim(outfits, /proc/cmp_text_asc)
+	outfits = special_outfits + sortTim(outfits, GLOBAL_PROC_REF(cmp_text_asc))
 
 	var/dresscode = input("Select outfit", "Robust quick dress shop") as null|anything in outfits
 	if(isnull(dresscode))
@@ -681,7 +684,7 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 			var/datum/outfit/O = path
 			if(initial(O.can_be_admin_equipped))
 				job_outfits[initial(O.name)] = path
-		job_outfits = sortTim(job_outfits, /proc/cmp_text_asc)
+		job_outfits = sortTim(job_outfits, GLOBAL_PROC_REF(cmp_text_asc))
 
 		dresscode = input("Select job equipment", "Robust quick dress shop") as null|anything in job_outfits
 		dresscode = job_outfits[dresscode]
@@ -712,14 +715,14 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 
 	for(var/obj/machinery/power/emitter/E in GLOB.machines)
 		if(E.anchored)
-			E.active = 1
+			E.active = TRUE
 
 	for(var/obj/machinery/field/generator/F in GLOB.machines)
-		if(F.active == 0)
-			F.active = 1
+		if(!F.active)
+			F.active = TRUE
 			F.state = 2
 			F.power = 250
-			F.anchored = 1
+			F.anchored = TRUE
 			F.warming_up = 3
 			F.start_fields()
 			F.update_icon()
@@ -773,7 +776,11 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 		if("Clients")
 			to_chat(usr, jointext(GLOB.clients, ","))
 		if("Respawnable Mobs")
-			to_chat(usr, jointext(GLOB.respawnable_list, ","))
+			var/list/respawnable_mobs
+			for(var/mob/potential_respawnable in GLOB.player_list)
+				if(HAS_TRAIT(potential_respawnable, TRAIT_RESPAWNABLE))
+					respawnable_mobs += potential_respawnable
+			to_chat(usr, jointext(respawnable_mobs, ", "))
 
 /client/proc/cmd_display_del_log()
 	set category = "Debug"
@@ -784,7 +791,7 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 		return
 
 	var/list/dellog = list("<B>List of things that have gone through qdel this round</B><BR><BR><ol>")
-	sortTim(SSgarbage.items, cmp=/proc/cmp_qdel_item_time, associative = TRUE)
+	sortTim(SSgarbage.items, GLOBAL_PROC_REF(cmp_qdel_item_time), TRUE)
 	for(var/path in SSgarbage.items)
 		var/datum/qdel_item/I = SSgarbage.items[path]
 		dellog += "<li><u>[path]</u><ul>"
@@ -835,6 +842,52 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 
 	usr << browse(dat, "window=simpledellog")
 
+/client/proc/show_gc_queues()
+	set name = "View GC Queue"
+	set category = "Debug"
+	set desc = "Shows the list of whats currently in a GC queue"
+
+	if(!check_rights(R_DEBUG|R_VIEWRUNTIMES))
+		return
+
+	// Get the amount of queues
+	var/queue_count = length(SSgarbage.queues)
+	var/list/selectable_queues = list()
+	// Setup choices
+	for(var/i in 1 to queue_count)
+		selectable_queues["Queue #[i] ([length(SSgarbage.queues[i])] item\s)"] = i
+
+	// Ask the user
+	var/choice = input(usr, "Select a GC queue. Note that the queue lookup may lag the server.", "GC Queue") as null|anything in selectable_queues
+	if(!choice)
+		return
+
+	// Get our target
+	var/list/target_queue = SSgarbage.queues[selectable_queues[choice]]
+	var/list/queue_counts = list()
+
+	// Iterate that target and see whats what
+	for(var/queue_entry in target_queue)
+		var/datum/D = locate(queue_entry[GC_QUEUE_ITEM_REF])
+		if(!istype(D))
+			continue
+
+		if(!queue_counts[D.type])
+			queue_counts[D.type] = 0
+
+		queue_counts[D.type]++
+
+	// Sort it the right way
+	var/list/sorted = sortTim(queue_counts, GLOBAL_PROC_REF(cmp_numeric_dsc), TRUE)
+
+	// And make a nice little menu
+	var/list/text = list("<h1>Current status of [choice]</h1>", "<ul>")
+	for(var/key in sorted)
+		text += "<li>[key] - [sorted[key]]</li>"
+
+	text += "</ul>"
+	usr << browse(text.Join(), "window=gcqueuestatus")
+
 /client/proc/cmd_admin_toggle_block(mob/M, block)
 	if(!check_rights(R_SPAWN))
 		return
@@ -863,75 +916,22 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 
 	GLOB.error_cache.showTo(usr)
 
-/client/proc/jump_to_ruin()
-	set category = "Debug"
-	set name = "Jump to Ruin"
-	set desc = "Displays a list of all placed ruins to teleport to."
-
-	if(!check_rights(R_DEBUG))
-		return
-
-	var/list/names = list()
-	for(var/i in GLOB.ruin_landmarks)
-		var/obj/effect/landmark/ruin/ruin_landmark = i
-		var/datum/map_template/ruin/template = ruin_landmark.ruin_template
-
-		var/count = 1
-		var/name = template.name
-		var/original_name = name
-
-		while(name in names)
-			count++
-			name = "[original_name] ([count])"
-
-		names[name] = ruin_landmark
-
-	var/ruinname = input("Select ruin", "Jump to Ruin") as null|anything in names
-
-	var/obj/effect/landmark/ruin/landmark = names[ruinname]
-
-	if(istype(landmark))
-		var/datum/map_template/ruin/template = landmark.ruin_template
-		if(isobj(usr.loc))
-			var/obj/O = usr.loc
-			O.force_eject_occupant(usr)
-		admin_forcemove(usr, get_turf(landmark))
-
-		to_chat(usr, "<span class='name'>[template.name]</span>")
-		to_chat(usr, "<span class='italics'>[template.description]</span>")
-
-		log_admin("[key_name(usr)] jumped to ruin [ruinname]")
-		if(!isobserver(usr))
-			message_admins("[key_name_admin(usr)] jumped to ruin [ruinname]", 1)
-
-		SSblackbox.record_feedback("tally", "admin_verb", 1, "Jump To Ruin") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
-
-/client/proc/toggle_medal_disable()
-	set category = "Debug"
-	set name = "Toggle Medal Disable"
-	set desc = "Toggles the safety lock on trying to contact the medal hub."
-
-	if(!check_rights(R_DEBUG))
-		return
-
-	SSmedals.hub_enabled = !SSmedals.hub_enabled
-
-	message_admins("<span class='adminnotice'>[key_name_admin(src)] [SSmedals.hub_enabled ? "disabled" : "enabled"] the medal hub lockout.</span>")
-	SSblackbox.record_feedback("tally", "admin_verb", 1, "Toggle Medal Disable") // If...
-	log_admin("[key_name(src)] [SSmedals.hub_enabled ? "disabled" : "enabled"] the medal hub lockout.")
-
-
 /client/proc/visualise_active_turfs()
 	set category = "Debug"
 	set name = "Visualise Active Turfs"
 
-	if(!check_rights(R_DEBUG))
+	if(!check_rights(R_DEBUG | R_VIEWRUNTIMES))
 		return
 
 	// This can potentially iterate through a list thats 20k things long. Give ample warning to the user
 	var/confirm = alert(usr, "WARNING: This process is lag intensive and should only be used if the atmos controller is screaming bloody murder. Are you sure you with to continue", "WARNING", "Im sure", "Nope")
 	if(confirm != "Im sure")
 		return
+
+	var/display_turfs_overlay = FALSE
+	var/do_display_turf_overlay = alert(usr, "Would you like to have all active turfs have a client side overlay applied as well?", "Optional", "Yep", "Nope")
+	if(do_display_turf_overlay == "Yep")
+		display_turfs_overlay = TRUE
 
 	message_admins("[key_name_admin(usr)] is visualising active atmos turfs. Server may lag.")
 
@@ -943,6 +943,8 @@ GLOBAL_PROTECT(AdminProcCallSpamPrevention)
 		if(!zlevel_turf_indexes["[T.z]"])
 			zlevel_turf_indexes["[T.z]"] = list()
 		zlevel_turf_indexes["[T.z]"] |= T
+		if(display_turfs_overlay)
+			usr.client.images += image('icons/effects/alphacolors.dmi', T, "red")
 		CHECK_TICK
 
 	// Sort the keys

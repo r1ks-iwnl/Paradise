@@ -11,6 +11,7 @@
 	bitesize = 3
 	list_reagents = list("plantmatter" = 2)
 	tastes = list("tofu" = 1)
+	ingredient_name = "tofu chunk"
 
 /obj/item/reagent_containers/food/snacks/fried_tofu
 	name = "fried tofu"
@@ -23,8 +24,8 @@
 
 /obj/item/reagent_containers/food/snacks/soydope
 	name = "soy dope"
-	desc = "Like regular dope, but for the health concious consumer."
 	icon_state = "soydope"
+	desc = "Like regular dope, but for the health conscious consumer."
 	trash = /obj/item/trash/plate
 	filling_color = "#C4BF76"
 	list_reagents = list("nutriment" = 2)
@@ -52,6 +53,9 @@
 	filling_color = "#FFF700"
 	tastes = list("cheese" = 1)
 
+/obj/item/reagent_containers/food/snacks/cheesewedge/presliced
+	list_reagents = list("nutriment" = 3, "vitamin" = 1, "cheese" = 4)
+	
 /obj/item/reagent_containers/food/snacks/weirdcheesewedge
 	name = "weird cheese"
 	desc = "Some kind of... gooey, messy, gloopy thing. Similar to cheese, but only in the broad sense of the word."
@@ -73,21 +77,20 @@
 	list_reagents = list("plantmatter" = 3, "vitamin" = 1)
 	tastes = list("mushroom" = 1)
 
-/obj/item/reagent_containers/food/snacks/tomatomeat
-	name = "tomato slice"
-	desc = "A slice from a huge tomato."
-	icon_state = "tomatomeat"
-	filling_color = "#DB0000"
-	bitesize = 6
-	list_reagents = list("protein" = 2)
-	tastes = list("tomato" = 1)
-
 /obj/item/reagent_containers/food/snacks/watermelonslice
 	name = "watermelon slice"
 	desc = "A slice of watery goodness."
 	icon_state = "watermelonslice" // Sprite created by https://github.com/binarysudoku for Goonstation, They have relicensed it for our use.
 	filling_color = "#FF3867"
 	tastes = list("watermelon" = 1)
+
+/obj/item/reagent_containers/food/snacks/tomatoslice
+	name = "tomato slice"
+	desc = "A fresh slice of tomato."
+	icon_state = "tomatoslice"
+	filling_color = "#DB0000"
+	list_reagents = list("plantmatter" = 2)
+	tastes = list("tomato" = 1)
 
 /obj/item/reagent_containers/food/snacks/pineappleslice
 	name = "pineapple slices"
@@ -153,15 +156,16 @@
 	list_reagents = list("nutriment" = 5, "sugar" = 5)
 	tastes = list("dough" = 1, "sugar" = 1)
 
+/obj/item/reagent_containers/food/snacks/cookiedough/update_name()
+	. = ..()
+	if(flat)
+		name = "flat pastry dough"
 
-/obj/item/reagent_containers/food/snacks/cookiedough/update_icon()
-    if(flat)
-        icon_state = "cookiedough_flat"
-        name = "flat pastry dough"
-    else
-        icon_state = "cookiedough"
-
-
+/obj/item/reagent_containers/food/snacks/cookiedough/update_icon_state()
+	if(flat)
+		icon_state = "cookiedough_flat"
+	else
+		icon_state = "cookiedough"
 
 // Dough + rolling pin = flat cookie dough // Flat dough + circular cutter = unbaked cookies
 /obj/item/reagent_containers/food/snacks/cookiedough/attackby(obj/item/I, mob/user, params)
@@ -169,7 +173,7 @@
 		if(isturf(loc))
 			to_chat(user, "<span class='notice'>You flatten [src].</span>")
 			flat = TRUE
-			update_icon()
+			update_appearance(UPDATE_NAME|UPDATE_ICON_STATE)
 		else
 			to_chat(user, "<span class='notice'>You need to put [src] on a surface to roll it out!</span>")
 	else if(istype(I, /obj/item/kitchen/cutter) && flat)

@@ -43,12 +43,10 @@
 			new /obj/item/tank/internals/emergency_oxygen/engi(src)
 			new /obj/item/clothing/mask/breath(src)
 			new /obj/item/storage/firstaid/o2(src)
-		if("nothing")
-			// doot
 
 		// teehee - Ah, tg coders...
 		if("delete")
-			qdel(src)
+			qdel(src) // Please make this use init hints its called from Initialize() I beg
 
 
 /obj/structure/closet/emcloset/legacy/populate_contents()
@@ -162,6 +160,6 @@
 
 /obj/structure/closet/bombclosetsecurity/populate_contents()
 	new /obj/item/clothing/suit/bomb_suit/security( src )
-	new /obj/item/clothing/under/rank/security( src )
+	new /obj/item/clothing/under/rank/security/officer( src )
 	new /obj/item/clothing/shoes/brown( src )
 	new /obj/item/clothing/head/bomb_hood/security( src )

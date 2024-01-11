@@ -10,11 +10,15 @@
 /obj/item/projectile/bullet/weakbullet //beanbag, heavy stamina damage
 	name = "beanbag slug"
 	damage = 5
-	stamina = 80
+	stamina = 40
 
-/obj/item/projectile/bullet/c38
-	name = ".38 bullet"
-	damage = 25
+/obj/item/projectile/bullet/weakbullet/on_hit(atom/target, blocked = 0)
+	. = ..()
+	if(isliving(target))
+		var/mob/living/L = target
+		if(L.move_resist < INFINITY)
+			var/atom/throw_target = get_edge_target_turf(L, get_dir(src, get_step_away(L, starting)))
+			L.throw_at(throw_target, 1, 2)
 
 /obj/item/projectile/bullet/weakbullet/booze
 
@@ -68,24 +72,34 @@
 
 /obj/item/projectile/bullet/armourpiercing
 	damage = 17
-	armour_penetration = 10
+	armour_penetration_flat = 10
 
 /obj/item/projectile/bullet/armourpiercing/wt550
 	damage = 15
-	armour_penetration = 40
+	armour_penetration_percentage = 50
+	armour_penetration_flat = 25
 
 /obj/item/projectile/bullet/pellet
 	name = "pellet"
 	damage = 12.5
 	tile_dropoff = 0.75
 	tile_dropoff_s = 1.25
-	armour_penetration = -30
+	armour_penetration_flat = -20
 
 /obj/item/projectile/bullet/pellet/rubber
 	name = "rubber pellet"
 	damage = 3
-	stamina = 25
+	stamina = 12.5
 	icon_state = "bullet-r"
+	armour_penetration_flat = -10
+
+/obj/item/projectile/bullet/pellet/rubber/on_hit(atom/target, blocked = 0)
+	. = ..()
+	if(!ishuman(target))
+		return
+	var/mob/living/carbon/human/H = target
+	if(H.getStaminaLoss() >= 60)
+		H.KnockDown(8 SECONDS)
 
 /obj/item/projectile/bullet/pellet/weak
 	tile_dropoff = 0.55		//Come on it does 6 damage don't be like that.
@@ -96,8 +110,8 @@
 	..()
 
 /obj/item/projectile/bullet/pellet/weak/on_range()
- 	do_sparks(1, 1, src)
- 	..()
+	do_sparks(1, 1, src)
+	..()
 
 /obj/item/projectile/bullet/pellet/overload
 	damage = 3
@@ -116,17 +130,17 @@
 		M.AdjustSilence(4 SECONDS)	// HELP MIME KILLING ME IN MAINT
 
 /obj/item/projectile/bullet/pellet/overload/on_hit(atom/target, blocked = 0)
- 	..()
- 	explosion(target, 0, 0, 2)
+	..()
+	explosion(target, 0, 0, 2)
 
 /obj/item/projectile/bullet/pellet/overload/on_range()
- 	explosion(src, 0, 0, 2)
- 	do_sparks(3, 3, src)
- 	..()
+	explosion(src, 0, 0, 2)
+	do_sparks(3, 3, src)
+	..()
 
 /obj/item/projectile/bullet/midbullet
 	damage = 20
-	stamina = 65 //two rounds from the c20r knocks people down
+	stamina = 45 // Three rounds from the c20r knocks unarmoured people down, four for people with bulletproof
 
 /obj/item/projectile/bullet/midbullet_r
 	damage = 5
@@ -140,17 +154,23 @@
 
 /obj/item/projectile/bullet/midbullet3/hp
 	damage = 40
-	armour_penetration = -50
+	armour_penetration_flat = -40
 
 /obj/item/projectile/bullet/midbullet3/ap
 	damage = 27
-	armour_penetration = 40
+	armour_penetration_flat = 40
 
 /obj/item/projectile/bullet/midbullet3/fire/on_hit(atom/target, blocked = 0)
 	if(..(target, blocked))
 		var/mob/living/M = target
 		M.adjust_fire_stacks(1)
 		M.IgniteMob()
+
+/obj/item/projectile/bullet/midbullet3/overgrown
+	icon = 'icons/obj/ammo.dmi'
+	item_state = "peashooter_bullet"
+	icon_state = "peashooter_bullet"
+	damage = 25
 
 /obj/item/projectile/bullet/heavybullet
 	damage = 35
@@ -185,7 +205,7 @@
 	icon = 'icons/obj/meteor.dmi'
 	icon_state = "dust"
 	damage = 30
-	weaken = 8 SECONDS
+	knockdown = 8 SECONDS
 	hitsound = 'sound/effects/meteorimpact.ogg'
 
 /obj/item/projectile/bullet/meteorshot/on_hit(atom/target, blocked = 0)
@@ -217,6 +237,10 @@
 			for(var/obj/item/mecha_parts/mecha_equipment/weapon/honker in chassis.equipment)
 				honker.set_ready_state(0)
 
+/obj/item/projectile/bullet/mime/nonlethal
+	damage = 0 /// We deal no normal damage...
+	stamina = 40 /// ...Rather a large amount of stamina damage. Used in the mime mecha
+
 /obj/item/projectile/bullet/mime/fake
 	damage = 0
 	nodamage = TRUE
@@ -237,19 +261,24 @@
 /obj/item/projectile/bullet/dart/on_hit(atom/target, blocked = 0, hit_zone)
 	if(iscarbon(target))
 		var/mob/living/carbon/M = target
-		if(blocked != 100)
+		if(blocked != INFINITY)
 			if(M.can_inject(null, FALSE, hit_zone, piercing)) // Pass the hit zone to see if it can inject by whether it hit the head or the body.
 				..()
+
+				for(var/datum/reagent/R as anything in reagents.reagent_list)
+					if(initial(R.id) == "????") // Yes this is a specific case that we don't really want
+						continue
+					reagents.reaction(M, REAGENT_INGEST, 0.1)
 				reagents.trans_to(M, reagents.total_volume)
-				return 1
+				return TRUE
 			else
-				blocked = 100
+				blocked = INFINITY
 				target.visible_message("<span class='danger'>[src] was deflected!</span>", \
 									"<span class='userdanger'>You were protected against [src]!</span>")
 	..(target, blocked, hit_zone)
 	reagents.set_reacting(TRUE)
 	reagents.handle_reactions()
-	return 1
+	return TRUE
 
 /obj/item/projectile/bullet/dart/metalfoam
 
@@ -265,6 +294,9 @@
 	icon = 'icons/obj/chemical.dmi'
 	icon_state = "syringeproj"
 
+/obj/item/projectile/bullet/dart/syringe/pierce_ignore
+	piercing = TRUE
+
 /obj/item/projectile/bullet/dart/syringe/tranquilizer
 
 /obj/item/projectile/bullet/dart/syringe/tranquilizer/New()
@@ -276,12 +308,13 @@
 	icon_state = "neurotoxin"
 	damage = 5
 	damage_type = TOX
-	weaken = 10 SECONDS
+	stamina = 40
+	knockdown = 10 SECONDS
 
 /obj/item/projectile/bullet/neurotoxin/on_hit(atom/target, blocked = 0)
 	if(isalien(target))
-		weaken = 0
-		nodamage = 1
+		knockdown = 0
+		nodamage = TRUE
 	. = ..() // Execute the rest of the code.
 
 /obj/item/projectile/bullet/cap

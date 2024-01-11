@@ -2,10 +2,10 @@
 	name = "gun"
 	desc = "It's a gun. It's pretty terrible, though."
 	icon = 'icons/obj/guns/projectile.dmi'
-	icon_state = "detective"
+	icon_state = "revolver_bright"
 	item_state = "gun"
 	flags =  CONDUCT
-	slot_flags = SLOT_BELT
+	slot_flags = SLOT_FLAG_BELT
 	materials = list(MAT_METAL=2000)
 	w_class = WEIGHT_CLASS_NORMAL
 	throwforce = 5
@@ -13,18 +13,18 @@
 	throw_range = 5
 	force = 5
 	origin_tech = "combat=1"
-	needs_permit = 1
+	needs_permit = TRUE
 	attack_verb = list("struck", "hit", "bashed")
 
 	var/fire_sound = "gunshot"
 	var/magin_sound = 'sound/weapons/gun_interactions/smg_magin.ogg'
 	var/magout_sound = 'sound/weapons/gun_interactions/smg_magout.ogg'
 	var/fire_sound_text = "gunshot" //the fire sound that shows in chat messages: laser blast, gunshot, etc.
-	var/suppressed = 0					//whether or not a message is displayed when fired
-	var/can_suppress = 0
-	var/can_unsuppress = 1
+	var/suppressed = FALSE					//whether or not a message is displayed when fired
+	var/can_suppress = FALSE
+	var/can_unsuppress = TRUE
 	var/recoil = 0						//boom boom shake the room
-	var/clumsy_check = 1
+	var/clumsy_check = TRUE
 	var/obj/item/ammo_casing/chambered = null
 	var/trigger_guard = TRIGGER_GUARD_NORMAL	//trigger guard on the weapon, hulks can't fire them with their big meaty fingers
 	var/sawn_desc = null				//description change if weapon is sawn-off
@@ -33,6 +33,7 @@
 	var/fire_delay = 0					//rate of fire for burst firing and semi auto
 	var/firing_burst = 0				//Prevent the weapon from firing again while already firing
 	var/semicd = 0						//cooldown handler
+	var/execution_speed = 6 SECONDS
 	var/weapon_weight = WEAPON_LIGHT
 	var/list/restricted_species
 
@@ -47,7 +48,7 @@
 	righthand_file = 'icons/mob/inhands/guns_righthand.dmi'
 
 	var/obj/item/flashlight/gun_light = null
-	var/can_flashlight = 0
+	var/can_flashlight = FALSE
 
 	var/can_bayonet = FALSE //if a bayonet can be added or removed if it already has one.
 	var/obj/item/kitchen/knife/bayonet
@@ -70,14 +71,18 @@
 	var/zoom_amt = 3 //Distance in TURFs to move the user's screen forward (the "zoom" effect)
 	var/datum/action/toggle_scope_zoom/azoom
 
-/obj/item/gun/New()
-	..()
+/obj/item/gun/Initialize(mapload)
+	. = ..()
 	if(gun_light)
 		verbs += /obj/item/gun/proc/toggle_gunlight
 	build_zooming()
+	ADD_TRAIT(src, TRAIT_CAN_POINT_WITH, ROUNDSTART_TRAIT)
 
 /obj/item/gun/Destroy()
 	QDEL_NULL(bayonet)
+	QDEL_NULL(chambered)
+	QDEL_NULL(azoom)
+	QDEL_NULL(gun_light)
 	return ..()
 
 /obj/item/gun/handle_atom_del(atom/A)
@@ -98,8 +103,6 @@
 	else if(can_bayonet)
 		. += "It has a <b>bayonet</b> lug on it."
 
-/obj/item/gun/detailed_examine() // Truly detailed
-	return "This is a gun."
 
 /obj/item/gun/proc/process_chamber()
 	return 0
@@ -117,9 +120,10 @@
 	if(recoil)
 		shake_camera(user, recoil + 1, recoil)
 
-	var/muzzle_range = chambered.muzzle_flash_range
-	var/muzzle_strength = chambered.muzzle_flash_strength
+	var/muzzle_range = chambered?.muzzle_flash_range
+	var/muzzle_strength = chambered?.muzzle_flash_strength
 	var/muzzle_flash_time = 0.2 SECONDS
+
 	if(suppressed)
 		playsound(user, fire_sound, 10, TRUE, ignore_walls = FALSE, extrarange = SILENCED_SOUND_EXTRARANGE, falloff_distance = 0)
 		muzzle_range *= 0.5
@@ -167,7 +171,10 @@
 
 	if(flag)
 		if(user.zone_selected == "mouth")
-			handle_suicide(user, target, params)
+			if(HAS_TRAIT(user, TRAIT_BADASS))
+				user.visible_message("<span class='danger'>[user] blows smoke off of [src]'s barrel. What a badass.</span>")
+			else
+				handle_suicide(user, target, params)
 			return
 
 
@@ -181,7 +188,7 @@
 				user.drop_item()
 				return
 
-	if(weapon_weight == WEAPON_HEAVY && user.get_inactive_hand())
+	if(!HAS_TRAIT(user, TRAIT_BADASS) && weapon_weight == WEAPON_HEAVY && user.get_inactive_hand())
 		to_chat(user, "<span class='userdanger'>You need both hands free to fire \the [src]!</span>")
 		return
 
@@ -194,9 +201,10 @@
 			if(G == src || G.weapon_weight >= WEAPON_MEDIUM)
 				continue
 			else if(G.can_trigger_gun(user))
-				bonus_spread += 24 * G.weapon_weight
+				if(!HAS_TRAIT(user, TRAIT_BADASS))
+					bonus_spread += 24 * G.weapon_weight
 				loop_counter++
-				addtimer(CALLBACK(G, .proc/process_fire, target, user, 1, params, null, bonus_spread), loop_counter)
+				addtimer(CALLBACK(G, PROC_REF(process_fire), target, user, 1, params, null, bonus_spread), loop_counter)
 
 	process_fire(target,user,1,params, null, bonus_spread)
 
@@ -233,11 +241,11 @@
 			if(!user)
 				break
 			if(!issilicon(user))
-				if( i>1 && !(src in get_both_hands(user))) //for burst firing
+				if(i>1 && !(src in get_both_hands(user))) //for burst firing
 					break
 			if(chambered)
 				sprd = round((pick(0.5, -0.5)) * (randomized_gun_spread + randomized_bonus_spread))
-				if(!chambered.fire(target, user, params, ,suppressed, zone_override, sprd))
+				if(!chambered.fire(target = target, user = user, params = params, distro = null, quiet = suppressed, zone_override = zone_override, spread = sprd, firer_source_atom = src))
 					shoot_with_empty_chamber(user)
 					break
 				else
@@ -259,7 +267,7 @@
 					to_chat(user, "<span class='warning'>[src] is lethally chambered! You don't want to risk harming anyone...</span>")
 					return
 			sprd = round((pick(1,-1)) * (randomized_gun_spread + randomized_bonus_spread))
-			if(!chambered.fire(target, user, params, , suppressed, zone_override, sprd))
+			if(!chambered.fire(target = target, user = user, params = params, distro = null, quiet = suppressed, zone_override = zone_override, spread = sprd, firer_source_atom = src))
 				shoot_with_empty_chamber(user)
 				return
 			else
@@ -316,7 +324,7 @@
 					A.Grant(user)
 
 	if(unique_rename)
-		if(istype(I, /obj/item/pen))
+		if(is_pen(I))
 			var/t = rename_interactive(user, I, use_prefix = FALSE)
 			if(!isnull(t))
 				to_chat(user, "<span class='notice'>You name the gun [name]. Say hello to your new friend.</span>")
@@ -359,20 +367,13 @@
 		clear_bayonet()
 
 /obj/item/gun/proc/toggle_gunlight()
-	set name = "Toggle Gun Light"
-	set category = "Object"
-	set desc = "Click to toggle your weapon's attached flashlight."
-
 	if(!gun_light)
 		return
-
-	var/mob/living/carbon/human/user = usr
-	if(!isturf(user.loc))
-		to_chat(user, "<span class='warning'>You cannot turn the light on while in this [user.loc]!</span>")
 	gun_light.on = !gun_light.on
-	to_chat(user, "<span class='notice'>You toggle the gun light [gun_light.on ? "on":"off"].</span>")
-
-	playsound(user, 'sound/weapons/empty.ogg', 100, 1)
+	var/mob/living/carbon/human/user = usr
+	if(user)
+		to_chat(user, "<span class='notice'>You toggle the gun light [gun_light.on ? "on":"off"].</span>")
+	playsound(src, 'sound/weapons/empty.ogg', 100, 1)
 	update_gun_light(user)
 
 /obj/item/gun/proc/update_gun_light(mob/user = null)
@@ -398,7 +399,7 @@
 		knife_overlay = null
 	return TRUE
 
-/obj/item/gun/extinguish_light()
+/obj/item/gun/extinguish_light(force = FALSE)
 	if(gun_light?.on)
 		toggle_gunlight()
 		visible_message("<span class='danger'>[src]'s light fades and turns off.</span>")
@@ -419,14 +420,25 @@
 		reskin_gun(user)
 
 /obj/item/gun/proc/reskin_gun(mob/M)
-	var/choice = input(M,"Warning, you can only reskin your weapon once!","Reskin Gun") in options
+	var/list/skins = list()
+	for(var/I in options)
+		skins[I] = image(icon, icon_state = options[I])
+	var/choice = show_radial_menu(M, src, skins, radius = 40, custom_check = CALLBACK(src, PROC_REF(reskin_radial_check), M), require_near = TRUE)
 
-	if(src && choice && !current_skin && !M.incapacitated() && in_range(M,src))
-		if(options[choice] == null)
-			return
+	if(choice && reskin_radial_check(M) && !current_skin)
 		current_skin = options[choice]
 		to_chat(M, "Your gun is now skinned as [choice]. Say hello to your new friend.")
 		update_icon()
+		M.update_inv_r_hand()
+		M.update_inv_l_hand()
+
+/obj/item/gun/proc/reskin_radial_check(mob/user)
+	if(!ishuman(user))
+		return FALSE
+	var/mob/living/carbon/human/H = user
+	if(!src || !H.is_in_hands(src) || HAS_TRAIT(H, TRAIT_HANDS_BLOCKED))
+		return FALSE
+	return TRUE
 
 /obj/item/gun/proc/handle_suicide(mob/living/carbon/human/user, mob/living/carbon/human/target, params)
 	if(!ishuman(user) || !ishuman(target))
@@ -444,7 +456,7 @@
 
 	semicd = 1
 
-	if(!do_mob(user, target, 120) || user.zone_selected != "mouth")
+	if(!do_mob(user, target, execution_speed) || user.zone_selected != "mouth")
 		if(user)
 			if(user == target)
 				user.visible_message("<span class='notice'>[user] decided life was worth living.</span>")
@@ -472,7 +484,11 @@
 	button_icon_state = "sniper_zoom"
 	var/obj/item/gun/gun = null
 
-/datum/action/toggle_scope_zoom/Trigger()
+/datum/action/toggle_scope_zoom/Destroy()
+	gun = null
+	return ..()
+
+/datum/action/toggle_scope_zoom/Trigger(left_click)
 	gun.zoom(owner)
 
 /datum/action/toggle_scope_zoom/IsAvailable()
@@ -524,7 +540,7 @@
 	if(zoomable)
 		azoom = new()
 		azoom.gun = src
-		RegisterSignal(src, COMSIG_ITEM_EQUIPPED, .proc/ZoomGrantCheck)
+		RegisterSignal(src, COMSIG_ITEM_EQUIPPED, PROC_REF(ZoomGrantCheck))
 
 /**
  * Proc which will be called when the gun receives the `COMSIG_ITEM_EQUIPPED` signal.
@@ -540,7 +556,7 @@
  */
 /obj/item/gun/proc/ZoomGrantCheck(datum/source, mob/user, slot)
 	// Checks if the gun got equipped into either of the user's hands.
-	if(slot != slot_r_hand && slot != slot_l_hand)
+	if(slot != SLOT_HUD_RIGHT_HAND && slot != SLOT_HUD_LEFT_HAND)
 		// If its not in their hands, un-zoom, and remove the zoom action button.
 		zoom(user, FALSE)
 		azoom.Remove(user)

@@ -42,7 +42,7 @@
 
 /datum/gear/matches
 	display_name = "Box of matches"
-	path = /obj/item/storage/box/matches
+	path = /obj/item/storage/fancy/matches
 
 /datum/gear/candlebox
 	display_name = "Box of candles"
@@ -79,7 +79,7 @@
 
 /datum/gear/carpplushie
 	display_name = "Carp plushie"
-	path = /obj/item/toy/carpplushie
+	path = /obj/item/toy/plushie/carpplushie
 
 /datum/gear/greyplushie
 	display_name = "Grey Plushie"
@@ -89,10 +89,9 @@
 	display_name = "Nian plushie"
 	path = /obj/item/toy/plushie/nianplushie
 
-/datum/gear/sechud
-	display_name = "Classic security HUD"
-	path = /obj/item/clothing/glasses/hud/security
-	allowed_roles = list("Head of Security", "Warden", "Security Officer", "Internal Affairs Agent","Magistrate")
+/datum/gear/sharkplushie
+	display_name = "Shark plushie"
+	path = /obj/item/toy/plushie/shark
 
 /datum/gear/cryaonbox
 	display_name = "Box of crayons"
@@ -108,11 +107,15 @@
 
 /datum/gear/doublecards
 	display_name = "Double deck of standard cards"
-	path = /obj/item/deck/doublecards
+	path = /obj/item/deck/cards/doublecards
 
 /datum/gear/tarot
 	display_name = "Deck of tarot cards"
 	path = /obj/item/deck/tarot
+
+/datum/gear/unum
+	display_name = "Deck of UNUM! cards"
+	path = /obj/item/deck/unum
 
 /datum/gear/headphones
 	display_name = "Headphones"
@@ -153,6 +156,11 @@
 /datum/gear/skullbandana
 	display_name = "Bandana, skull"
 	path = /obj/item/clothing/mask/bandana/skull
+
+/datum/gear/pAI
+	display_name = "Personal Artificial Intelligence"
+	path = /obj/item/paicard
+	cost = 2
 
 /datum/gear/mob_hunt_game
 	display_name = "Nano-Mob Hunter GO! Cartridge"

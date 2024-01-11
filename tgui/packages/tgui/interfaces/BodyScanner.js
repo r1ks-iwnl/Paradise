@@ -22,12 +22,6 @@ const stats = [
 ];
 
 const abnormalities = [
-  [
-    'hasBorer',
-    'bad',
-    'Large growth detected in frontal lobe,' +
-      ' possibly cancerous. Surgical removal is recommended.',
-  ],
   ['hasVirus', 'bad', 'Viral pathogen detected in blood stream.'],
   ['blind', 'average', 'Cataracts detected.'],
   ['colourblind', 'average', 'Photoreceptor abnormalities detected.'],
@@ -38,11 +32,11 @@ const damages = [
   ['Respiratory', 'oxyLoss'],
   ['Brain', 'brainLoss'],
   ['Toxin', 'toxLoss'],
-  ['Radioactive', 'radLoss'],
+  ['Radiation', 'radLoss'],
   ['Brute', 'bruteLoss'],
-  ['Genetic', 'cloneLoss'],
+  ['Cellular', 'cloneLoss'],
   ['Burn', 'fireLoss'],
-  ['Paralysis', 'paralysis'],
+  ['Inebriation', 'drunkenness'],
 ];
 
 const damageRange = {
@@ -205,7 +199,7 @@ const BodyScannerMainAbnormalities = (props) => {
       {abnormalities.map((a, i) => {
         if (occupant[a[0]]) {
           return (
-            <Box color={a[1]} bold={a[1] === 'bad'}>
+            <Box key={a[2]} color={a[1]} bold={a[1] === 'bad'}>
               {a[2]}
             </Box>
           );
@@ -282,6 +276,7 @@ const BodyScannerMainOrgansExternal = (props) => {
               color={
                 (!!o.status.dead && 'bad') ||
                 ((!!o.internalBleeding ||
+                  !!o.burnWound ||
                   !!o.lungRuptured ||
                   !!o.status.broken ||
                   !!o.open ||
@@ -298,7 +293,7 @@ const BodyScannerMainOrgansExternal = (props) => {
                 min="0"
                 max={o.maxHealth}
                 mt={i > 0 && '0.5rem'}
-                value={o.totalLoss / 100}
+                value={o.totalLoss / o.maxHealth}
                 ranges={damageRange}
               >
                 <Box float="left" display="inline">
@@ -329,6 +324,7 @@ const BodyScannerMainOrgansExternal = (props) => {
               <Box color="average" display="inline">
                 {reduceOrganStatus([
                   !!o.internalBleeding && 'Internal bleeding',
+                  !!o.burnWound && 'Critical tissue burns',
                   !!o.lungRuptured && 'Ruptured lung',
                   !!o.status.broken && o.status.broken,
                   germStatus(o.germ_level),
@@ -390,7 +386,7 @@ const BodyScannerMainOrgansInternal = (props) => {
               <ProgressBar
                 min="0"
                 max={o.maxHealth}
-                value={o.damage / 100}
+                value={o.damage / o.maxHealth}
                 mt={i > 0 && '0.5rem'}
                 ranges={damageRange}
               >

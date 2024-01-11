@@ -61,20 +61,24 @@
 	icon_state = "scanner_open"
 	density = TRUE
 	anchored = TRUE
-	use_power = IDLE_POWER_USE
-	idle_power_usage = 50
-	active_power_usage = 300
-	interact_offline = 1
+	idle_power_consumption = 50
+	active_power_consumption = 300
+	interact_offline = TRUE
 	var/locked = FALSE
 	var/mob/living/carbon/occupant = null
 	var/obj/item/reagent_containers/glass/beaker = null
-	var/opened = 0
+	var/opened = FALSE
 	var/damage_coeff
 	var/scan_level
 	var/precision_coeff
 
-/obj/machinery/dna_scannernew/New()
-	..()
+/obj/machinery/dna_scannernew/examine(mob/user)
+	. = ..()
+	. += "<span class='info'>You can <b>Alt-Click</b> [src] to eject its occupant.</span>"
+	. += "<span class='info'>You can <b>Click-drag</b> someone to [src] to put them in.</span>"
+
+/obj/machinery/dna_scannernew/Initialize(mapload)
+	. = ..()
 	component_parts = list()
 	component_parts += new /obj/item/circuitboard/clonescanner(null)
 	component_parts += new /obj/item/stock_parts/scanning_module(null)
@@ -85,8 +89,8 @@
 	component_parts += new /obj/item/stack/cable_coil(null, 1)
 	RefreshParts()
 
-/obj/machinery/dna_scannernew/upgraded/New()
-	..()
+/obj/machinery/dna_scannernew/upgraded/Initialize(mapload)
+	. = ..()
 	component_parts = list()
 	component_parts += new /obj/item/circuitboard/clonescanner(null)
 	component_parts += new /obj/item/stock_parts/scanning_module/phasic(null)
@@ -116,15 +120,11 @@
 		return
 	go_out()
 
-/obj/machinery/dna_scannernew/verb/eject()
-	set src in oview(1)
-	set category = null
-	set name = "Eject DNA Scanner"
-
-	if(usr.incapacitated())
+/obj/machinery/dna_scannernew/AltClick(mob/user)
+	if(user.stat || HAS_TRAIT(user, TRAIT_HANDS_BLOCKED) || !Adjacent(user))
 		return
-	eject_occupant(usr)
-	add_fingerprint(usr)
+	eject_occupant(user)
+	add_fingerprint(user)
 
 /obj/machinery/dna_scannernew/Destroy()
 	eject_occupant(null, TRUE)
@@ -134,39 +134,19 @@
 	go_out(user, force)
 	for(var/obj/O in src)
 		if(!istype(O,/obj/item/circuitboard/clonescanner) && \
-		   !istype(O,/obj/item/stock_parts) && \
-		   !istype(O,/obj/item/stack/cable_coil) && \
-		   O != beaker)
+			!istype(O,/obj/item/stock_parts) && \
+			!istype(O,/obj/item/stack/cable_coil) && \
+			O != beaker)
 			O.forceMove(get_turf(src))//Ejects items that manage to get in there (exluding the components and beaker)
 	if(!occupant)
 		for(var/mob/M in src)//Failsafe so you can get mobs out
 			M.forceMove(get_turf(src))
 
-/obj/machinery/dna_scannernew/verb/move_inside()
-	set src in oview(1)
-	set category = null
-	set name = "Enter DNA Scanner"
-
-	if(usr.incapacitated() || usr.buckled) //are you cuffed, dying, lying, stunned or other
-		return
-	if(!ishuman(usr)) //Make sure they're a mob that has dna
-		to_chat(usr, "<span class='notice'>Try as you might, you can not climb up into [src].</span>")
-		return
+/obj/machinery/dna_scannernew/update_icon_state()
 	if(occupant)
-		to_chat(usr, "<span class='boldnotice'>[src] is already occupied!</span>")
-		return
-	if(usr.abiotic())
-		to_chat(usr, "<span class='boldnotice'>Subject may not hold anything in their hands.</span>")
-		return
-	if(usr.has_buckled_mobs()) //mob attached to us
-		to_chat(usr, "<span class='warning'>[usr] will not fit into [src] because [usr.p_they()] [usr.p_have()] a slime latched onto [usr.p_their()] head.</span>")
-		return
-	usr.stop_pulling()
-	usr.forceMove(src)
-	occupant = usr
-	icon_state = "scanner_occupied"
-	add_fingerprint(usr)
-	SStgui.update_uis(src)
+		icon_state = "scanner_occupied"
+	else
+		icon_state = "scanner_open"
 
 /obj/machinery/dna_scannernew/MouseDrop_T(atom/movable/O, mob/user)
 	if(!istype(O))
@@ -179,26 +159,26 @@
 		return
 	if(!ismob(O)) //humans only
 		return
-	if(istype(O, /mob/living/simple_animal) || istype(O, /mob/living/silicon)) //animals and robutts dont fit
+	if(isanimal(O) || issilicon(O)) //animals and robutts dont fit
 		return
 	if(!ishuman(user) && !isrobot(user)) //No ghosts or mice putting people into the sleeper
 		return
 	if(user.loc==null) // just in case someone manages to get a closet into the blue light dimension, as unlikely as that seems
 		return
-	if(!istype(user.loc, /turf) || !istype(O.loc, /turf)) // are you in a container/closet/pod/etc?
+	if(!isturf(user.loc) || !isturf(O.loc)) // are you in a container/closet/pod/etc?
 		return
 	if(occupant)
 		to_chat(user, "<span class='boldnotice'>[src] is already occupied!</span>")
-		return
+		return TRUE
 	var/mob/living/L = O
 	if(!istype(L) || L.buckled)
 		return
 	if(L.abiotic())
 		to_chat(user, "<span class='danger'>Subject may not hold anything in their hands.</span>")
-		return
+		return TRUE
 	if(L.has_buckled_mobs()) //mob attached to us
 		to_chat(user, "<span class='warning'>[L] will not fit into [src] because [L.p_they()] [L.p_have()] a slime latched onto [L.p_their()] head.</span>")
-		return
+		return TRUE
 	if(L == user)
 		visible_message("<span class='notice'>[user] climbs into [src].</span>")
 	else
@@ -206,6 +186,7 @@
 	put_in(L)
 	if(user.pulling == L)
 		user.stop_pulling()
+	return TRUE
 
 /obj/machinery/dna_scannernew/attackby(obj/item/I, mob/user, params)
 	if(exchange_parts(user, I))
@@ -247,9 +228,16 @@
 	return ..()
 
 /obj/machinery/dna_scannernew/crowbar_act(mob/user, obj/item/I)
-	if(default_deconstruction_crowbar(user, I))
-		for(var/obj/thing in contents) // in case there is something in the scanner
-			thing.forceMove(loc)
+	if(!panel_open)
+		return
+	. = TRUE
+	if(!I.use_tool(src, user, 0, volume = I.tool_volume))
+		return
+	if(flags & NODECONSTRUCT)//We need to check for this early or the contents could be moved before it checks for the flag normally
+		return
+	for(var/obj/thing in contents) // in case there is something in the scanner
+		thing.forceMove(loc)
+	default_deconstruction_crowbar(user, I)
 
 /obj/machinery/dna_scannernew/screwdriver_act(mob/user, obj/item/I)
 	if(occupant)
@@ -266,7 +254,7 @@
 /obj/machinery/dna_scannernew/proc/put_in(mob/M)
 	M.forceMove(src)
 	occupant = M
-	icon_state = "scanner_occupied"
+	update_icon(UPDATE_ICON_STATE)
 	SStgui.update_uis(src)
 
 	// search for ghosts, if the corpse is empty and the scanner is connected to a cloner
@@ -288,7 +276,7 @@
 		return
 	occupant.forceMove(loc)
 	occupant = null
-	icon_state = "scanner_open"
+	update_icon(UPDATE_ICON_STATE)
 	SStgui.update_uis(src)
 
 /obj/machinery/dna_scannernew/force_eject_occupant(mob/target)
@@ -304,7 +292,7 @@
 	if(A == occupant)
 		occupant = null
 		updateUsrDialog()
-		update_icon()
+		update_icon(UPDATE_ICON_STATE)
 		SStgui.update_uis(src)
 
 // Checks if occupants can be irradiated/mutated - prevents exploits where wearing full rad protection would still let you gain mutations
@@ -343,9 +331,8 @@
 	var/obj/item/disk/data/disk = null
 	var/selected_menu_key = PAGE_UI
 	anchored = TRUE
-	use_power = IDLE_POWER_USE
-	idle_power_usage = 10
-	active_power_usage = 400
+	idle_power_consumption = 10
+	active_power_consumption = 400
 
 /obj/machinery/computer/scan_consolenew/attackby(obj/item/I, mob/user, params)
 	if(istype(I, /obj/item/disk/data)) //INSERT SOME diskS
@@ -363,8 +350,8 @@
 	. = ..()
 	for(var/i=0;i<3;i++)
 		buffers[i+1]=new /datum/dna2/record
-	addtimer(CALLBACK(src, .proc/find_machine), 1 SECONDS)
-	addtimer(CALLBACK(src, .proc/ready), 25 SECONDS)
+	addtimer(CALLBACK(src, PROC_REF(find_machine)), 1 SECONDS)
+	addtimer(CALLBACK(src, PROC_REF(ready)), 25 SECONDS)
 
 /obj/machinery/computer/scan_consolenew/proc/find_machine()
 	for(var/obj/machinery/dna_scannernew/scanner in orange(1, src))
@@ -502,7 +489,7 @@
 /obj/machinery/computer/scan_consolenew/ui_act(action, params)
 	if(..())
 		return FALSE // don't update uis
-	if(!istype(usr.loc, /turf))
+	if(!isturf(usr.loc))
 		return FALSE // don't update uis
 	if(!src || !connected)
 		return FALSE // don't update uis
@@ -771,7 +758,7 @@
 						return
 					var/datum/dna2/record/buf = buffers[bufferId]
 					disk.buf = buf.copy()
-					disk.name = "data disk - '[buf.dna.real_name]'"
+					disk.name = "data disk - '[buf.name]'"
 		if("wipeDisk")
 			if(isnull(disk) || disk.read_only)
 				return
@@ -795,7 +782,7 @@
 
 	// Cooldown
 	injector_ready = FALSE
-	addtimer(CALLBACK(src, .proc/injector_cooldown_finish), 30 SECONDS)
+	addtimer(CALLBACK(src, PROC_REF(injector_cooldown_finish)), 30 SECONDS)
 
 	// Create it
 	var/datum/dna2/record/buf = buffers[buffer_id]

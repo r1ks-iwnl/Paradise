@@ -8,11 +8,12 @@
 	w_class = WEIGHT_CLASS_BULKY
 	max_integrity = 40
 	resistance_flags = FLAMMABLE
+	custom_fire_overlay = "fire"
 	var/rolled = FALSE
 
 /obj/item/flag/attackby(obj/item/W, mob/user, params)
 	. = ..()
-	if(is_hot(W) && !(resistance_flags & ON_FIRE))
+	if(W.get_heat() && !(resistance_flags & ON_FIRE))
 		user.visible_message("<span class='notice'>[user] lights [src] with [W].</span>", "<span class='notice'>You light [src] with [W].</span>", "<span class='warning'>You hear a low whoosh.</span>")
 		fire_act()
 
@@ -29,18 +30,16 @@
 	..()
 	update_icon()
 
-/obj/item/flag/update_icon()
-	overlays.Cut()
+/obj/item/flag/update_icon_state()
 	updateFlagIcon()
 	item_state = icon_state
 	if(rolled)
 		icon_state = "[icon_state]_rolled"
+		custom_fire_overlay = "fire_rolled"
+	else
+		custom_fire_overlay = initial(custom_fire_overlay)
 	if(resistance_flags & ON_FIRE)
 		item_state = "[item_state]_fire"
-	if((resistance_flags & ON_FIRE) && rolled)
-		overlays += image('icons/obj/flag.dmi', src , "fire_rolled")
-	else if((resistance_flags & ON_FIRE) && !rolled)
-		overlays += image('icons/obj/flag.dmi', src , "fire")
 	if(ismob(loc))
 		var/mob/M = loc
 		M.update_inv_r_hand()
@@ -55,13 +54,13 @@
 	icon_state = "ntflag"
 
 /obj/item/flag/clown
-	name = "\improper Clown Planet flag"
-	desc = "The banner of His Majesty, King Squiggles the Eighth."
+	name = "\improper Clown Unity flag"
+	desc = "The universal banner of clowns everywhere. It smells faintly of bananas."
 	icon_state = "clownflag"
 
 /obj/item/flag/mime
-	name = "\improper Mime Revolution flag"
-	desc = "The banner of the glorious revolutionary forces fighting the oppressors on Clown Planet."
+	name = "\improper Mime Unity flag"
+	desc = "The standard by which all mimes march to war, as cold as ice and silent as the grave."
 	icon_state = "mimeflag"
 
 /obj/item/flag/ian
@@ -196,6 +195,16 @@
 	desc = "A flag proudly boasting the logo of the cultists, sworn enemies of NT."
 	icon_state = "cultflag"
 
+/obj/item/flag/ussp
+	name = "\improper USSP flag"
+	desc = "A flag proudly boasting the logo of the USSP, a noticeable faction in the galaxy."
+	icon_state = "usspflag"
+
+/obj/item/flag/solgov
+	name = "\improper Trans-Solar Federation flag"
+	desc = "A flag proudly boasting the logo of the SolGov, allied to NT government originated from Earth."
+	icon_state = "solgovflag"
+
 //Chameleon
 
 /obj/item/flag/chameleon
@@ -250,7 +259,7 @@
 			log_game("[key_name(user)] has hidden [I] in [src] ready for detonation at [A.name] ([bombturf.x],[bombturf.y],[bombturf.z]).")
 			investigate_log("[key_name(user)] has hidden [I] in [src] ready for detonation at [A.name] ([bombturf.x],[bombturf.y],[bombturf.z]).", INVESTIGATE_BOMB)
 			add_attack_logs(user, src, "has hidden [I] ready for detonation in", ATKLOG_MOST)
-	else if(is_hot(I) && !(resistance_flags & ON_FIRE) && boobytrap && trapper)
+	else if(I.get_heat() && !(resistance_flags & ON_FIRE) && boobytrap && trapper)
 		var/turf/bombturf = get_turf(src)
 		var/area/A = get_area(bombturf)
 		log_game("[key_name_admin(user)] has lit [src] trapped with [boobytrap] by [key_name_admin(trapper)] at [A.name] ([bombturf.x],[bombturf.y],[bombturf.z]).")
@@ -274,7 +283,7 @@
 /obj/item/flag/chameleon/burn()
 	if(boobytrap)
 		fire_act()
-		addtimer(CALLBACK(src, .proc/prime_boobytrap), boobytrap.det_time)
+		addtimer(CALLBACK(src, PROC_REF(prime_boobytrap)), boobytrap.det_time)
 	else
 		..()
 

@@ -52,7 +52,7 @@
 			var/needed_amount = R.reqs[A]
 			for(var/B in contents)
 				if(ispath(B, A))
-					if (R.blacklist.Find(B))
+					if(R.blacklist.Find(B))
 						continue
 					if(contents[B] >= R.reqs[A])
 						continue main_loop
@@ -83,7 +83,7 @@
 				if(AM.flags_2 & HOLOGRAM_2)
 					continue
 				. += AM
-	for(var/slot in list(slot_r_store, slot_l_store))
+	for(var/slot in list(SLOT_HUD_RIGHT_STORE, SLOT_HUD_LEFT_STORE))
 		. += user.get_item_by_slot(slot)
 
 
@@ -112,7 +112,7 @@
 	var/list/possible_tools = list()
 	var/list/tools_used = list()
 	for(var/obj/item/I in user.contents) //searchs the inventory of the mob
-		if(istype(I, /obj/item/storage))
+		if(isstorage(I))
 			for(var/obj/item/SI in I.contents)
 				if(SI.tool_behaviour) //filters for tool behaviours
 					possible_tools += SI
@@ -137,7 +137,7 @@
 		return TRUE
 	var/list/other_possible_tools = list()
 	for(var/obj/item/I in user.contents) // searchs the inventory of the mob
-		if(istype(I, /obj/item/storage))
+		if(isstorage(I))
 			for(var/obj/item/SI in I.contents)
 				other_possible_tools += SI.type	// filters type paths
 		other_possible_tools += I.type
@@ -195,8 +195,8 @@
 /datum/personal_crafting/proc/requirements_deletion(datum/crafting_recipe/recipe, mob/user)
 	var/list/surroundings = get_environment(user)
 	var/list/parts_used = list()
-	var/list/reagent_containers_for_deletion = list()
 	var/list/item_stacks_for_deletion = list()
+	var/list/reagent_list_for_deletion = list()
 
 	for(var/thing in recipe.reqs)
 		var/needed_amount = recipe.reqs[thing]
@@ -206,13 +206,13 @@
 				part_reagent = new thing()
 				parts_used += part_reagent
 
-			for(var/obj/item/reagent_containers/container in (surroundings - reagent_containers_for_deletion))
+			for(var/obj/item/reagent_containers/container in surroundings)
 				var/datum/reagent/contained_reagent = container.reagents.get_reagent(thing)
 				if(!contained_reagent)
 					continue
 
 				var/extracted_amount = min(contained_reagent.volume, needed_amount)
-				reagent_containers_for_deletion[container] = list(contained_reagent, extracted_amount)
+				reagent_list_for_deletion[thing] += list(list(container, extracted_amount))
 				part_reagent.volume += extracted_amount
 				part_reagent.data += contained_reagent.data
 				needed_amount -= extracted_amount
@@ -247,22 +247,23 @@
 
 		else
 			for(var/i in 1 to needed_amount)
-				var/atom/movable/part_atom = locate(thing) in (surroundings - parts_used)
+				var/atom/movable/part_atom
+				for(var/atom/movable/candidate as anything in (surroundings - parts_used))
+					if(istype(candidate, thing) && !is_type_in_list(candidate, recipe.blacklist))
+						part_atom = candidate
+						break
+
 				if(!part_atom)
 					stack_trace("While crafting [recipe], the [thing] went missing!")
 					continue
 				parts_used += part_atom
 
-	for(var/obj/item/reagent_containers/container_to_clear as anything in reagent_containers_for_deletion)
-		var/datum/reagent/reagent_to_delete = reagent_containers_for_deletion[container_to_clear][1]
-		var/amount_to_delete = reagent_containers_for_deletion[container_to_clear][2]
+	for(var/datum/reagent/reagent_to_delete as anything in reagent_list_for_deletion)
+		for(var/list/reagent_info in reagent_list_for_deletion[reagent_to_delete])
+			var/obj/item/reagent_containers/container = reagent_info[1]
+			var/amount_to_delete = reagent_info[2]
 
-		if(amount_to_delete < reagent_to_delete.volume)
-			reagent_to_delete.volume -= amount_to_delete
-		else
-			container_to_clear.reagents.reagent_list -= reagent_to_delete
-		container_to_clear.reagents.conditional_update(container_to_clear)
-		container_to_clear.update_icon()
+			container.reagents.remove_reagent(reagent_to_delete.id, amount_to_delete)
 
 	for(var/obj/item/stack/stack_to_delete as anything in item_stacks_for_deletion)
 		var/amount_to_delete = item_stacks_for_deletion[stack_to_delete]
@@ -278,7 +279,7 @@
 				stack_trace("Part [part_path] went missing")
 			parts_returned += part
 			parts_used -= part
-	QDEL_LIST(parts_used)
+	QDEL_LIST_CONTENTS(parts_used)
 
 	return parts_returned
 
@@ -321,7 +322,7 @@
 	for(var/rec in GLOB.crafting_recipes)
 		var/datum/crafting_recipe/R = rec
 
-		if(!R.always_availible && !(R.type in user?.mind?.learned_recipes)) //User doesn't actually know how to make this.
+		if(!R.always_available && !(R.type in user?.mind?.learned_recipes)) //User doesn't actually know how to make this.
 			continue
 
 		if((R.category != cur_category) || (R.subcategory != cur_subcategory))
@@ -378,7 +379,7 @@
 
 //Next works nicely with modular arithmetic
 /datum/personal_crafting/proc/next_cat(readonly = TRUE)
-	if (!readonly)
+	if(!readonly)
 		viewing_subcategory = 1
 	. = viewing_category % categories.len + 1
 
@@ -390,7 +391,7 @@
 
 //Previous can go fuck itself
 /datum/personal_crafting/proc/prev_cat(readonly = TRUE)
-	if (!readonly)
+	if(!readonly)
 		viewing_subcategory = 1
 	if(viewing_category == categories.len)
 		. = viewing_category-1

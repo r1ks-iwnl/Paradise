@@ -3,7 +3,7 @@
 //Don't hear deadchat and are NOT normal ghosts
 //Admin-spawn or random event
 
-#define INVISIBILITY_REVENANT 50
+#define INVISIBILITY_REVENANT 45
 #define REVENANT_NAME_FILE "revenant_names.json"
 
 /mob/living/simple_animal/revenant
@@ -23,7 +23,7 @@
 	maxHealth =  INFINITY
 	see_in_dark = 8
 	lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE
-	universal_understand = 1
+	universal_understand = TRUE
 	response_help   = "passes through"
 	response_disarm = "swings at"
 	response_harm   = "punches"
@@ -33,8 +33,8 @@
 	harm_intent_damage = 0
 	friendly = "touches"
 	status_flags = 0
-	wander = 0
-	density = 0
+	wander = FALSE
+	density = FALSE
 	flying = TRUE
 	move_resist = INFINITY
 	mob_size = MOB_SIZE_TINY
@@ -84,7 +84,7 @@
 		to_chat(src, "<span class='revenboldnotice'>You are once more concealed.</span>")
 	if(unstun_time && world.time >= unstun_time)
 		unstun_time = 0
-		notransform = 0
+		notransform = FALSE
 		to_chat(src, "<span class='revenboldnotice'>You can move again!</span>")
 	update_spooky_icon()
 
@@ -137,7 +137,7 @@
 	remove_from_all_data_huds()
 	random_revenant_name()
 
-	addtimer(CALLBACK(src, .proc/firstSetupAttempt), 15 SECONDS) // Give admin 15 seconds to put in a ghost (Or wait 15 seconds before giving it objectives)
+	addtimer(CALLBACK(src, PROC_REF(firstSetupAttempt)), 15 SECONDS) // Give admin 15 seconds to put in a ghost (Or wait 15 seconds before giving it objectives)
 
 /mob/living/simple_animal/revenant/proc/random_revenant_name()
 	var/built_name = ""
@@ -153,7 +153,7 @@
 		giveSpells()
 	else
 		message_admins("Revenant was created but has no mind. Put a ghost inside, or a poll will be made in one minute.")
-		addtimer(CALLBACK(src, .proc/setupOrDelete), 1 MINUTES)
+		addtimer(CALLBACK(src, PROC_REF(setupOrDelete)), 1 MINUTES)
 
 /mob/living/simple_animal/revenant/proc/setupOrDelete()
 	if(mind)
@@ -168,37 +168,37 @@
 			key = theghost.key
 			giveObjectivesandGoals()
 			giveSpells()
+			dust_if_respawnable(theghost)
 		else
 			message_admins("No ghost was willing to take control of a mindless revenant. Deleting...")
 			qdel(src)
 
 /mob/living/simple_animal/revenant/proc/giveObjectivesandGoals()
-			mind.wipe_memory()
-			SEND_SOUND(src, sound('sound/effects/ghost.ogg'))
-			to_chat(src, "<br>")
-			to_chat(src, "<span class='deadsay'><font size=3><b>You are a revenant.</b></font></span>")
-			to_chat(src, "<b>Your formerly mundane spirit has been infused with alien energies and empowered into a revenant.</b>")
-			to_chat(src, "<b>You are not dead, not alive, but somewhere in between. You are capable of limited interaction with both worlds.</b>")
-			to_chat(src, "<b>You are invincible and invisible to everyone but other ghosts. Most abilities will reveal you, rendering you vulnerable.</b>")
-			to_chat(src, "<b>To function, you are to drain the life essence from humans. This essence is a resource, as well as your health, and will power all of your abilities.</b>")
-			to_chat(src, "<b><i>You do not remember anything of your past lives, nor will you remember anything about this one after your death.</i></b>")
-			to_chat(src, "<span class='motd'>For more information, check the wiki page: ([GLOB.configuration.url.wiki_url]/index.php/Revenant)</span>")
-			var/datum/objective/revenant/objective = new
-			objective.owner = mind
-			mind.objectives += objective
-			to_chat(src, "<b>Objective #1</b>: [objective.explanation_text]")
-			var/datum/objective/revenantFluff/objective2 = new
-			objective2.owner = mind
-			mind.objectives += objective2
-			to_chat(src, "<b>Objective #2</b>: [objective2.explanation_text]")
-			SSticker.mode.traitors |= mind //Necessary for announcing
+	mind.wipe_memory() // someone kill this and give revenants their own minds please
+	SEND_SOUND(src, sound('sound/effects/ghost.ogg'))
+	var/list/messages = list()
+	messages.Add("<span class='deadsay'><font size=3><b>You are a revenant.</b></font></span>")
+	messages.Add("<b>Your formerly mundane spirit has been infused with alien energies and empowered into a revenant.</b>")
+	messages.Add("<b>You are not dead, not alive, but somewhere in between. You are capable of limited interaction with both worlds.</b>")
+	messages.Add("<b>You are invincible and invisible to everyone but other ghosts. Most abilities will reveal you, rendering you vulnerable.</b>")
+	messages.Add("<b>To function, you are to drain the life essence from humans. This essence is a resource, as well as your health, and will power all of your abilities.</b>")
+	messages.Add("<b><i>You do not remember anything of your past lives, nor will you remember anything about this one after your death.</i></b>")
+	messages.Add("<span class='motd'>For more information, check the wiki page: ([GLOB.configuration.url.wiki_url]/index.php/Revenant)</span>")
+
+	SSticker.mode.traitors |= mind //Necessary for announcing
+	mind.add_mind_objective(/datum/objective/revenant)
+	mind.add_mind_objective(/datum/objective/revenantFluff)
+	messages.Add(mind.prepare_announce_objectives(FALSE))
+	to_chat(src, chat_box_red(messages.Join("<br>")))
 
 /mob/living/simple_animal/revenant/proc/giveSpells()
 	mind.AddSpell(new /obj/effect/proc_holder/spell/night_vision/revenant(null))
 	mind.AddSpell(new /obj/effect/proc_holder/spell/revenant_transmit(null))
-	mind.AddSpell(new /obj/effect/proc_holder/spell/aoe_turf/revenant/overload(null))
-	mind.AddSpell(new /obj/effect/proc_holder/spell/aoe_turf/revenant/defile(null))
-	mind.AddSpell(new /obj/effect/proc_holder/spell/aoe_turf/revenant/malfunction(null))
+	mind.AddSpell(new /obj/effect/proc_holder/spell/aoe/revenant/defile(null))
+	mind.AddSpell(new /obj/effect/proc_holder/spell/aoe/revenant/malfunction(null))
+	mind.AddSpell(new /obj/effect/proc_holder/spell/aoe/revenant/overload(null))
+	mind.AddSpell(new /obj/effect/proc_holder/spell/aoe/revenant/haunt_object(null))
+	mind.AddSpell(new /obj/effect/proc_holder/spell/aoe/revenant/hallucinations(null))
 	return TRUE
 
 
@@ -217,7 +217,7 @@
 		return FALSE
 
 	to_chat(src, "<span class='revendanger'>NO! No... it's too late, you can feel your essence breaking apart...</span>")
-	notransform = 1
+	notransform = TRUE
 	revealed = 1
 	invisibility = 0
 	playsound(src, 'sound/effects/screech.ogg', 100, 1)
@@ -249,7 +249,7 @@
 	if(holy_check(src))
 		return
 	var/turf/T = get_turf(src)
-	if(istype(T, /turf/simulated/wall))
+	if(iswallturf(T))
 		to_chat(src, "<span class='revenwarning'>You cannot use abilities from inside of a wall.</span>")
 		return 0
 	if(inhibited)
@@ -290,7 +290,7 @@
 /mob/living/simple_animal/revenant/proc/stun(time)
 	if(time <= 0)
 		return
-	notransform = 1
+	notransform = TRUE
 	if(!unstun_time)
 		to_chat(src, "<span class='revendanger'>You cannot move!</span>")
 		unstun_time = world.time + time
@@ -312,6 +312,7 @@
 		icon_state = icon_idle
 
 /datum/objective/revenant
+	needs_target = FALSE
 	var/targetAmount = 100
 
 /datum/objective/revenant/New()
@@ -320,33 +321,34 @@
 	..()
 
 /datum/objective/revenant/check_completion()
-	if(!owner || !istype(owner.current, /mob/living/simple_animal/revenant))
-		return 0
-	var/mob/living/simple_animal/revenant/R = owner.current
-	if(!R || R.stat == DEAD)
-		return 0
-	var/essence_stolen  = R.essence_accumulated
-	if(essence_stolen  < targetAmount)
-		return 0
-	return 1
+	var/total_essence = 0
+	for(var/datum/mind/M in get_owners())
+		if(!istype(M.current, /mob/living/simple_animal/revenant) || QDELETED(M.current))
+			continue
+		var/mob/living/simple_animal/revenant/R = M.current
+		total_essence += R.essence_accumulated
+	if(total_essence < targetAmount)
+		return FALSE
+	return TRUE
 
 /datum/objective/revenantFluff
+	needs_target = FALSE
 
 /datum/objective/revenantFluff/New()
 	var/list/explanationTexts = list("Assist and exacerbate existing threats at critical moments.", \
-									 "Cause as much chaos and anger as you can without being killed.", \
-									 "Damage and render as much of the station rusted and unusable as possible.", \
-									 "Disable and cause malfunctions in as many machines as possible.", \
-									 "Ensure that any holy weapons are rendered unusable.", \
-									 "Hinder the crew while attempting to avoid being noticed.", \
-									 "Make the crew as miserable as possible.", \
-									 "Make the clown as miserable as possible.", \
-									 "Make the captain as miserable as possible.", \
-									 "Make the AI as miserable as possible.", \
-									 "Annoy the ones that insult you the most.", \
-									 "Whisper ghost jokes into peoples heads.", \
-									 "Help the crew in critical situations, but take your payments in souls.", \
-									 "Prevent the use of energy weapons where possible.")
+									"Cause as much chaos and anger as you can without being killed.", \
+									"Damage and render as much of the station rusted and unusable as possible.", \
+									"Disable and cause malfunctions in as many machines as possible.", \
+									"Ensure that any holy weapons are rendered unusable.", \
+									"Hinder the crew while attempting to avoid being noticed.", \
+									"Make the crew as miserable as possible.", \
+									"Make the clown as miserable as possible.", \
+									"Make the captain as miserable as possible.", \
+									"Make the AI as miserable as possible.", \
+									"Annoy the ones that insult you the most.", \
+									"Whisper ghost jokes into peoples heads.", \
+									"Help the crew in critical situations, but take your payments in souls.", \
+									"Prevent the use of energy weapons where possible.")
 	explanation_text = pick(explanationTexts)
 	..()
 
@@ -379,7 +381,7 @@
 	if(!reforming || inert)
 		return ..()
 	user.visible_message("<span class='notice'>[user] scatters [src] in all directions.</span>", \
-						 "<span class='notice'>You scatter [src] across the area. The particles slowly fade away.</span>")
+						"<span class='notice'>You scatter [src] across the area. The particles slowly fade away.</span>")
 	user.drop_item()
 	qdel(src)
 
@@ -397,7 +399,7 @@
 	else if(reforming)
 		. += "<span class='revenwarning'>It is shifting and distorted. It would be wise to destroy this.</span>"
 
-/obj/item/ectoplasm/revenant/proc/reform()
+/obj/item/ectoplasm/revenant/proc/reform() // Unused proc, production doesn't have revenants revive
 	if(inert || !src)
 		return
 	var/key_of_revenant
@@ -429,7 +431,7 @@
 				visible_message("<span class='revenwarning'>[src] settles down and seems lifeless.</span>")
 				return
 		var/datum/mind/player_mind = new /datum/mind(key_of_revenant)
-		player_mind.active = 1
+		player_mind.active = TRUE
 		player_mind.transfer_to(R)
 		player_mind.assigned_role = SPECIAL_ROLE_REVENANT
 		player_mind.special_role = SPECIAL_ROLE_REVENANT

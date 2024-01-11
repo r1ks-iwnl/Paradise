@@ -12,6 +12,8 @@ export const KEY_CTRL = 17;
 export const KEY_ALT = 18;
 export const KEY_ESCAPE = 27;
 export const KEY_SPACE = 32;
+export const ARROW_KEY_UP = 38;
+export const ARROW_KEY_DOWN = 40;
 export const KEY_0 = 48;
 export const KEY_1 = 49;
 export const KEY_2 = 50;
@@ -48,6 +50,16 @@ export const KEY_W = 87;
 export const KEY_X = 88;
 export const KEY_Y = 89;
 export const KEY_Z = 90;
+export const KEY_NUMPAD_0 = 96;
+export const KEY_NUMPAD_1 = 97;
+export const KEY_NUMPAD_2 = 98;
+export const KEY_NUMPAD_3 = 99;
+export const KEY_NUMPAD_4 = 100;
+export const KEY_NUMPAD_5 = 101;
+export const KEY_NUMPAD_6 = 102;
+export const KEY_NUMPAD_7 = 103;
+export const KEY_NUMPAD_8 = 104;
+export const KEY_NUMPAD_9 = 105;
 export const KEY_EQUAL = 187;
 export const KEY_MINUS = 189;
 
@@ -60,6 +72,7 @@ const NO_PASSTHROUGH_KEYS = [
   KEY_TAB,
   KEY_CTRL,
   KEY_SHIFT,
+  KEY_ALT, // to prevent alt tabbing breaking shit
 ];
 
 // Tracks the "pressed" state of keys
@@ -100,6 +113,46 @@ const getKeyData = (e) => {
   };
 };
 
+const keyCodeToByond = (keyCode) => {
+  const dict = {
+    16: 'Shift',
+    17: 'Ctrl',
+    18: 'Alt',
+    33: 'Northeast',
+    34: 'Southeast',
+    35: 'Southwest',
+    36: 'Northwest',
+    37: 'West',
+    38: 'North',
+    39: 'East',
+    40: 'South',
+    45: 'Insert',
+    46: 'Delete',
+  };
+
+  if (dict[keyCode]) {
+    return dict[keyCode];
+  }
+  if ((keyCode >= 48 && keyCode <= 57) || (keyCode >= 65 && keyCode <= 90)) {
+    return String.fromCharCode(keyCode);
+  }
+  if (keyCode >= 96 && keyCode <= 105) {
+    return 'Numpad' + (keyCode - 96);
+  }
+  if (keyCode >= 112 && keyCode <= 123) {
+    return 'F' + (keyCode - 111);
+  }
+  if (keyCode === 188) {
+    return ',';
+  }
+  if (keyCode === 189) {
+    return '-';
+  }
+  if (keyCode === 190) {
+    return '.';
+  }
+};
+
 /**
  * Keyboard passthrough logic. This allows you to keep doing things
  * in game while the browser window is focused.
@@ -114,21 +167,23 @@ const handlePassthrough = (e, eventType) => {
   }
   const keyData = getKeyData(e);
   const { keyCode, ctrlKey, shiftKey } = keyData;
-  // NOTE: We pass through only Alt of all modifier keys, because Alt
-  // modifier (for toggling run/walk) is implemented very shittily
-  // in our codebase. We pass no other modifier keys, because they can
-  // be used internally as tgui hotkeys.
-  if (ctrlKey || shiftKey || NO_PASSTHROUGH_KEYS.includes(keyCode)) {
+  const byondKey = keyCodeToByond(keyCode);
+
+  if (NO_PASSTHROUGH_KEYS.includes(keyCode)) {
+    return;
+  }
+  if (eventType === 'keyup' && keyState[keyCode]) {
+    // this needs to happen regardless of ctrl or shift, else you can get stuck walking one way
+    logger.debug('passthrough', eventType, keyData);
+    return callByond('', { __keyup: byondKey });
+  }
+  if (ctrlKey || shiftKey) {
     return;
   }
   // Send this keypress to BYOND
   if (eventType === 'keydown' && !keyState[keyCode]) {
     logger.debug('passthrough', eventType, keyData);
-    return callByond('', { __keydown: keyCode });
-  }
-  if (eventType === 'keyup' && keyState[keyCode]) {
-    logger.debug('passthrough', eventType, keyData);
-    return callByond('', { __keyup: keyCode });
+    return callByond('', { __keydown: byondKey });
   }
 };
 
@@ -139,9 +194,10 @@ const handlePassthrough = (e, eventType) => {
 export const releaseHeldKeys = () => {
   for (let keyCode of Object.keys(keyState)) {
     if (keyState[keyCode]) {
+      const byondKey = keyCodeToByond(keyCode);
       logger.log(`releasing [${keyCode}] key`);
       keyState[keyCode] = false;
-      callByond('', { __keyup: keyCode });
+      callByond('', { __keyup: byondKey });
     }
   }
 };

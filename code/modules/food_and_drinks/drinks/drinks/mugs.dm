@@ -86,8 +86,8 @@
 	description = "So mesmerizing!"
 	state = "mug_rainbow"
 
-/obj/item/reagent_containers/food/drinks/mug/New()
-	..()
+/obj/item/reagent_containers/food/drinks/mug/Initialize(mapload)
+	. = ..()
 	if(preset)
 		return
 	if(novelty)
@@ -151,6 +151,12 @@
 	name = "chief medical officer's mug"
 	desc = "Fill it with something to keep you awake while you try to keep the crew alive."
 	icon_state = "mug_cmo"
+	preset = TRUE
+
+/obj/item/reagent_containers/food/drinks/mug/qm
+	name = "quartermaster's mug"
+	desc = "A newly imported mug, express delivery."
+	icon_state = "mug_qm"
 	preset = TRUE
 
 /obj/item/reagent_containers/food/drinks/mug/hop

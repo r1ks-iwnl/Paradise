@@ -368,7 +368,7 @@
 	return sanitize(input, allow_lines ? list("\t" = " ") : list("\n" = " ", "\t" = " "))
 
 /proc/trim_strip_html_properly(input, max_length = MAX_MESSAGE_LEN, allow_lines = 0)
-    return trim(strip_html_properly(input, max_length, allow_lines))
+	return trim(strip_html_properly(input, max_length, allow_lines))
 
 //Used in preferences' SetFlavorText and human's set_flavor verb
 //Previews a string of len or less length
@@ -399,8 +399,8 @@
 	return text_macro.Replace(rest, /proc/replace_text_macro)
 
 /proc/macro2html(text)
-    var/static/regex/text_macro = new("(\\xFF.)(.*)$")
-    return text_macro.Replace(text, /proc/replace_text_macro)
+	var/static/regex/text_macro = new("(\\xFF.)(.*)$")
+	return text_macro.Replace(text, /proc/replace_text_macro)
 
 /proc/dmm_encode(text)
 	// First, go through and nix out any of our escape sequences so we don't leave ourselves open to some escape sequence attack
@@ -411,7 +411,7 @@
 		var/index = findtext(text, char)
 		var/keylength = length(char)
 		while(index)
-			log_runtime(EXCEPTION("Bad string given to dmm encoder! [text]"))
+			stack_trace("Bad string given to dmm encoder! [text]")
 			// Replace w/ underscore to prevent "&#3&#123;4;" from cheesing the radar
 			// Should probably also use canon text replacing procs
 			text = copytext(text, 1, index) + "_" + copytext(text, index+keylength)
@@ -462,6 +462,10 @@
 	text = replacetext(text, "\[/i\]",		"</I>")
 	text = replacetext(text, "\[u\]",		"<U>")
 	text = replacetext(text, "\[/u\]",		"</U>")
+	if(findtext(text, "\[signfont\]") || findtext(text, "\[/signfont\]")) // Make sure the text is there before giving off an error
+		if(check_rights(R_EVENT))
+			text = replacetext(text, "\[signfont\]",		"<font face=\"[signfont]\"><i>")
+			text = replacetext(text, "\[/signfont\]",		"</i></font>")
 	if(sign)
 		text = replacetext(text, "\[sign\]",	"<font face=\"[signfont]\"><i>[user ? user.real_name : "Anonymous"]</i></font>")
 	if(fields)
@@ -492,6 +496,8 @@
 		text = replacetext(text, "\[row\]", 	"")
 		text = replacetext(text, "\[cell\]", 	"")
 		text = replacetext(text, "\[logo\]", 	"")
+		text = replacetext(text, "\[syndielogo\]", 	"")
+
 	if(istype(P, /obj/item/toy/crayon))
 		text = "<font face=\"[crayonfont]\" color=[P ? P.colour : "black"]><b>[text]</b></font>"
 	else 	// They are using "not a crayon" - formatting is OK and such
@@ -507,7 +513,8 @@
 		text = replacetext(text, "\[/grid\]",	"</td></tr></table>")
 		text = replacetext(text, "\[row\]",		"</td><tr>")
 		text = replacetext(text, "\[cell\]",	"<td>")
-		text = replacetext(text, "\[logo\]",	"&ZeroWidthSpace;<img src = ntlogo.png>")
+		text = replacetext(text, "\[logo\]",	"&ZeroWidthSpace;<img src='ntlogo.png'>")
+		text = replacetext(text, "\[syndielogo\]", 	"&ZeroWidthSpace;<img src='syndielogo.png'>")
 		text = replacetext(text, "\[time\]",	"[station_time_timestamp()]") // TO DO
 		text = replacetext(text, "\[date\]",	"[GLOB.current_date_string]")
 		text = replacetext(text, "\[station\]", "[SSmapping.map_datum.fluff_name]")
@@ -589,7 +596,8 @@
 	text = replacetext(text, "</td></tr></table>",		"\[/grid\]")
 	text = replacetext(text, "</td><tr>",				"\[row\]")
 	text = replacetext(text, "<td>",					"\[cell\]")
-	text = replacetext(text, "<img src = ntlogo.png>",	"\[logo\]")
+	text = replacetext(text, "<img src='ntlogo.png'>",	"\[logo\]")
+	text = replacetext(text, "<img src='syndielogo.png'>",	"\[syndielogo\]")
 	return text
 
 /datum/html/split_holder
@@ -673,34 +681,34 @@
 	switch(macro)
 		//prefixes/agnostic
 		if("the")
-			rest = text("\the []", rest)
+			rest = "\the [rest]"
 		if("a")
-			rest = text("\a []", rest)
+			rest = "\a [rest]"
 		if("an")
-			rest = text("\an []", rest)
+			rest = "\an [rest]"
 		if("proper")
-			rest = text("\proper []", rest)
+			rest = "\proper [rest]"
 		if("improper")
-			rest = text("\improper []", rest)
+			rest = "\improper [rest]"
 		if("roman")
-			rest = text("\roman []", rest)
+			rest = "\roman [rest]"
 		//postfixes
 		if("th")
-			base = text("[]\th", rest)
+			base = "[rest]\th"
 		if("s")
-			base = text("[]\s", rest)
+			base = "[rest]\s"
 		if("he")
-			base = text("[]\he", rest)
+			base = "[rest]\he"
 		if("she")
-			base = text("[]\she", rest)
+			base = "[rest]\she"
 		if("his")
-			base = text("[]\his", rest)
+			base = "[rest]\his"
 		if("himself")
-			base = text("[]\himself", rest)
+			base = "[rest]\himself"
 		if("herself")
-			base = text("[]\herself", rest)
+			base = "[rest]\herself"
 		if("hers")
-			base = text("[]\hers", rest)
+			base = "[rest]\hers"
 
 	. = base
 	if(rest)
@@ -725,3 +733,45 @@
 		return "#e67e22" // Patreon orange
 	return null
 
+
+// Removes HTML tags, preserving text
+/proc/strip_html_tags(the_text)
+	var/static/regex/html_replacer = regex("<\[^>]*>", "g")
+	return html_replacer.Replace(the_text, "")
+
+/proc/starts_with_vowel(text)
+	var/start_char = copytext(text, 1, 2)
+	switch(lowertext(start_char))
+		if("a", "e", "i", "o", "u")
+			return TRUE
+		else
+			return FALSE
+
+/**
+  * Formats num with an SI prefix.
+  *
+  * Returns a string formatted with a multiple of num and an SI prefix corresponding to an exponent of 10.
+  * Only considers exponents that are multiples of 3 (deca, deci, hecto, and centi are not included).
+  * A unit is not included in the string, the prefix is placed after the number with no spacing added anywhere.
+  * Listing of prefixes: https://en.wikipedia.org/wiki/Metric_prefix#List_of_SI_prefixes
+  */
+/proc/format_si_suffix(num)
+	if(num == 0)
+		return "[num]"
+
+	var/exponent = round_down(log(10, abs(num)))
+	var/ofthree = exponent / 3
+	if(exponent < 0)
+		ofthree = round(ofthree)
+	else
+		ofthree = round_down(ofthree)
+	if(ofthree == 0)
+		return "[num]"
+	return "[num / (10 ** (ofthree * 3))][GLOB.si_suffixes[round(length(GLOB.si_suffixes) / 2) + ofthree + 1]]"
+
+/**
+ * Creates a hyperlink for a specified wiki article.
+ */
+/proc/wiki_link(article_name, link_text = null)
+	var/url = "[GLOB.configuration.url.wiki_url]/index.php?title=[article_name]"
+	return "<a href=\"[url]\">[link_text ? link_text : url]</a>"

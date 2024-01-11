@@ -6,9 +6,15 @@
 	var/list/status_traits
 	var/list/comp_lookup
 	var/list/list/datum/callback/signal_procs
-	var/signal_enabled = FALSE
 	var/var_edited = FALSE //Warranty void if seal is broken
 	var/tmp/unique_datum_id = null
+
+/**
+  * A cached version of our \ref
+  * The brunt of \ref costs are in creating entries in the string tree (a tree of immutable strings)
+  * This avoids doing that more then once per datum by ensuring ref strings always have a reference to them after they're first pulled
+  */
+	var/cached_ref
 
 #ifdef REFERENCE_TRACKING
 	var/running_find_references
@@ -22,6 +28,9 @@
 	SHOULD_CALL_PARENT(TRUE)
 	tag = null
 
+	// Close our open TGUIs
+	SStgui.close_uis(src)
+
 	var/list/timers = active_timers
 	active_timers = null
 	for(var/thing in timers)
@@ -31,8 +40,6 @@
 		qdel(timer)
 
 	//BEGIN: ECS SHIT
-	signal_enabled = FALSE
-
 	var/list/dc = datum_components
 	if(dc)
 		var/all_components = dc[/datum/component]

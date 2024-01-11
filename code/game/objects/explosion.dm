@@ -105,7 +105,7 @@
 						M.playsound_local(epicenter, null, echo_volume, 1, frequency, S = explosion_echo_sound, distance_multiplier = 0)
 
 					if(creaking_explosion) // 5 seconds after the bang, the station begins to creak
-						addtimer(CALLBACK(M, /mob/proc/playsound_local, epicenter, null, rand(FREQ_LOWER, FREQ_UPPER), 1, frequency, null, null, FALSE, hull_creaking_sound, 0), CREAK_DELAY)
+						addtimer(CALLBACK(M, TYPE_PROC_REF(/mob, playsound_local), epicenter, null, rand(FREQ_LOWER, FREQ_UPPER), 1, frequency, null, null, FALSE, hull_creaking_sound, 0), CREAK_DELAY)
 
 		if(heavy_impact_range > 1)
 			var/datum/effect_system/explosion/E
@@ -156,10 +156,10 @@
 			//------- TURF FIRES -------
 
 			if(T)
-				if(flame_dist && prob(40) && !istype(T, /turf/space) && !T.density)
+				if(flame_dist && prob(40) && !isspaceturf(T) && !T.density)
 					new /obj/effect/hotspot(T) //Mostly for ambience!
 				if(dist > 0)
-					if(istype(T, /turf/simulated))
+					if(issimulatedturf(T))
 						var/turf/simulated/S = T
 						var/affecting_level
 						if(dist == 1)
@@ -195,9 +195,9 @@
 			if(istype(array, /obj/machinery/doppler_array))
 				var/obj/machinery/doppler_array/Array = array
 				Array.sense_explosion(x0,y0,z0,devastation_range,heavy_impact_range,light_impact_range,took,orig_dev_range,orig_heavy_range,orig_light_range)
-			if(istype(array, /obj/item/clothing/head/helmet/space/hardsuit/rd))
-				var/obj/item/clothing/head/helmet/space/hardsuit/rd/Helm_Array = array
-				Helm_Array.sense_explosion(x0,y0,z0,devastation_range,heavy_impact_range,light_impact_range,took,orig_dev_range,orig_heavy_range,orig_light_range)
+			if(istype(array, /obj/item/mod/module/reagent_scanner/advanced))
+				var/obj/item/mod/module/reagent_scanner/advanced/Mod_Array = array
+				Mod_Array.sense_explosion(x0,y0,z0,devastation_range,heavy_impact_range,light_impact_range,took,orig_dev_range,orig_heavy_range,orig_light_range)
 	return 1
 
 
@@ -236,7 +236,7 @@
 			heavy = 5
 			light = 7
 		if("Custom Bomb")
-			dev = input("Devestation range (Tiles):") as num
+			dev = input("Devastation range (Tiles):") as num
 			heavy = input("Heavy impact range (Tiles):") as num
 			light = input("Light impact range (Tiles):") as num
 

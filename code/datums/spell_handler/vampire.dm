@@ -25,7 +25,7 @@
 			to_chat(user, "<span class='warning'>You require at least [required_blood] units of usable blood to do that!</span>")
 		return FALSE
 	//chapel check
-	if(istype(get_area(user), /area/chapel) && !fullpower)
+	if(istype(get_area(user), /area/station/service/chapel) && !fullpower)
 		if(show_message)
 			to_chat(user, "<span class='warning'>Your powers are useless on this holy ground.</span>")
 		return FALSE
@@ -45,6 +45,8 @@
 	return blood_cost
 
 /datum/spell_handler/vampire/after_cast(list/targets, mob/user, obj/effect/proc_holder/spell/spell)
+	if(!spell.should_recharge_after_cast)
+		return
 	if(!required_blood)
 		return
 	var/datum/antagonist/vampire/vampire = user.mind.has_antag_datum(/datum/antagonist/vampire)

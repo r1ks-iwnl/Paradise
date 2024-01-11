@@ -50,7 +50,7 @@
 	if(current_user)
 		current_user.unset_machine()
 	QDEL_NULL(eyeobj)
-	QDEL_LIST(actions)
+	QDEL_LIST_CONTENTS(actions)
 	return ..()
 
 /obj/machinery/computer/camera_advanced/on_unset_machine(mob/M)
@@ -202,7 +202,7 @@
 
 
 	playsound(origin, 'sound/machines/terminal_prompt.ogg', 25, 0)
-	var/camera = input("Choose which camera you want to view", "Cameras") as null|anything in T
+	var/camera = tgui_input_list(target, "Choose which camera you want to view", "Cameras", T)
 	var/obj/machinery/camera/final = T[camera]
 	playsound(origin, "terminal_type", 25, 0)
 	if(final)

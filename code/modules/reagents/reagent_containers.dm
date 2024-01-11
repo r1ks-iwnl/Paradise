@@ -5,6 +5,7 @@
 	icon_state = null
 	w_class = WEIGHT_CLASS_TINY
 	var/amount_per_transfer_from_this = 5
+	var/visible_transfer_rate = TRUE
 	var/possible_transfer_amounts = list(5,10,15,25,30)
 	var/volume = 30
 	var/list/list_reagents = null
@@ -14,25 +15,31 @@
 	var/temperature_min = 0 // To limit the temperature of a reagent container can atain when exposed to heat/cold
 	var/temperature_max = 10000
 
-/obj/item/reagent_containers/verb/set_APTFT() //set amount_per_transfer_from_this
-	set name = "Set transfer amount"
-	set category = "Object"
-	set src in range(0)
-
-	if(usr.incapacitated())
+/obj/item/reagent_containers/AltClick(mob/user)
+	if(!Adjacent(user) || !length(possible_transfer_amounts) || !ishuman(user) || HAS_TRAIT(user, TRAIT_HANDS_BLOCKED))
 		return
+
 	var/default = null
 	if(amount_per_transfer_from_this in possible_transfer_amounts)
 		default = amount_per_transfer_from_this
-	var/N = input("Amount per transfer from this:", "[src]", default) as null|anything in possible_transfer_amounts
-	if(N)
-		amount_per_transfer_from_this = N
+	var/new_transfer_rate = input("Amount per transfer from this:", "[src]", default) as null|anything in possible_transfer_amounts
+	if(!new_transfer_rate)
+		return
 
-/obj/item/reagent_containers/New()
-	create_reagents(volume, temperature_min, temperature_max)
-	..()
-	if(!possible_transfer_amounts)
-		verbs -= /obj/item/reagent_containers/verb/set_APTFT
+	if(!Adjacent(user))
+		to_chat(user, "<span class='warning'>You have moved too far away!</span>")
+		return
+	if(!ishuman(user) || HAS_TRAIT(user, TRAIT_HANDS_BLOCKED))
+		to_chat(user, "<span class='warning'>You can't use your hands!</span>")
+		return
+
+	amount_per_transfer_from_this = new_transfer_rate
+	to_chat(user, "<span class='notice'>[src] will now transfer [amount_per_transfer_from_this] units at a time.</span>")
+
+/obj/item/reagent_containers/Initialize(mapload)
+	. = ..()
+	if(!reagents) // Some subtypes create their own reagents
+		create_reagents(volume, temperature_min, temperature_max)
 	if(spawned_disease)
 		var/datum/disease/F = new spawned_disease(0)
 		var/list/data = list("viruses" = list(F), "blood_color" = "#A10808")
@@ -54,12 +61,12 @@
 /obj/item/reagent_containers/proc/add_lid()
 	if(has_lid)
 		container_type ^= REFILLABLE | DRAINABLE
-		update_icon()
+		update_icon(UPDATE_OVERLAYS)
 
 /obj/item/reagent_containers/proc/remove_lid()
 	if(has_lid)
 		container_type |= REFILLABLE | DRAINABLE
-		update_icon()
+		update_icon(UPDATE_OVERLAYS)
 
 /obj/item/reagent_containers/attack_self(mob/user)
 	if(has_lid)
@@ -88,7 +95,9 @@
 /obj/item/reagent_containers/examine(mob/user)
 	. = ..()
 
-	// Food has no valid possible_transfer_amounts, and we don't want to show
-	// this message on examining food.
+	if(visible_transfer_rate)
+		. += "<span class='notice'>It will transfer [amount_per_transfer_from_this] unit[amount_per_transfer_from_this != 1 ? "s" : ""] at a time.</span>"
+
+	// Items that have no valid possible_transfer_amounts shouldn't say their transfer rate is variable
 	if(possible_transfer_amounts)
-		. += "<span class='notice'>It will transfer [amount_per_transfer_from_this] unit[amount_per_transfer_from_this > 1 ? "s" : ""] at a time."
+		. += "<span class='info'><b>Alt-Click</b> to change the transfer amount.</span>"

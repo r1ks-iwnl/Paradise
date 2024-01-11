@@ -106,7 +106,7 @@
 				new /obj/effect/particle_effect/chem_smoke(location, color)
 
 		if(x % 10 == 0) //Once every 10 ticks.
-			INVOKE_ASYNC(src, .proc/SmokeEm, effect_range)
+			INVOKE_ASYNC(src, PROC_REF(SmokeEm), effect_range)
 
 		sleep(1)
 	qdel(src)
@@ -120,6 +120,7 @@
 			continue
 		smoked_atoms += A
 		chemholder.reagents.reaction(A)
+		SEND_SIGNAL(A, COMSIG_ATOM_EXPOSE_REAGENTS, chemholder.reagents, chemholder, chemholder.reagents.total_volume)
 		if(iscarbon(A))
 			var/mob/living/carbon/C = A
 			if(C.can_breathe_gas())

@@ -1,3 +1,5 @@
+#define DONUT_NORMAL	1
+#define DONUT_FROSTED	2
 
 //////////////////////
 //		Cakes		//
@@ -6,6 +8,7 @@
 /obj/item/reagent_containers/food/snacks/sliceable/carrotcake
 	name = "carrot cake"
 	desc = "A favorite desert of a certain wascally wabbit. Not a lie."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "carrotcake"
 	slice_path = /obj/item/reagent_containers/food/snacks/carrotcakeslice
 	slices_num = 5
@@ -17,6 +20,7 @@
 /obj/item/reagent_containers/food/snacks/carrotcakeslice
 	name = "carrot cake slice"
 	desc = "Carrotty slice of Carrot Cake, carrots are good for your eyes! Also not a lie."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "carrotcake_slice"
 	trash = /obj/item/trash/plate
 	filling_color = "#FFD675"
@@ -26,6 +30,7 @@
 /obj/item/reagent_containers/food/snacks/sliceable/braincake
 	name = "brain cake"
 	desc = "A squishy cake-thing."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "braincake"
 	slice_path = /obj/item/reagent_containers/food/snacks/braincakeslice
 	slices_num = 5
@@ -37,6 +42,7 @@
 /obj/item/reagent_containers/food/snacks/braincakeslice
 	name = "brain cake slice"
 	desc = "Lemme tell you something about brains. THEY'RE DELICIOUS."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "braincakeslice"
 	trash = /obj/item/trash/plate
 	filling_color = "#E6AEDB"
@@ -45,6 +51,7 @@
 /obj/item/reagent_containers/food/snacks/sliceable/cheesecake
 	name = "cheese cake"
 	desc = "DANGEROUSLY cheesy."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "cheesecake"
 	slice_path = /obj/item/reagent_containers/food/snacks/cheesecakeslice
 	slices_num = 5
@@ -56,6 +63,7 @@
 /obj/item/reagent_containers/food/snacks/cheesecakeslice
 	name = "cheese cake slice"
 	desc = "Slice of pure cheestisfaction."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "cheesecake_slice"
 	trash = /obj/item/trash/plate
 	filling_color = "#FAF7AF"
@@ -64,6 +72,7 @@
 /obj/item/reagent_containers/food/snacks/sliceable/plaincake
 	name = "vanilla cake"
 	desc = "A plain cake, not a lie."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "plaincake"
 	slice_path = /obj/item/reagent_containers/food/snacks/plaincakeslice
 	slices_num = 5
@@ -75,6 +84,7 @@
 /obj/item/reagent_containers/food/snacks/plaincakeslice
 	name = "vanilla cake slice"
 	desc = "Just a slice of cake, it is enough for everyone."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "plaincake_slice"
 	trash = /obj/item/trash/plate
 	filling_color = "#F7EDD5"
@@ -83,6 +93,7 @@
 /obj/item/reagent_containers/food/snacks/sliceable/orangecake
 	name = "orange cake"
 	desc = "A cake with added orange."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "orangecake"
 	slice_path = /obj/item/reagent_containers/food/snacks/orangecakeslice
 	slices_num = 5
@@ -94,6 +105,7 @@
 /obj/item/reagent_containers/food/snacks/orangecakeslice
 	name = "orange cake slice"
 	desc = "Just a slice of cake, it is enough for everyone."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "orangecake_slice"
 	trash = /obj/item/trash/plate
 	filling_color = "#FADA8E"
@@ -102,6 +114,7 @@
 /obj/item/reagent_containers/food/snacks/sliceable/bananacake
 	name = "banana cake"
 	desc = "A cake with added bananas."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "bananacake"
 	slice_path = /obj/item/reagent_containers/food/snacks/bananacakeslice
 	slices_num = 5
@@ -113,6 +126,7 @@
 /obj/item/reagent_containers/food/snacks/bananacakeslice
 	name = "banana cake slice"
 	desc = "Just a slice of cake, it is enough for everyone."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "bananacake_slice"
 	trash = /obj/item/trash/plate
 	filling_color = "#FADA8E"
@@ -121,6 +135,7 @@
 /obj/item/reagent_containers/food/snacks/sliceable/limecake
 	name = "lime cake"
 	desc = "A cake with added lime."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "limecake"
 	bitesize = 3
 	slice_path = /obj/item/reagent_containers/food/snacks/limecakeslice
@@ -132,6 +147,7 @@
 /obj/item/reagent_containers/food/snacks/limecakeslice
 	name = "lime cake slice"
 	desc = "Just a slice of cake, it is enough for everyone."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "limecake_slice"
 	trash = /obj/item/trash/plate
 	filling_color = "#CBFA8E"
@@ -140,6 +156,7 @@
 /obj/item/reagent_containers/food/snacks/sliceable/lemoncake
 	name = "lemon cake"
 	desc = "A cake with added lemon."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "lemoncake"
 	slice_path = /obj/item/reagent_containers/food/snacks/lemoncakeslice
 	slices_num = 5
@@ -151,6 +168,7 @@
 /obj/item/reagent_containers/food/snacks/lemoncakeslice
 	name = "lemon cake slice"
 	desc = "Just a slice of cake, it is enough for everyone."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "lemoncake_slice"
 	trash = /obj/item/trash/plate
 	filling_color = "#FAFA8E"
@@ -159,6 +177,7 @@
 /obj/item/reagent_containers/food/snacks/sliceable/chocolatecake
 	name = "chocolate cake"
 	desc = "A cake with added chocolate."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "chocolatecake"
 	slice_path = /obj/item/reagent_containers/food/snacks/chocolatecakeslice
 	slices_num = 5
@@ -170,6 +189,7 @@
 /obj/item/reagent_containers/food/snacks/chocolatecakeslice
 	name = "chocolate cake slice"
 	desc = "Just a slice of cake, it is enough for everyone."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "chocolatecake_slice"
 	trash = /obj/item/trash/plate
 	filling_color = "#805930"
@@ -178,6 +198,7 @@
 /obj/item/reagent_containers/food/snacks/sliceable/birthdaycake
 	name = "birthday cake"
 	desc = "Happy Birthday..."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "birthdaycake"
 	slice_path = /obj/item/reagent_containers/food/snacks/birthdaycakeslice
 	slices_num = 5
@@ -189,6 +210,7 @@
 /obj/item/reagent_containers/food/snacks/birthdaycakeslice
 	name = "birthday cake slice"
 	desc = "A slice of your birthday"
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "birthdaycakeslice"
 	trash = /obj/item/trash/plate
 	filling_color = "#FFD6D6"
@@ -197,6 +219,7 @@
 /obj/item/reagent_containers/food/snacks/sliceable/applecake
 	name = "apple cake"
 	desc = "A cake centered with Apple."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "applecake"
 	slice_path = /obj/item/reagent_containers/food/snacks/applecakeslice
 	slices_num = 5
@@ -208,6 +231,7 @@
 /obj/item/reagent_containers/food/snacks/applecakeslice
 	name = "apple cake slice"
 	desc = "A slice of heavenly cake."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "applecakeslice"
 	trash = /obj/item/trash/plate
 	filling_color = "#EBF5B8"
@@ -221,6 +245,7 @@
 /obj/item/reagent_containers/food/snacks/cookie
 	name = "cookie"
 	desc = "COOKIE!!!"
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "COOKIE!!!"
 	bitesize = 1
 	filling_color = "#DBC94F"
@@ -230,6 +255,7 @@
 /obj/item/reagent_containers/food/snacks/fortunecookie
 	name = "fortune cookie"
 	desc = "A true prophecy in each cookie!"
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "fortune_cookie"
 	filling_color = "#E8E79E"
 	list_reagents = list("nutriment" = 3)
@@ -239,6 +265,7 @@
 /obj/item/reagent_containers/food/snacks/sugarcookie
 	name = "sugar cookie"
 	desc = "Just like your little sister used to make."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "sugarcookie"
 	list_reagents = list("nutriment" = 1, "sugar" = 3)
 	tastes = list("sweetness" = 1)
@@ -250,7 +277,8 @@
 
 /obj/item/reagent_containers/food/snacks/pie
 	name = "banana cream pie"
-	desc = "Just like back home, on clown planet! HONK!"
+	desc = "One of the five essential food groups of clowns."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "pie"
 	trash = /obj/item/trash/plate
 	filling_color = "#FBFFB8"
@@ -266,6 +294,7 @@
 
 /obj/item/reagent_containers/food/snacks/meatpie
 	name = "meat-pie"
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "meatpie"
 	desc = "An old barber recipe, very delicious!"
 	trash = /obj/item/trash/plate
@@ -276,6 +305,7 @@
 
 /obj/item/reagent_containers/food/snacks/tofupie
 	name = "tofu-pie"
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "meatpie"
 	desc = "A delicious tofu pie."
 	trash = /obj/item/trash/plate
@@ -287,6 +317,7 @@
 /obj/item/reagent_containers/food/snacks/amanita_pie
 	name = "amanita pie"
 	desc = "Sweet and tasty poison pie."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "amanita_pie"
 	filling_color = "#FFCCCC"
 	bitesize = 4
@@ -296,14 +327,15 @@
 /obj/item/reagent_containers/food/snacks/plump_pie
 	name = "plump pie"
 	desc = "I bet you love stuff made out of plump helmets!"
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "plump_pie"
 	filling_color = "#B8279B"
 	bitesize = 3
 	list_reagents = list("nutriment" = 10, "vitamin" = 2)
 	tastes = list("pie" = 1, "mushroom" = 1)
 
-/obj/item/reagent_containers/food/snacks/plump_pie/New()
-	..()
+/obj/item/reagent_containers/food/snacks/plump_pie/Initialize(mapload)
+	. = ..()
 	if(prob(10))
 		name = "exceptional plump pie"
 		desc = "Microwave is taken by a fey mood! It has cooked an exceptional plump pie!" // What
@@ -311,6 +343,7 @@
 
 /obj/item/reagent_containers/food/snacks/xemeatpie
 	name = "xeno-pie"
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "xenomeatpie"
 	desc = "A delicious meatpie. Probably heretical."
 	trash = /obj/item/trash/plate
@@ -322,6 +355,7 @@
 /obj/item/reagent_containers/food/snacks/applepie
 	name = "apple pie"
 	desc = "A pie containing sweet sweet love... or apple."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "applepie"
 	filling_color = "#E0EDC5"
 	bitesize = 3
@@ -332,6 +366,7 @@
 /obj/item/reagent_containers/food/snacks/cherrypie
 	name = "cherry pie"
 	desc = "Taste so good, make a grown man cry."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "cherrypie"
 	filling_color = "#FF525A"
 	bitesize = 3
@@ -341,6 +376,7 @@
 /obj/item/reagent_containers/food/snacks/sliceable/pumpkinpie
 	name = "pumpkin pie"
 	desc = "A delicious treat for the autumn months."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "pumpkinpie"
 	slice_path = /obj/item/reagent_containers/food/snacks/pumpkinpieslice
 	slices_num = 5
@@ -352,6 +388,7 @@
 /obj/item/reagent_containers/food/snacks/pumpkinpieslice
 	name = "pumpkin pie slice"
 	desc = "A slice of pumpkin pie, with whipped cream on top. Perfection."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "pumpkinpieslice"
 	trash = /obj/item/trash/plate
 	filling_color = "#F5B951"
@@ -364,22 +401,23 @@
 /obj/item/reagent_containers/food/snacks/donut
 	name = "donut"
 	desc = "Goes great with Robust Coffee."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "donut1"
 	bitesize = 5
 	list_reagents = list("nutriment" = 3, "sugar" = 2)
 	var/extra_reagent = null
 	filling_color = "#D2691E"
 	var/randomized_sprinkles = 1
-	var/donut_sprite_type = "regular"
+	var/donut_sprite_type = DONUT_NORMAL
 	tastes = list("donut" = 1)
 
-/obj/item/reagent_containers/food/snacks/donut/New()
-	..()
+/obj/item/reagent_containers/food/snacks/donut/Initialize(mapload)
+	. = ..()
 	if(randomized_sprinkles && prob(30))
 		icon_state = "donut2"
 		name = "frosted donut"
 		reagents.add_reagent("sprinkles", 2)
-		donut_sprite_type = "frosted"
+		donut_sprite_type = DONUT_FROSTED
 		filling_color = "#FF69B4"
 
 /obj/item/reagent_containers/food/snacks/donut/sprinkles
@@ -387,7 +425,7 @@
 	icon_state = "donut2"
 	list_reagents = list("nutriment" = 3, "sugar" = 2, "sprinkles" = 2)
 	filling_color = "#FF69B4"
-	donut_sprite_type = "frosted"
+	donut_sprite_type = DONUT_FROSTED
 	randomized_sprinkles = 0
 
 /obj/item/reagent_containers/food/snacks/donut/chaos
@@ -396,8 +434,8 @@
 	bitesize = 10
 	tastes = list("donut" = 3, "chaos" = 1)
 
-/obj/item/reagent_containers/food/snacks/donut/chaos/New()
-	..()
+/obj/item/reagent_containers/food/snacks/donut/chaos/Initialize(mapload)
+	. = ..()
 	extra_reagent = pick("nutriment", "capsaicin", "frostoil", "krokodil", "plasma", "cocoa", "slimejelly", "banana", "berryjuice", "omnizine")
 	reagents.add_reagent("[extra_reagent]", 3)
 	if(prob(30))
@@ -411,17 +449,16 @@
 	desc = "You jelly?"
 	icon_state = "jdonut1"
 	extra_reagent = "berryjuice"
-	donut_sprite_type = "jelly"
 	tastes = list("jelly" = 1, "donut" = 3)
 
-/obj/item/reagent_containers/food/snacks/donut/jelly/New()
-	..()
+/obj/item/reagent_containers/food/snacks/donut/jelly/Initialize(mapload)
+	. = ..()
 	if(extra_reagent)
 		reagents.add_reagent("[extra_reagent]", 3)
 	if(prob(30))
 		icon_state = "jdonut2"
 		name = "frosted jelly Donut"
-		donut_sprite_type = "frostedjelly"
+		donut_sprite_type = DONUT_FROSTED
 		reagents.add_reagent("sprinkles", 2)
 		filling_color = "#FF69B4"
 
@@ -444,22 +481,41 @@
 /obj/item/reagent_containers/food/snacks/pancake
 	name = "pancake"
 	desc = "A plain pancake."
+	icon = 'icons/obj/food/breakfast.dmi'
 	icon_state = "pancake"
 	filling_color = "#E7D8AB"
 	bitesize = 2
 	list_reagents = list("nutriment" = 3, "sugar" = 3)
+	tastes = list("sweet cake" = 1)
+
+/obj/item/reagent_containers/food/snacks/pancake/attack_tk(mob/user)
+	if(src in user.tkgrabbed_objects)
+		to_chat(user, "<span class='notice'>You start channeling psychic energy into [src].</span>")
+		visible_message("<span class='danger'>The syrup on [src] starts to boil...</span>")
+		if(do_after_once(user, 4 SECONDS, target = src))
+			visible_message("<span class='danger'>[src] suddenly combust!</span>")
+			to_chat(user, "<span class='warning'>You combust [src] with your mind!</span>")
+			explosion(get_turf(src), light_impact_range = 2, flash_range = 2)
+			add_attack_logs(user, src, "blew up [src] with TK", ATKLOG_ALL)
+			qdel(src)
+			return
+		to_chat(user, "<span class='notice'>You decide against the destruction of [src].</span>")
+		return
+	return ..()
 
 /obj/item/reagent_containers/food/snacks/pancake/berry_pancake
 	name = "berry pancake"
 	desc = "A pancake loaded with berries."
 	icon_state = "berry_pancake"
 	list_reagents = list("nutriment" = 3, "sugar" = 3, "berryjuice" = 3)
+	tastes = list("sweet cake" = 2, "berries" = 2)
 
 /obj/item/reagent_containers/food/snacks/pancake/choc_chip_pancake
 	name = "choc-chip pancake"
 	desc = "A pancake loaded with chocolate chips."
 	icon_state = "choc_chip_pancake"
 	list_reagents = list("nutriment" = 3, "sugar" = 3, "cocoa" = 3)
+	tastes = list("sweet cake" = 2, "chocolate" = 3)
 
 //////////////////////
 //		Misc		//
@@ -468,6 +524,7 @@
 /obj/item/reagent_containers/food/snacks/muffin
 	name = "muffin"
 	desc = "A delicious and spongy little cake."
+	icon = 'icons/obj/food/breakfast.dmi'
 	icon_state = "muffin"
 	filling_color = "#E0CF9B"
 	list_reagents = list("nutriment" = 6)
@@ -476,6 +533,7 @@
 /obj/item/reagent_containers/food/snacks/berryclafoutis
 	name = "berry clafoutis"
 	desc = "No black birds, this is a good sign."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "berryclafoutis"
 	trash = /obj/item/trash/plate
 	bitesize = 3
@@ -486,6 +544,7 @@
 /obj/item/reagent_containers/food/snacks/poppypretzel
 	name = "poppy pretzel"
 	desc = "A large soft pretzel full of POP! It's all twisted up!"
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "poppypretzel"
 	filling_color = "#916E36"
 	list_reagents = list("nutriment" = 5)
@@ -494,13 +553,14 @@
 /obj/item/reagent_containers/food/snacks/plumphelmetbiscuit
 	name = "plump helmet biscuit"
 	desc = "This is a finely-prepared plump helmet biscuit. The ingredients are exceptionally minced plump helmet, and well-minced dwarven wheat flour."
+	icon = 'icons/obj/food/breakfast.dmi'
 	icon_state = "phelmbiscuit"
 	filling_color = "#CFB4C4"
 	list_reagents = list("nutriment" = 5)
 	tastes = list("mushroom" = 1, "biscuit" = 1)
 
-/obj/item/reagent_containers/food/snacks/plumphelmetbiscuit/New()
-	..()
+/obj/item/reagent_containers/food/snacks/plumphelmetbiscuit/Initialize(mapload)
+	. = ..()
 	if(prob(10))
 		name = "exceptional plump helmet biscuit"
 		desc = "Microwave is taken by a fey mood! It has cooked an exceptional plump helmet biscuit!" // Is this a reference?
@@ -509,6 +569,7 @@
 /obj/item/reagent_containers/food/snacks/appletart
 	name = "golden apple streusel tart"
 	desc = "A tasty dessert that won't make it through a metal detector."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "gappletart"
 	trash = /obj/item/trash/plate
 	filling_color = "#FFFF00"
@@ -520,8 +581,32 @@
 /obj/item/reagent_containers/food/snacks/cracker
 	name = "cracker"
 	desc = "It's a salted cracker."
+	icon = 'icons/obj/food/bakedgoods.dmi'
 	icon_state = "cracker"
 	bitesize = 1
 	filling_color = "#F5DEB8"
 	list_reagents = list("nutriment" = 1)
 	tastes = list("cracker" = 1)
+
+/obj/item/reagent_containers/food/snacks/croissant
+	name = "croissant"
+	desc = "Once a pastry reserved for the bourgeois, this flaky goodness is now on your table."
+	icon = 'icons/obj/food/bakedgoods.dmi'
+	icon_state = "croissant"
+	bitesize = 4
+	filling_color = "#ecb54f"
+	list_reagents = list("nutriment" = 4, "sugar" = 2)
+	tastes = list("croissant" = 1)
+
+/obj/item/reagent_containers/food/snacks/croissant/throwing
+	throwforce = 20
+	throw_range = 9 //now with extra throwing action
+	tastes = list("croissant" = 2, "butter" = 1, "metal" = 1)
+	list_reagents = list("nutriment" = 4, "sugar" = 2, "iron" = 1)
+
+/obj/item/reagent_containers/food/snacks/croissant/throwing/Initialize(mapload)
+	. = ..()
+	AddComponent(/datum/component/boomerang, throw_range, TRUE)
+
+#undef DONUT_NORMAL
+#undef DONUT_FROSTED

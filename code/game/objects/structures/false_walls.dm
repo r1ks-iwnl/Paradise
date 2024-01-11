@@ -8,27 +8,30 @@
 
 /obj/structure/falsewall
 	name = "wall"
-	desc = "A huge chunk of metal used to seperate rooms."
+	desc = "A huge chunk of metal used to separate rooms."
 	anchored = TRUE
 	icon = 'icons/turf/walls/wall.dmi'
 	icon_state = "wall-0"
 	base_icon_state = "wall"
 	flags_2 = RAD_PROTECT_CONTENTS_2 | RAD_NO_CONTAMINATE_2
 	rad_insulation = RAD_MEDIUM_INSULATION
+	layer = TURF_LAYER
 
 	var/mineral = /obj/item/stack/sheet/metal
 	var/mineral_amount = 2
 	var/walltype = /turf/simulated/wall
 	var/girder_type = /obj/structure/girder/displaced
 	var/opening = FALSE
+	/// Minimum environment smash level (found on simple animals) to break through this instantly
+	var/env_smash_level = ENVIRONMENT_SMASH_STRUCTURES
 
 	density = TRUE
 	opacity = TRUE
 	max_integrity = 100
 
 	smoothing_flags = SMOOTH_BITMASK
-	smoothing_groups = list(SMOOTH_GROUP_SIMULATED_TURFS, SMOOTH_GROUP_WALLS)
-	canSmoothWith = list(SMOOTH_GROUP_WALLS)
+	smoothing_groups = list(SMOOTH_GROUP_SIMULATED_TURFS, SMOOTH_GROUP_WALLS, SMOOTH_GROUP_REGULAR_WALLS)
+	canSmoothWith = list(SMOOTH_GROUP_WALLS, SMOOTH_GROUP_REGULAR_WALLS, SMOOTH_GROUP_REINFORCED_WALLS)
 
 /obj/structure/falsewall/Initialize(mapload)
 	. = ..()
@@ -38,16 +41,17 @@
 	var/healthpercent = (obj_integrity/max_integrity) * 100
 	switch(healthpercent)
 		if(100)
-			return "<span class='notice'>It looks fully intact.</span>"
+			. += "<span class='notice'>It looks fully intact.</span>"
 		if(70 to 99)
-			return  "<span class='warning'>It looks slightly damaged.</span>"
+			. +=  "<span class='warning'>It looks slightly damaged.</span>"
 		if(40 to 70)
-			return  "<span class='warning'>It looks moderately damaged.</span>"
+			. +=  "<span class='warning'>It looks moderately damaged.</span>"
 		if(0 to 40)
-			return "<span class='danger'>It looks heavily damaged.</span>"
+			. += "<span class='danger'>It looks heavily damaged.</span>"
+	. += "<br><span class='notice'>Using a lit welding tool on this item will allow you to slice through it, eventually removing the outer layer.</span>"
 
 /obj/structure/falsewall/Destroy()
-	density = 0
+	density = FALSE
 	air_update_turf(1)
 	return ..()
 
@@ -84,7 +88,7 @@
 	opening = FALSE
 	update_icon()
 
-/obj/structure/falsewall/update_icon()
+/obj/structure/falsewall/update_icon_state()
 	if(opening)
 		smoothing_flags = NONE
 		clear_smooth_overlays()
@@ -96,7 +100,7 @@
 	if(!density)
 		icon_state = "fwall_open"
 		return
-	smoothing_flags = SMOOTH_BITMASK
+	smoothing_flags = SMOOTH_BITMASK | SMOOTH_OBJ
 	icon_state = initial(icon_state)
 	icon_state = "[base_icon_state]-[smoothing_junction]"
 	QUEUE_SMOOTH(src)
@@ -113,22 +117,33 @@
 		to_chat(user, "<span class='warning'>You must wait until the door has stopped moving.</span>")
 		return
 
-	if(density)
-		var/turf/T = get_turf(src)
-		if(T.density)
-			to_chat(user, "<span class='warning'>[src] is blocked!</span>")
-			return
-		if(istype(W, /obj/item/screwdriver))
-			if(!istype(T, /turf/simulated/floor))
-				to_chat(user, "<span class='warning'>[src] bolts must be tightened on the floor!</span>")
-				return
-			user.visible_message("<span class='notice'>[user] tightens some bolts on the wall.</span>", "<span class='warning'>You tighten the bolts on the wall.</span>")
-			ChangeToWall()
-	else
-		to_chat(user, "<span class='warning'>You can't reach, close it first!</span>")
-
-	if(istype(W, /obj/item/gun/energy/plasmacutter) || istype(W, /obj/item/pickaxe/drill/diamonddrill) || istype(W, /obj/item/pickaxe/drill/jackhammer) || istype(W, /obj/item/melee/energy/blade))
+	if(istype(W, /obj/item/gun/energy/plasmacutter) || istype(W, /obj/item/pickaxe/drill/diamonddrill) || istype(W, /obj/item/pickaxe/drill/jackhammer) || istype(W, /obj/item/melee/energy/blade) || istype(W, /obj/item/pyro_claws))
 		dismantle(user, TRUE)
+
+/obj/structure/falsewall/attack_animal(mob/living/simple_animal/M)
+	. = ..()
+	if(. && M.environment_smash >= env_smash_level)
+		deconstruct(FALSE)
+		to_chat(M, "<span class='info'>You smash through the wall.</span>")
+
+/obj/structure/falsewall/screwdriver_act(mob/living/user, obj/item/I)
+	if(opening)
+		to_chat(user, "<span class='warning'>You must wait until the door has stopped moving.</span>")
+		return TRUE
+	if(!density)
+		to_chat(user, "<span class='warning'>You can't reach, close it first!</span>")
+		return TRUE
+	var/turf/T = get_turf(src)
+	if(T.density)
+		to_chat(user, "<span class='warning'>[src] is blocked!</span>")
+		return TRUE
+
+	if(!isfloorturf(T))
+		to_chat(user, "<span class='warning'>[src] bolts must be tightened on the floor!</span>")
+		return TRUE
+	user.visible_message("<span class='notice'>[user] tightens some bolts on the wall.</span>", "<span class='warning'>You tighten the bolts on the wall.</span>")
+	ChangeToWall()
+	return TRUE
 
 /obj/structure/falsewall/welder_act(mob/user, obj/item/I)
 	if(!density)
@@ -158,13 +173,15 @@
 
 /obj/structure/falsewall/reinforced
 	name = "reinforced wall"
-	desc = "A huge chunk of reinforced metal used to seperate rooms."
+	desc = "A huge chunk of reinforced metal used to separate rooms."
 	icon = 'icons/turf/walls/reinforced_wall.dmi'
 	icon_state = "reinforced_wall-0"
 	base_icon_state = "reinforced_wall"
 	walltype = /turf/simulated/wall/r_wall
 	mineral = /obj/item/stack/sheet/plasteel
 	smoothing_flags = SMOOTH_BITMASK
+	smoothing_groups = list(SMOOTH_GROUP_SIMULATED_TURFS, SMOOTH_GROUP_WALLS, SMOOTH_GROUP_REINFORCED_WALLS)
+	canSmoothWith = list(SMOOTH_GROUP_WALLS, SMOOTH_GROUP_REGULAR_WALLS, SMOOTH_GROUP_REINFORCED_WALLS)
 
 /obj/structure/falsewall/reinforced/examine_status(mob/user)
 	. = ..()
@@ -189,7 +206,7 @@
 	base_icon_state = "uranium_wall"
 	mineral = /obj/item/stack/sheet/mineral/uranium
 	walltype = /turf/simulated/wall/mineral/uranium
-	var/active = null
+	var/active = FALSE
 	var/last_event = 0
 	smoothing_flags = SMOOTH_BITMASK
 	smoothing_groups = list(SMOOTH_GROUP_WALLS, SMOOTH_GROUP_URANIUM_WALLS)
@@ -205,13 +222,13 @@
 
 /obj/structure/falsewall/uranium/proc/radiate()
 	if(!active)
-		if(world.time > last_event + 15)
-			active = 1
+		if(world.time > last_event + 1.5 SECONDS)
+			active = TRUE
 			radiation_pulse(src, 150)
 			for(var/turf/simulated/wall/mineral/uranium/T in orange(1, src))
 				T.radiate()
 			last_event = world.time
-			active = null
+			active = FALSE
 /*
  * Other misc falsewall types
  */
@@ -256,7 +273,7 @@
 
 /obj/structure/falsewall/plasma
 	name = "plasma wall"
-	desc = "A wall with plasma plating. This is definately a bad idea."
+	desc = "A wall with plasma plating. This is definitely a bad idea."
 	icon = 'icons/turf/walls/plasma_wall.dmi'
 	icon_state = "plasma_wall-0"
 	base_icon_state = "plasma_wall"
@@ -267,7 +284,7 @@
 	canSmoothWith = list(SMOOTH_GROUP_PLASMA_WALLS)
 
 /obj/structure/falsewall/plasma/attackby(obj/item/W, mob/user, params)
-	if(is_hot(W) > 300)
+	if(W.get_heat() > 300)
 		var/turf/T = locate(user)
 		message_admins("Plasma falsewall ignited by [key_name_admin(user)] in [ADMIN_VERBOSEJMP(T)]")
 		log_game("Plasma falsewall ignited by [key_name(user)] in [AREACOORD(T)]")
@@ -403,3 +420,16 @@
 	var/turf/T = get_turf(src)
 	new /obj/effect/temp_visual/ratvar/wall/false(T)
 	new /obj/effect/temp_visual/ratvar/beam/falsewall(T)
+
+/obj/structure/falsewall/rock_ancient
+	name = "ancient rock"
+	desc = "A rare asteroid rock that appears to be resistant to all mining tools except pickaxes!"
+	icon = 'icons/turf/walls/smoothrocks.dmi'
+	icon_state = "smoothrocks-0"
+	base_icon_state = "smoothrocks"
+	color = COLOR_ANCIENT_ROCK
+	smoothing_flags = SMOOTH_BITMASK
+	smoothing_groups = list(SMOOTH_GROUP_ASTEROID_WALLS)
+	canSmoothWith = list(SMOOTH_GROUP_ASTEROID_WALLS)
+	mineral = /obj/item/stack/ore/glass/basalt/ancient
+	walltype = /turf/simulated/mineral/ancient

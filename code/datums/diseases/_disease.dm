@@ -39,6 +39,8 @@ GLOBAL_LIST_INIT(diseases, subtypesof(/datum/disease))
 	var/spread_flags = AIRBORNE
 
 	//Fluff
+	/// Used for identification of viruses in the Medical Records Virus Database
+	var/medical_name
 	var/form = "Virus"
 	var/name = "No disease"
 	var/desc = ""
@@ -57,7 +59,7 @@ GLOBAL_LIST_INIT(diseases, subtypesof(/datum/disease))
 
 	//Other
 	var/list/viable_mobtypes = list() //typepaths of viable mobs
-	var/mob/living/carbon/affected_mob = null
+	var/mob/living/carbon/affected_mob
 	var/list/cures = list() //list of cures if the disease has the CURABLE flag, these are reagent ids
 	var/infectivity = 65
 	var/cure_chance = 8
@@ -65,7 +67,7 @@ GLOBAL_LIST_INIT(diseases, subtypesof(/datum/disease))
 	var/bypasses_immunity = FALSE //Does it skip species virus immunity check? Some things may diseases and not viruses
 	var/virus_heal_resistant = FALSE // Some things aren't technically viruses/traditional diseases and should be immune to edge case cure methods, like healing viruses.
 	var/permeability_mod = 1
-	var/severity =	NONTHREAT
+	var/severity = NONTHREAT
 	var/list/required_organs = list()
 	var/needs_all_cures = TRUE
 	var/list/strain_data = list() //dna_spread special bullshit
@@ -76,10 +78,12 @@ GLOBAL_LIST_INIT(diseases, subtypesof(/datum/disease))
 	return ..()
 
 /datum/disease/proc/stage_act()
+	if(!affected_mob)
+		return FALSE
 	var/cure = has_cure()
 
 	if(carrier && !cure)
-		return TRUE
+		return FALSE
 
 	stage = min(stage, max_stages)
 
@@ -150,6 +154,7 @@ GLOBAL_LIST_INIT(diseases, subtypesof(/datum/disease))
 			if(!(type in affected_mob.resistances))
 				affected_mob.resistances += type
 		remove_virus()
+		affected_mob.create_log(MISC_LOG, "has been cured from the virus \"[src]\"")
 	qdel(src)
 
 /datum/disease/proc/IsSame(datum/disease/D)

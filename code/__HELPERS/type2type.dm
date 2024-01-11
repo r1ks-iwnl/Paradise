@@ -21,7 +21,7 @@
 		var/char = copytext(hex, i, i + 1)
 		switch(char)
 			if("0")
-				//Apparently, switch works with empty statements, yay! If that doesn't work, blame me, though. -- Urist
+				pass() // Do nothing
 			if("9", "8", "7", "6", "5", "4", "3", "2", "1")
 				num += text2num(char) * 16 ** power
 			if("a", "A")
@@ -41,23 +41,6 @@
 		power++
 		i--
 	return num
-
-//Returns the hex value of a number given a value assumed to be a base-ten value
-/proc/num2hex(num, placeholder = 2)
-	if(!isnum(num) || num < 0)
-		return
-
-	var/hex = ""
-	while(num)
-		var/val = num % 16
-		num = round(num / 16)
-
-		if(val > 9)
-			val = ascii2text(55 + val) // 65 - 70 correspond to "A" - "F"
-		hex = "[val][hex]"
-	while(length(hex) < placeholder)
-		hex = "0[hex]"
-	return hex || "0"
 
 //Returns an integer value for R of R/G/B given a hex color input.
 /proc/color2R(hex)
@@ -100,7 +83,7 @@
 		if(4.0) return EAST
 		if(8.0) return WEST
 		else
-			log_runtime(EXCEPTION("UNKNOWN DIRECTION: [direction]"))
+			stack_trace("UNKNOWN DIRECTION: [direction]")
 
 /proc/dir2text(direction)
 	switch(direction)
@@ -120,8 +103,6 @@
 			return "northwest"
 		if(10.0)
 			return "southwest"
-		else
-	return
 
 //Turns text into proper directions
 /proc/text2dir(direction)
@@ -142,8 +123,6 @@
 			return 6
 		if("SOUTHWEST")
 			return 10
-		else
-	return
 
 //Converts an angle (degrees) into an ss13 direction
 /proc/angle2dir(degree)
@@ -228,6 +207,8 @@
 			return 'icons/mob/screen_operative.dmi'
 		if("White")
 			return 'icons/mob/screen_white.dmi'
+		if("Midnight")
+			return 'icons/mob/screen_midnight.dmi'
 		else
 			return 'icons/mob/screen_midnight.dmi'
 
@@ -393,3 +374,8 @@
 			else
 				return /datum
 	return text2path(copytext(string_type, 1, last_slash))
+
+/proc/text2bool(input)
+	if(input == "true")
+		return TRUE
+	return FALSE //

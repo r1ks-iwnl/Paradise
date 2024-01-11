@@ -105,6 +105,59 @@
 	..(gibbed)
 	regenerate_icons()
 
+/mob/living/simple_animal/pet/dog/corgi/RangedAttack(atom/A, params)
+	if(inventory_back)
+		inventory_back.afterattack(A, src)
+
+/mob/living/simple_animal/pet/dog/corgi/UnarmedAttack(atom/A)
+	if(istype(inventory_back, /obj/item/extinguisher))
+		var/obj/item/extinguisher/E = inventory_back
+		if(E.AttemptRefill(A, src))
+			return
+	return ..()
+
+/mob/living/simple_animal/pet/dog/corgi/deadchat_plays(mode = DEADCHAT_ANARCHY_MODE, cooldown = 12 SECONDS)
+	. = AddComponent(/datum/component/deadchat_control/cardinal_movement, mode, list(
+		"speak" = CALLBACK(src, PROC_REF(handle_automated_speech), TRUE),
+		"wear_hat" = CALLBACK(src, PROC_REF(find_new_hat)),
+		"drop_hat" = CALLBACK(src, PROC_REF(drop_hat)),
+		"spin" = CALLBACK(src, TYPE_PROC_REF(/mob, emote), "spin")), cooldown, CALLBACK(src, PROC_REF(end_dchat_plays)))
+
+	if(. == COMPONENT_INCOMPATIBLE)
+		return
+
+	stop_automated_movement = TRUE
+
+///Deadchat plays command that picks a new hat for Ian.
+/mob/living/simple_animal/pet/dog/corgi/proc/find_new_hat()
+	if(!isturf(loc))
+		return
+	var/list/possible_headwear = list()
+	for(var/obj/item/item in loc)
+		if(ispath(item.dog_fashion, /datum/dog_fashion/head))
+			possible_headwear += item
+	if(!length(possible_headwear))
+		for(var/obj/item/item in orange(1))
+			if(ispath(item.dog_fashion, /datum/dog_fashion/head) && Adjacent(item))
+				possible_headwear += item
+	if(!length(possible_headwear))
+		return
+	if(inventory_head)
+		inventory_head.forceMove(drop_location())
+		inventory_head = null
+	place_on_head(pick(possible_headwear))
+	visible_message("<span class='notice'>[src] puts [inventory_head] on [p_their()] own head, somehow.</span>")
+
+///Deadchat plays command that drops the current hat off Ian.
+/mob/living/simple_animal/pet/dog/corgi/proc/drop_hat()
+	if(!inventory_head)
+		return
+	visible_message("<span class='notice'>[src] vigorously shakes [p_their()] head, dropping [inventory_head] to the ground.</span>")
+	inventory_head.forceMove(drop_location())
+	inventory_head = null
+	update_corgi_fluff()
+	regenerate_icons()
+
 /mob/living/simple_animal/pet/dog/corgi/show_inv(mob/user)
 	if(user.incapacitated() || !Adjacent(user))
 		return
@@ -403,9 +456,12 @@
 	. = ..()
 	SSpersistent_data.register(src)
 
+/mob/living/simple_animal/pet/dog/corgi/Ian/Destroy()
+	SSpersistent_data.registered_atoms -= src
+	return ..()
+
 /mob/living/simple_animal/pet/dog/corgi/Ian/death()
 	write_memory(TRUE)
-	SSpersistent_data.registered_atoms -= src // We already wrote here, dont overwrite!
 	..()
 
 /mob/living/simple_animal/pet/dog/corgi/Ian/persistent_load()
@@ -430,6 +486,8 @@
 		turns_per_move = 20
 
 /mob/living/simple_animal/pet/dog/corgi/Ian/persistent_save()
+	if(SEND_SIGNAL(src, COMSIG_LIVING_WRITE_MEMORY) & COMPONENT_DONT_WRITE_MEMORY)
+		return FALSE
 	write_memory(FALSE)
 
 /mob/living/simple_animal/pet/dog/corgi/Ian/proc/read_memory()
@@ -443,7 +501,7 @@
 		var/json_file = file("data/npc_saves/Ian.json")
 		if(!fexists(json_file))
 			return
-		var/list/json = json_decode(file2text(json_file))
+		var/list/json = json_decode(wrap_file2text(json_file))
 		age = json["age"]
 		record_age = json["record_age"]
 		saved_head = json["saved_head"]
@@ -479,7 +537,7 @@
 /mob/living/simple_animal/pet/dog/corgi/Ian/handle_automated_movement()
 	. = ..()
 	//Feeding, chasing food, FOOOOODDDD
-	if(resting || buckled)
+	if(IS_HORIZONTAL(src) || buckled)
 		return
 
 	if(++turns_since_scan > 5)
@@ -507,7 +565,7 @@
 			if(possible_target && (isturf(possible_target.loc) || ishuman(possible_target.loc))) // On the ground or in someone's hand.
 				movement_target = possible_target
 		if(movement_target)
-			INVOKE_ASYNC(src, .proc/move_to_target)
+			INVOKE_ASYNC(src, PROC_REF(move_to_target))
 
 	if(prob(1))
 		chasetail()
@@ -633,7 +691,7 @@
 
 /mob/living/simple_animal/pet/dog/corgi/Lisa/handle_automated_movement()
 	. = ..()
-	if(!resting && !buckled)
+	if(!IS_HORIZONTAL(src) && !buckled)
 		if(prob(1))
 			custom_emote(EMOTE_VISIBLE, pick("dances around.","chases her tail."))
 			spin(20, 1)
@@ -661,20 +719,20 @@
 	icon_living = "borgi"
 	bark_sound = null	//No robo-bjork...
 	yelp_sound = null	//Or robo-Yelp.
-	var/emagged = 0
+	var/emagged = FALSE
 	atmos_requirements = list("min_oxy" = 0, "max_oxy" = 0, "min_tox" = 0, "max_tox" = 0, "min_co2" = 0, "max_co2" = 0, "min_n2" = 0, "max_n2" = 0)
 	minbodytemp = 0
 	loot = list(/obj/effect/decal/cleanable/blood/gibs/robot)
-	del_on_death = 1
+	del_on_death = TRUE
 	deathmessage = "blows apart!"
 	animal_species = /mob/living/simple_animal/pet/dog/corgi/borgi
 	nofur = TRUE
 
 /mob/living/simple_animal/pet/dog/corgi/borgi/emag_act(user as mob)
 	if(!emagged)
-		emagged = 1
+		emagged = TRUE
 		visible_message("<span class='warning'>[user] swipes a card through [src].</span>", "<span class='notice'>You overload [src]s internal reactor.</span>")
-		addtimer(CALLBACK(src, .proc/explode), 1000)
+		addtimer(CALLBACK(src, PROC_REF(explode)), 1000)
 
 /mob/living/simple_animal/pet/dog/corgi/borgi/proc/explode()
 	visible_message("<span class='warning'>[src] makes an odd whining noise.</span>")
@@ -729,7 +787,7 @@
 
 /mob/living/simple_animal/pet/dog/pug/handle_automated_movement()
 	. = ..()
-	if(!resting && !buckled)
+	if(!IS_HORIZONTAL(src) && !buckled)
 		if(prob(1))
 			custom_emote(EMOTE_VISIBLE, pick("chases its tail."))
 			spawn(0)

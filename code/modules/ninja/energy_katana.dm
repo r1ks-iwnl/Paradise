@@ -1,11 +1,13 @@
 /obj/item/katana/energy
 	name = "energy katana"
 	desc = "A katana infused with a strong energy"
+	icon = 'icons/obj/energy_melee.dmi'
 	icon_state = "energy_katana"
 	item_state = "energy_katana"
 	force = 40
 	throwforce = 20
-	armour_penetration = 50
+	armour_penetration_percentage = 50
+	armour_penetration_flat = 10
 	var/cooldown = 0 // Because spam aint cool, yo.
 	var/datum/effect_system/spark_spread/spark_system
 
@@ -52,7 +54,7 @@
 
 	if(user.put_in_hands(src))
 		msg = "Your Energy Katana teleports into your hand!"
-	else if(user.equip_to_slot_if_possible(src, slot_belt, FALSE, TRUE))
+	else if(user.equip_to_slot_if_possible(src, SLOT_HUD_BELT, FALSE, TRUE))
 		msg = "Your Energy Katana teleports back to you, sheathing itself as it does so!</span>"
 	else
 		loc = get_turf(user)

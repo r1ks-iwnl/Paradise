@@ -7,7 +7,7 @@
 */
 
 /mob/living/silicon/robot/ClickOn(atom/A, params)
-	if(client.click_intercept)
+	if(client?.click_intercept)
 		client.click_intercept.InterceptClickOn(src, params, A)
 		return
 
@@ -79,7 +79,7 @@
 		return
 
 	// buckled cannot prevent machine interlinking but stops arm movement
-	if( buckled )
+	if(buckled)
 		return
 
 	if(W == A)
@@ -111,7 +111,7 @@
 
 //Middle click points
 /mob/living/silicon/robot/MiddleClickOn(atom/A)
-	if(istype(src, /mob/living/silicon/robot/drone))
+	if(isdrone(src))
 		// Drones cannot point.
 		return
 	pointed(A)

@@ -70,14 +70,14 @@
 /obj/item/dnainjector/proc/inject(mob/living/M, mob/user)
 	if(used)
 		return
-	if(istype(M,/mob/living))
+	if(isliving(M))
 		M.apply_effect(rand(20 / (damage_coeff ** 2), 50 / (damage_coeff ** 2)), IRRADIATE)
 	var/mob/living/carbon/human/H
-	if(istype(M, /mob/living/carbon/human))
+	if(ishuman(M))
 		H = M
 
 	if(!buf)
-		log_runtime(EXCEPTION("[src] used by [user] on [M] failed to initialize properly."), src)
+		stack_trace("[src] used by [user] on [M] failed to initialize properly.")
 		return
 
 	spawn(0) //Some mutations have sleeps in them, like monkey
@@ -117,6 +117,7 @@
 		return FALSE
 
 	if(!user.IsAdvancedToolUser())
+		to_chat(user, "<span class='warning'>You don't have the dexterity to do this!</span>")
 		return FALSE
 
 	var/attack_log = "injected with the Isolated [name]"
@@ -284,28 +285,6 @@
 
 /obj/item/dnainjector/antiregenerate/Initialize()
 	block = GLOB.regenerateblock
-	..()
-
-/obj/item/dnainjector/runfast
-	name = "DNA-Injector (Increase Run)"
-	desc = "Running Man."
-	datatype = DNA2_BUF_SE
-	value = 0xFFF
-	forcedmutation = TRUE
-
-/obj/item/dnainjector/runfast/Initialize()
-	block = GLOB.increaserunblock
-	..()
-
-/obj/item/dnainjector/antirunfast
-	name = "DNA-Injector (Anti-Increase Run)"
-	desc = "Walking Man."
-	datatype = DNA2_BUF_SE
-	value = 0x001
-	forcedmutation = TRUE
-
-/obj/item/dnainjector/antirunfast/Initialize()
-	block = GLOB.increaserunblock
 	..()
 
 /obj/item/dnainjector/morph
@@ -509,7 +488,7 @@
 
 /obj/item/dnainjector/antitour
 	name = "DNA-Injector (Anti-Tour.)"
-	desc = "Will cure tourrets."
+	desc = "Will cure tourettes."
 	datatype = DNA2_BUF_SE
 	value = 0x001
 	forcedmutation = TRUE
@@ -520,7 +499,7 @@
 
 /obj/item/dnainjector/tourmut
 	name = "DNA-Injector (Tour.)"
-	desc = "Gives you a nasty case off tourrets."
+	desc = "Gives you a nasty case off tourettes."
 	datatype = DNA2_BUF_SE
 	value = 0xFFF
 	forcedmutation = TRUE

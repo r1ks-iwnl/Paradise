@@ -20,9 +20,8 @@ GLOBAL_LIST_EMPTY(fax_blacklist)
 	var/long_range_enabled = FALSE
 	req_one_access = list(ACCESS_LAWYER, ACCESS_HEADS, ACCESS_ARMORY)
 
-	use_power = IDLE_POWER_USE
-	idle_power_usage = 30
-	active_power_usage = 200
+	idle_power_consumption = 30
+	active_power_consumption = 200
 
 	/// ID card inserted into the machine, used to log in with
 	var/obj/item/card/id/scan = null
@@ -48,6 +47,10 @@ GLOBAL_LIST_EMPTY(fax_blacklist)
 /obj/machinery/photocopier/faxmachine/Destroy()
 	GLOB.allfaxes -= src
 	return ..()
+
+/obj/machinery/photocopier/faxmachine/examine(mob/user)
+	. = ..()
+	. += "<span class='info'><b>Alt-Click</b> [src] to remove its currently stored ID.</span>"
 
 /obj/machinery/photocopier/faxmachine/proc/update_network()
 	if(department != "Unknown")
@@ -101,7 +104,7 @@ GLOBAL_LIST_EMPTY(fax_blacklist)
 
 /obj/machinery/photocopier/faxmachine/emag_act(mob/user)
 	if(!emagged)
-		emagged = 1
+		emagged = TRUE
 		req_one_access = list()
 		to_chat(user, "<span class='notice'>The transmitters realign to an unknown source!</span>")
 	else
@@ -197,12 +200,12 @@ GLOBAL_LIST_EMPTY(fax_blacklist)
 				var/n_name = sanitize(copytext(input(usr, "What would you like to label the fax?", "Fax Labelling", copyitem.name)  as text, 1, MAX_MESSAGE_LEN))
 				if((copyitem && copyitem.loc == src && usr.stat == 0))
 					if(istype(copyitem, /obj/item/paper))
-						copyitem.name = "[(n_name ? text("[n_name]") : initial(copyitem.name))]"
+						copyitem.name = "[(n_name ? "[n_name]" : initial(copyitem.name))]"
 						copyitem.desc = "This is a paper titled '" + copyitem.name + "'."
 					else if(istype(copyitem, /obj/item/photo))
-						copyitem.name = "[(n_name ? text("[n_name]") : "photo")]"
+						copyitem.name = "[(n_name ? "[n_name]" : "photo")]"
 					else if(istype(copyitem, /obj/item/paper_bundle))
-						copyitem.name = "[(n_name ? text("[n_name]") : "paper")]"
+						copyitem.name = "[(n_name ? "[n_name]" : "paper")]"
 					else
 						. = FALSE
 				else
@@ -224,7 +227,7 @@ GLOBAL_LIST_EMPTY(fax_blacklist)
 					for(var/obj/machinery/photocopier/faxmachine/F in GLOB.allfaxes)
 						if(F.emagged)//we can contact emagged faxes on the station
 							combineddepartments |= F.department
-				destination = input(usr, "To which department?", "Choose a department", "") as null|anything in combineddepartments
+				destination = tgui_input_list(usr, "To which department?", "Choose a department", combineddepartments)
 				if(!destination)
 					destination = lastdestination
 		if("send") // actually send the fax
@@ -268,25 +271,22 @@ GLOBAL_LIST_EMPTY(fax_blacklist)
 			scan = card
 	SStgui.update_uis(src)
 
-/obj/machinery/photocopier/faxmachine/verb/eject_id()
-	set category = null
-	set name = "Eject ID Card"
-	set src in oview(1)
-
-	if(usr.incapacitated())
+/obj/machinery/photocopier/faxmachine/AltClick(mob/user)
+	if(user.stat || HAS_TRAIT(user, TRAIT_HANDS_BLOCKED) || !Adjacent(user))
 		return
 
 	if(scan)
-		to_chat(usr, "You remove [scan] from [src].")
-		scan.forceMove(get_turf(src))
-		if(!usr.get_active_hand() && Adjacent(usr))
-			usr.put_in_hands(scan)
+		to_chat(user, "<span class='notice'>You remove [scan] from [src].</span>")
+		if(!user.get_active_hand())
+			user.put_in_hands(scan)
+		else if(!user.put_in_inactive_hand(scan))
+			scan.forceMove(get_turf(src))
 		scan = null
 	else
-		to_chat(usr, "There is nothing to remove from [src].")
+		to_chat(user, "<span class='notice'>There is nothing to remove from [src].</span>")
 
 /obj/machinery/photocopier/faxmachine/proc/sendfax(destination, mob/sender)
-	use_power(active_power_usage)
+	use_power(active_power_consumption)
 	var/success = 0
 	for(var/obj/machinery/photocopier/faxmachine/F in GLOB.allfaxes)
 		if(F.department == destination)
@@ -315,7 +315,7 @@ GLOBAL_LIST_EMPTY(fax_blacklist)
 	flick(receive_anim, src)
 
 	playsound(loc, 'sound/goonstation/machines/printer_dotmatrix.ogg', 50, 1)
-	addtimer(CALLBACK(src, .proc/print_fax, incoming), 2 SECONDS)
+	addtimer(CALLBACK(src, PROC_REF(print_fax), incoming), 2 SECONDS)
 	return TRUE
 
 /obj/machinery/photocopier/faxmachine/proc/print_fax(obj/item/incoming)
@@ -328,10 +328,10 @@ GLOBAL_LIST_EMPTY(fax_blacklist)
 	else
 		return
 
-	use_power(active_power_usage)
+	use_power(active_power_consumption)
 
 /obj/machinery/photocopier/faxmachine/proc/send_admin_fax(mob/sender, destination)
-	use_power(active_power_usage)
+	use_power(active_power_consumption)
 
 	if(!(istype(copyitem, /obj/item/paper) || istype(copyitem, /obj/item/paper_bundle) || istype(copyitem, /obj/item/photo)))
 		visible_message("[src] beeps, \"Error transmitting message.\"")

@@ -12,8 +12,21 @@
 /datum/proc/can_vv_get(var_name)
 	return TRUE
 
-// /client/proc/can_vv_get(var_name)
-// 	return TRUE
+/mob/can_vv_get(var_name)
+	var/static/list/protected_vars = list(
+		"lastKnownIP", "computer_id", "attack_log_old"
+	)
+	if(!check_rights(R_ADMIN, FALSE, usr) && (var_name in protected_vars))
+		return FALSE
+	return TRUE
+
+/client/can_vv_get(var_name)
+	var/static/list/protected_vars = list(
+		"address", "chatOutput", "computer_id", "connection", "jbh", "pm_tracker", "related_accounts_cid", "related_accounts_ip", "watchlisted"
+	)
+	if(!check_rights(R_ADMIN, FALSE, usr) && (var_name in protected_vars))
+		return FALSE
+	return TRUE
 
 /datum/proc/vv_edit_var(var_name, var_value) //called whenever a var is edited
 	switch(var_name)
@@ -83,7 +96,7 @@
 
 	var/static/cookieoffset = rand(1, 9999) //to force cookies to reset after the round.
 
-	if(!is_admin(usr))
+	if(!check_rights(R_ADMIN|R_VIEWRUNTIMES))
 		to_chat(usr, "<span class='warning'>You need to be an administrator to access this.</span>")
 		return
 
@@ -256,11 +269,11 @@
 				if(event.keyCode == 13){	//Enter / return
 					var vars_ol = document.getElementById('vars');
 					var lis = vars_ol.getElementsByTagName("li");
-					for ( var i = 0; i < lis.length; ++i )
+					for(var i = 0; i < lis.length; ++i)
 					{
 						try{
 							var li = lis\[i\];
-							if ( li.style.backgroundColor == "#ffee88" )
+							if(li.style.backgroundColor == "#ffee88")
 							{
 								alist = lis\[i\].getElementsByTagName("a")
 								if(alist.length > 0){
@@ -274,13 +287,13 @@
 				if(event.keyCode == 38){	//Up arrow
 					var vars_ol = document.getElementById('vars');
 					var lis = vars_ol.getElementsByTagName("li");
-					for ( var i = 0; i < lis.length; ++i )
+					for(var i = 0; i < lis.length; ++i)
 					{
 						try{
 							var li = lis\[i\];
-							if ( li.style.backgroundColor == "#ffee88" )
+							if(li.style.backgroundColor == "#ffee88")
 							{
-								if( (i-1) >= 0){
+								if((i-1) >= 0){
 									var li_new = lis\[i-1\];
 									li.style.backgroundColor = "white";
 									li_new.style.backgroundColor = "#ffee88";
@@ -294,13 +307,13 @@
 				if(event.keyCode == 40){	//Down arrow
 					var vars_ol = document.getElementById('vars');
 					var lis = vars_ol.getElementsByTagName("li");
-					for ( var i = 0; i < lis.length; ++i )
+					for(var i = 0; i < lis.length; ++i)
 					{
 						try{
 							var li = lis\[i\];
-							if ( li.style.backgroundColor == "#ffee88" )
+							if(li.style.backgroundColor == "#ffee88")
 							{
-								if( (i+1) < lis.length){
+								if((i+1) < lis.length){
 									var li_new = lis\[i+1\];
 									li.style.backgroundColor = "white";
 									li_new.style.backgroundColor = "#ffee88";
@@ -323,11 +336,11 @@
 				}else{
 					var vars_ol = document.getElementById('vars');
 					var lis = vars_ol.getElementsByTagName("li");
-					for ( var i = 0; i < lis.length; ++i )
+					for(var i = 0; i < lis.length; ++i)
 					{
 						try{
 							var li = lis\[i\];
-							if ( li.innerText.toLowerCase().indexOf(filter) == -1 )
+							if(li.innerText.toLowerCase().indexOf(filter) == -1)
 							{
 								vars_ol.removeChild(li);
 								i--;
@@ -336,10 +349,10 @@
 					}
 				}
 				var lis_new = vars_ol.getElementsByTagName("li");
-				for ( var j = 0; j < lis_new.length; ++j )
+				for(var j = 0; j < lis_new.length; ++j)
 				{
 					var li1 = lis\[j\];
-					if (j == 0){
+					if(j == 0){
 						li1.style.backgroundColor = "#ffee88";
 					}else{
 						li1.style.backgroundColor = "white";
@@ -351,7 +364,7 @@
 				filter_text.focus();
 				filter_text.select();
 				var lastsearch = getCookie("[refid][cookieoffset]search");
-				if (lastsearch) {
+				if(lastsearch) {
 					filter_text.value = lastsearch;
 					updateSearch();
 				}
@@ -367,8 +380,8 @@
 				var ca = document.cookie.split(';');
 				for(var i=0; i<ca.length; i++) {
 					var c = ca\[i\];
-					while (c.charAt(0)==' ') c = c.substring(1,c.length);
-					if (c.indexOf(name)==0) return c.substring(name.length,c.length);
+					while(c.charAt(0)==' ') c = c.substring(1,c.length);
+					if(c.indexOf(name)==0) return c.substring(name.length,c.length);
 				}
 				return "";
 			}
@@ -490,7 +503,7 @@
 		var/datum/D = value
 		item = "<a href='?_src_=vars;Vars=[D.UID()]'>[VV_HTML_ENCODE(name)] \ref[value]</a> = [D.type]"
 
-	else if(istype(value, /client))
+	else if(isclient(value))
 		var/client/C = value
 		item = "<a href='?_src_=vars;Vars=[C.UID()]'>[VV_HTML_ENCODE(name)] \ref[value]</a> = [C] [C.type]"
 //
@@ -524,8 +537,8 @@
 
 /client/proc/view_var_Topic(href, href_list, hsrc)
 	//This should all be moved over to datum/admins/Topic() or something ~Carn
-	if(!check_rights(R_ADMIN|R_MOD))
-		return
+	if(!check_rights(R_ADMIN|R_MOD, FALSE) && !((href_list["datumrefresh"] || href_list["Vars"] || href_list["VarsList"]) && check_rights(R_VIEWRUNTIMES, FALSE)))
+		return // clients with R_VIEWRUNTIMES can still refresh the window/view references/view lists. they cannot edit anything else however.
 
 	if(view_var_Topic_list(href, href_list, hsrc))  // done because you can't use UIDs with lists and I don't want to snowflake into the below check to supress warnings
 		return
@@ -544,7 +557,7 @@
 		else if(isclient(D))
 			var/client/C = D
 			href_list[paramname] = C.UID()
-		log_runtime(EXCEPTION("Found \\ref-based '[paramname]' param in VV topic for [datuminfo], should be UID: [href]"))
+		stack_trace("Found \\ref-based '[paramname]' param in VV topic for [datuminfo], should be UID: [href]")
 
 	if(href_list["Vars"])
 		debug_variables(locateUID(href_list["Vars"]))
@@ -559,7 +572,7 @@
 			return
 
 		var/new_name = reject_bad_name(sanitize(copytext(input(usr, "What would you like to name this mob?", "Input a name", M.real_name) as text|null, 1, MAX_NAME_LEN)), allow_numbers = TRUE)
-		if( !new_name || !M )	return
+		if(!new_name || !M)	return
 
 		message_admins("Admin [key_name_admin(usr)] renamed [key_name_admin(M)] to [new_name].")
 		M.rename_character(M.real_name, new_name)
@@ -569,7 +582,7 @@
 		if(!check_rights(R_VAREDIT))	return
 
 		var/D = locateUID(href_list["datumedit"])
-		if(!istype(D,/datum) && !istype(D,/client))
+		if(!istype(D,/datum) && !isclient(D))
 			to_chat(usr, "This can only be used on instances of types /client or /datum")
 			return
 
@@ -579,7 +592,7 @@
 		if(!check_rights(R_VAREDIT))	return
 
 		var/atom/D = locateUID(href_list["subject"])
-		if(!istype(D,/datum) && !istype(D,/client))
+		if(!istype(D,/datum) && !isclient(D))
 			to_chat(usr, "This can only be used on instances of types /client or /datum")
 			return
 		if(!(href_list["var"] in D.vars))
@@ -594,7 +607,7 @@
 		if(!check_rights(R_VAREDIT))	return
 
 		var/D = locateUID(href_list["datumchange"])
-		if(!istype(D,/datum) && !istype(D,/client))
+		if(!istype(D,/datum) && !isclient(D))
 			to_chat(usr, "This can only be used on instances of types /client or /datum")
 			return
 
@@ -673,7 +686,7 @@
 		href_list["datumrefresh"] = href_list["give_spell"]
 
 	else if(href_list["godmode"])
-		if(!check_rights(R_REJUVINATE))	return
+		if(!check_rights(R_EVENT))	return
 
 		var/mob/M = locateUID(href_list["godmode"])
 		if(!istype(M))
@@ -895,10 +908,10 @@
 		if(!result || !A)
 			return TRUE
 
-		A.armor = A.armor.setRating(armorlist[MELEE], armorlist[BULLET], armorlist[LASER], armorlist[ENERGY], armorlist[BOMB], armorlist[BIO], armorlist[RAD], armorlist[FIRE], armorlist[ACID], armorlist[MAGIC])
+		A.armor = A.armor.setRating(armorlist[MELEE], armorlist[BULLET], armorlist[LASER], armorlist[ENERGY], armorlist[BOMB], armorlist[RAD], armorlist[FIRE], armorlist[ACID], armorlist[MAGIC])
 
-		log_admin("[key_name(usr)] modified the armor on [A] to: melee = [armorlist[MELEE]], bullet = [armorlist[BULLET]], laser = [armorlist[LASER]], energy = [armorlist[ENERGY]], bomb = [armorlist[BOMB]], bio = [armorlist[BIO]], rad = [armorlist[RAD]], fire = [armorlist[FIRE]], acid = [armorlist[ACID]], magic = [armorlist[MAGIC]]")
-		message_admins("<span class='notice'>[key_name(usr)] modified the armor on [A] to: melee = [armorlist[MELEE]], bullet = [armorlist[BULLET]], laser = [armorlist[LASER]], energy = [armorlist[ENERGY]], bomb = [armorlist[BOMB]], bio = [armorlist[BIO]], rad = [armorlist[RAD]], fire = [armorlist[FIRE]], acid = [armorlist[ACID]], magic = [armorlist[MAGIC]]")
+		log_admin("[key_name(usr)] modified the armor on [A] to: melee = [armorlist[MELEE]], bullet = [armorlist[BULLET]], laser = [armorlist[LASER]], energy = [armorlist[ENERGY]], bomb = [armorlist[BOMB]], rad = [armorlist[RAD]], fire = [armorlist[FIRE]], acid = [armorlist[ACID]], magic = [armorlist[MAGIC]]")
+		message_admins("<span class='notice'>[key_name(usr)] modified the armor on [A] to: melee = [armorlist[MELEE]], bullet = [armorlist[BULLET]], laser = [armorlist[LASER]], energy = [armorlist[ENERGY]], bomb = [armorlist[BOMB]], rad = [armorlist[RAD]], fire = [armorlist[FIRE]], acid = [armorlist[ACID]], magic = [armorlist[MAGIC]]")
 		return TRUE
 
 	else if(href_list["addreagent"]) /* Made on /TG/, credit to them. */
@@ -1003,113 +1016,6 @@
 		message_admins("[key_name_admin(usr)] has rotated \the [A]")
 		log_admin("[key_name(usr)] has rotated \the [A]")
 		href_list["datumrefresh"] = href_list["rotatedatum"]
-
-	else if(href_list["makemonkey"])
-		if(!check_rights(R_SPAWN))	return
-
-		var/mob/living/carbon/human/H = locateUID(href_list["makemonkey"])
-		if(!istype(H))
-			to_chat(usr, "This can only be done to instances of type /mob/living/carbon/human")
-			return
-
-		if(alert("Confirm mob type change?",,"Transform","Cancel") != "Transform")	return
-		if(!H)
-			to_chat(usr, "Mob doesn't exist anymore")
-			return
-		holder.Topic(href, list("monkeyone"=href_list["makemonkey"]))
-
-	else if(href_list["makerobot"])
-		if(!check_rights(R_SPAWN))	return
-
-		var/mob/living/carbon/human/H = locateUID(href_list["makerobot"])
-		if(!istype(H))
-			to_chat(usr, "This can only be done to instances of type /mob/living/carbon/human")
-			return
-
-		if(alert("Confirm mob type change?",,"Transform","Cancel") != "Transform")	return
-		if(!H)
-			to_chat(usr, "Mob doesn't exist anymore")
-			return
-		holder.Topic(href, list("makerobot"=href_list["makerobot"]))
-
-	else if(href_list["makealien"])
-		if(!check_rights(R_SPAWN))	return
-
-		var/mob/living/carbon/human/H = locateUID(href_list["makealien"])
-		if(!istype(H))
-			to_chat(usr, "This can only be done to instances of type /mob/living/carbon/human")
-			return
-
-		if(alert("Confirm mob type change?",,"Transform","Cancel") != "Transform")	return
-		if(!H)
-			to_chat(usr, "Mob doesn't exist anymore")
-			return
-		holder.Topic(href, list("makealien"=href_list["makealien"]))
-
-	else if(href_list["makeslime"])
-		if(!check_rights(R_SPAWN))	return
-
-		var/mob/living/carbon/human/H = locateUID(href_list["makeslime"])
-		if(!istype(H))
-			to_chat(usr, "This can only be done to instances of type /mob/living/carbon/human")
-			return
-
-		if(alert("Confirm mob type change?",,"Transform","Cancel") != "Transform")	return
-		if(!H)
-			to_chat(usr, "Mob doesn't exist anymore")
-			return
-		holder.Topic(href, list("makeslime"=href_list["makeslime"]))
-
-	else if(href_list["makesuper"])
-		if(!check_rights(R_SPAWN))	return
-
-		var/mob/living/carbon/human/H = locateUID(href_list["makesuper"])
-		if(!istype(H))
-			to_chat(usr, "This can only be done to instances of type /mob/living/carbon/human")
-			return
-
-		if(alert("Confirm mob type change?",,"Transform","Cancel") != "Transform")	return
-		if(!H)
-			to_chat(usr, "Mob doesn't exist anymore")
-			return
-		holder.Topic(href, list("makesuper"=href_list["makesuper"]))
-
-	else if(href_list["makeai"])
-		if(!check_rights(R_SPAWN))	return
-
-		var/mob/living/carbon/human/H = locateUID(href_list["makeai"])
-		if(!istype(H))
-			to_chat(usr, "This can only be done to instances of type /mob/living/carbon/human")
-			return
-
-		if(alert("Confirm mob type change?",,"Transform","Cancel") != "Transform")	return
-		if(!H)
-			to_chat(usr, "Mob doesn't exist anymore")
-			return
-		holder.Topic(href, list("makeai"=href_list["makeai"]))
-
-	else if(href_list["setspecies"])
-		if(!check_rights(R_SPAWN))	return
-
-		var/mob/living/carbon/human/H = locateUID(href_list["setspecies"])
-		if(!istype(H))
-			to_chat(usr, "This can only be done to instances of type /mob/living/carbon/human")
-			return
-
-		var/new_species = input("Please choose a new species.","Species",null) as null|anything in GLOB.all_species
-
-		if(!H)
-			to_chat(usr, "Mob doesn't exist anymore")
-			return
-
-		var/datum/species/S = GLOB.all_species[new_species]
-		if(H.set_species(S.type))
-			to_chat(usr, "Set species of [H] to [H.dna.species].")
-			H.regenerate_icons()
-			message_admins("[key_name_admin(usr)] has changed the species of [key_name_admin(H)] to [new_species]")
-			log_admin("[key_name(usr)] has changed the species of [key_name(H)] to [new_species]")
-		else
-			to_chat(usr, "Failed! Something went wrong.")
 
 	else if(href_list["addlanguage"])
 		if(!check_rights(R_SPAWN))	return
@@ -1330,13 +1236,6 @@
 			return
 		src.debug_variables(DAT)
 
-	if(href_list["copyoutfit"])
-		if(!check_rights(R_EVENT))
-			return
-		var/mob/living/carbon/human/H = locateUID(href_list["copyoutfit"])
-		if(istype(H))
-			H.copy_outfit()
-
 	if(href_list["manipcolours"])
 		if(!check_rights(R_DEBUG))
 			return
@@ -1349,6 +1248,63 @@
 		message_admins("[key_name_admin(usr)] is manipulating the colour matrix for [target]")
 		var/datum/ui_module/colour_matrix_tester/CMT = new(target=target)
 		CMT.ui_interact(usr)
+
+	if(href_list["grantdeadchatcontrol"])
+		if(!check_rights(R_EVENT))
+			return
+
+		var/atom/movable/A = locateUID(href_list["grantdeadchatcontrol"])
+		if(!istype(A))
+			return
+
+		if(!GLOB.dsay_enabled)
+			// TODO verify what happens when deadchat is muted
+			to_chat(usr, "<span class='warning'>Deadchat is globally muted, un-mute deadchat before enabling this.</span>")
+			return
+
+		if(A.GetComponent(/datum/component/deadchat_control))
+			to_chat(usr, "<span class='warning'>[A] is already under deadchat control!</span>")
+			return
+
+		var/control_mode = input(usr, "Please select the control mode","Deadchat Control", null) as null|anything in list("democracy", "anarchy")
+
+		var/selected_mode
+		switch(control_mode)
+			if("democracy")
+				selected_mode = DEADCHAT_DEMOCRACY_MODE
+			if("anarchy")
+				selected_mode = DEADCHAT_ANARCHY_MODE
+			else
+				return
+
+		var/cooldown = input(usr, "Please enter a cooldown time in seconds. For democracy, it's the time between actions (must be greater than zero). For anarchy, it's the time between each user's actions, or -1 for no cooldown.", "Cooldown", null) as null|num
+		if(isnull(cooldown) || (cooldown == -1 && selected_mode == DEADCHAT_DEMOCRACY_MODE))
+			return
+		if(cooldown < 0 && selected_mode == DEADCHAT_DEMOCRACY_MODE)
+			to_chat(usr, "<span class='warning'>The cooldown for democracy mode must be greater than zero.</span>")
+			return
+		if(cooldown == -1)
+			cooldown = 0
+		else
+			cooldown = cooldown SECONDS
+
+		A.deadchat_plays(selected_mode, cooldown)
+		message_admins("[key_name_admin(usr)] provided deadchat control to [A].")
+
+	if(href_list["removedeadchatcontrol"])
+		if(!check_rights(R_EVENT))
+			return
+
+		var/atom/movable/A = locateUID(href_list["removedeadchatcontrol"])
+		if(!istype(A))
+			return
+
+		if(!A.GetComponent(/datum/component/deadchat_control))
+			to_chat(usr, "<span class='warning'>[A] is not currently under deadchat control!</span>")
+			return
+
+		A.stop_deadchat_plays()
+		message_admins("[key_name_admin(usr)] removed deadchat control from [A].")
 
 /client/proc/view_var_Topic_list(href, href_list, hsrc)
 	if(href_list["VarsList"])
@@ -1464,3 +1420,29 @@
 	if(href_list["listrefresh"])
 		debug_variables(locate(href_list["listrefresh"]))
 		return TRUE
+
+/client/proc/debug_global_variables(var_search as text)
+	set category = "Debug"
+	set name = "Debug Global Variables"
+
+	if(!check_rights(R_ADMIN|R_VIEWRUNTIMES))
+		to_chat(usr, "<span class='warning'>You need to be an administrator to access this.</span>")
+		return
+
+	var_search = trim(var_search)
+	if(!var_search)
+		return
+	if(!GLOB.can_vv_get(var_search))
+		return
+	switch(var_search)
+		if("vars")
+			return FALSE
+	if(!(var_search in GLOB.vars))
+		to_chat(src, "<span class='debug'>GLOB.[var_search] does not exist.</span>")
+		return
+	log_and_message_admins("is debugging the Global Variables controller with the search term \"[var_search]\"")
+	var/result = GLOB.vars[var_search]
+	if(islist(result) || isclient(result) || istype(result, /datum))
+		to_chat(src, "<span class='debug'>Now showing GLOB.[var_search].</span>")
+		return debug_variables(result)
+	to_chat(src, "<span class='debug'>GLOB.[var_search] returned [result].</span>")

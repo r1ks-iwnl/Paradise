@@ -7,7 +7,7 @@
 /obj/item/powersink
 	name = "power sink"
 	desc = "A nulling power sink which drains energy from electrical systems."
-	icon = 'icons/obj/device.dmi'
+	icon = 'icons/goonstation/objects/powersink.dmi'
 	icon_state = "powersink0"
 	item_state = "electronic"
 	w_class = WEIGHT_CLASS_BULKY
@@ -30,7 +30,7 @@
 	attached = null
 	return ..()
 
-/obj/item/powersink/update_icon()
+/obj/item/powersink/update_icon_state()
 	icon_state = "powersink[mode == OPERATING]"
 
 /obj/item/powersink/proc/set_mode(value)
@@ -60,7 +60,7 @@
 			density = TRUE
 
 	mode = value
-	update_icon()
+	update_icon(UPDATE_ICON_STATE)
 	set_light(0)
 
 /obj/item/powersink/screwdriver_act(mob/user, obj/item/I)
@@ -113,14 +113,14 @@
 		set_mode(DISCONNECTED)
 		return
 
-	var/datum/powernet/PN = attached.powernet
+	var/datum/regional_powernet/PN = attached.powernet
 	if(PN)
 		set_light(5)
 
 		// found a powernet, so drain up to max power from it
 
-		var/drained = min (drain_rate, attached.newavail())
-		attached.add_delayedload(drained)
+		var/drained = min(drain_rate, attached.get_queued_surplus())
+		attached.add_queued_power_demand(drained)
 		power_drained += drained
 
 		// if tried to drain more than available on powernet
@@ -132,13 +132,13 @@
 					if(A.operating && A.cell)
 						A.cell.charge = max(0, A.cell.charge - 50)
 						power_drained += 50
-						if(A.charging == 2) // If the cell was full
-							A.charging = 1 // It's no longer full
+						if(A.charging == APC_FULLY_CHARGED) // If the cell was full
+							A.charging = APC_IS_CHARGING // It's no longer full
 				if(drained >= drain_rate)
 					break
 
 	if(power_drained > max_power * 0.98)
-		if (!admins_warned)
+		if(!admins_warned)
 			admins_warned = TRUE
 			message_admins("Power sink at ([x],[y],[z] - <A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[x];Y=[y];Z=[z]'>JMP</a>) is 95% full. Explosion imminent.")
 		playsound(src, 'sound/effects/screech.ogg', 100, 1, 1)

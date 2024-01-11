@@ -61,7 +61,7 @@
 		if("import")
 			var/t = ""
 			do
-				t = html_encode(input(usr, "Please paste the entire song, formatted:", text("[]", name), t)  as message)
+				t = html_encode(input(usr, "Please paste the entire song, formatted:", "[name]", t)  as message)
 				if(!in_range(parent, usr))
 					return
 
@@ -83,7 +83,7 @@
 		if("tempo")
 			tempo = sanitize_tempo(text2num(params["new"]))
 		if("play")
-			INVOKE_ASYNC(src, .proc/start_playing, usr)
+			INVOKE_ASYNC(src, PROC_REF(start_playing), usr)
 		if("newline")
 			var/newline = html_encode(input("Enter your line: ", parent.name) as text|null)
 			if(!newline || !in_range(parent, usr))

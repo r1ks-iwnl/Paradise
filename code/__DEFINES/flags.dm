@@ -2,11 +2,11 @@
 #define NONE 0
 
 //FLAGS BITMASK
-#define STOPSPRESSUREDMAGE 		1		//This flag is used on the flags variable for SUIT and HEAD items which stop pressure damage. Note that the flag 1 was previous used as ONBACK, so it is possible for some code to use (flags & 1) when checking if something can be put on your back. Replace this code with (inv_flags & SLOT_BACK) if you see it anywhere To successfully stop you taking all pressure damage you must have both a suit and head item with this flag.
+#define STOPSPRESSUREDMAGE		1		//This flag is used on the flags variable for SUIT and HEAD items which stop pressure damage. Note that the flag 1 was previous used as ONBACK, so it is possible for some code to use (flags & 1) when checking if something can be put on your back. Replace this code with (inv_flags & SLOT_FLAG_BACK) if you see it anywhere To successfully stop you taking all pressure damage you must have both a suit and head item with this flag.
 #define NODROP					2		// This flag makes it so that an item literally cannot be removed at all, or at least that's how it should be. Only deleted.
 #define NOBLUDGEON  			4		// when an item has this it produces no "X has been hit by Y with Z" message with the default handler
 #define AIRTIGHT				8		// mask allows internals
-#define HANDSLOW        		16		// If an item has this flag, it will slow you to carry it
+#define HANDSLOW				16		// If an item has this flag, it will slow you to carry it
 #define CONDUCT					32		// conducts electricity (metal etc.)
 #define ABSTRACT				64		// for all things that are technically items but used for various different stuff, made it 128 because it could conflict with other flags other way
 #define ON_BORDER				128		// item has priority to check when entering or leaving
@@ -27,6 +27,17 @@
 ///Whether or not this atom shows screentips when hovered over
 #define NO_SCREENTIPS			32768
 
+// Update flags for [/atom/proc/update_appearance]
+/// Update the atom's name
+#define UPDATE_NAME (1<<0)
+/// Update the atom's desc
+#define UPDATE_DESC (1<<1)
+/// Update the atom's icon state
+#define UPDATE_ICON_STATE (1<<2)
+/// Update the atom's overlays
+#define UPDATE_OVERLAYS (1<<3)
+/// Update the atom's icon
+#define UPDATE_ICON (UPDATE_ICON_STATE|UPDATE_OVERLAYS)
 
 /* Secondary atom flags, for the flags_2 var, denoted with a _2 */
 
@@ -37,6 +48,7 @@
 #define STATIONLOVING_2			16
 #define INFORM_ADMINS_ON_RELOCATE_2	32
 #define BANG_PROTECT_2			64
+#define BLOCKS_LIGHT_2          128 // Light sources placed in anything with that flag will not emit light through them.
 
 // A mob with OMNITONGUE has no restriction in the ability to speak
 // languages that they know. So even if they wouldn't normally be able to
@@ -64,7 +76,13 @@
 /// Prevents shuttles from deleting the item
 #define IMMUNE_TO_SHUTTLECRUSH_2 (1<<16)
 /// Prevents malf AI animate + overload ability
-#define NO_MALF_EFFECT_2 (1<<17)
+#define NO_MALF_EFFECT_2		(1<<17)
+/// Use when this shouldn't be obscured by large icons.
+#define CRITICAL_ATOM_2			(1<<18)
+/// Use this flag for items that can block randomly
+#define RANDOM_BLOCKER_2		(1<<19)
+/// This flag allows for wearing of a belt item, even if you're not wearing a jumpsuit
+#define ALLOW_BELT_NO_JUMPSUIT_2	(1<<20)
 
 //Reagent flags
 #define REAGENT_NOREACT			1
@@ -91,6 +109,7 @@
 #define HAS_BODYACC_COLOR	8192
 #define BALD				16384
 #define ALL_RPARTS			32768
+#define SHAVED				65536
 
 //Pre-baked combinations of the above body flags
 #define HAS_BODY_ACCESSORY 	HAS_TAIL|HAS_WING
@@ -110,13 +129,15 @@
 #define SAFE	16
 
 //flags for pass_flags
-#define PASSTABLE		1
-#define PASSGLASS		2
-#define PASSGRILLE		4
-#define PASSBLOB		8
-#define PASSMOB			16
-#define LETPASSTHROW	32
-#define PASSFENCE		64
+#define PASSTABLE		(1<<0)
+#define PASSGLASS		(1<<1)
+#define PASSGRILLE		(1<<2)
+#define PASSBLOB		(1<<3)
+#define PASSMOB			(1<<4)
+#define LETPASSTHROW	(1<<5)
+#define PASSFENCE		(1<<6)
+#define PASSDOOR		(1<<7)
+#define PASSGIRDER		(1<<8)
 
 //turf-only flags
 #define NOJAUNT		1
@@ -124,21 +145,21 @@
 #define NO_RUINS 	4
 
 //ITEM INVENTORY SLOT BITMASKS
-#define SLOT_OCLOTHING	(1<<0)
-#define SLOT_ICLOTHING	(1<<1)
-#define SLOT_GLOVES		(1<<2)
-#define SLOT_EYES		(1<<3)
-#define SLOT_EARS		(1<<4)
-#define SLOT_MASK		(1<<5)
-#define SLOT_HEAD		(1<<6)
-#define SLOT_FEET		(1<<7)
-#define SLOT_ID			(1<<8)
-#define SLOT_BELT		(1<<9)
-#define SLOT_BACK		(1<<10)
-#define SLOT_POCKET 	(1<<11)	//this is to allow items with a w_class of 3 or 4 to fit in pockets.
-#define SLOT_TWOEARS	(1<<12)
-#define SLOT_PDA		(1<<13)
-#define SLOT_TIE		(1<<14)
+#define SLOT_FLAG_OCLOTHING	(1<<0)
+#define SLOT_FLAG_ICLOTHING	(1<<1)
+#define SLOT_FLAG_GLOVES		(1<<2)
+#define SLOT_FLAG_EYES		(1<<3)
+#define SLOT_FLAG_EARS		(1<<4)
+#define SLOT_FLAG_MASK		(1<<5)
+#define SLOT_FLAG_HEAD		(1<<6)
+#define SLOT_FLAG_FEET		(1<<7)
+#define SLOT_FLAG_ID			(1<<8)
+#define SLOT_FLAG_BELT		(1<<9)
+#define SLOT_FLAG_BACK		(1<<10)
+#define SLOT_FLAG_POCKET 	(1<<11)	//this is to allow items with a w_class of 3 or 4 to fit in pockets.
+#define SLOT_FLAG_TWOEARS	(1<<12)
+#define SLOT_FLAG_PDA		(1<<13)
+#define SLOT_FLAG_TIE		(1<<14)
 
 //ORGAN TYPE FLAGS
 #define AFFECT_ROBOTIC_ORGAN	1
@@ -168,3 +189,17 @@
 #define ZAP_SUPERMATTER_FLAGS ZAP_GENERATES_POWER
 
 GLOBAL_LIST_INIT(bitflags, list(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768))
+
+//Mob mobility var flags
+/// can move
+#define MOBILITY_MOVE (1<<0)
+/// can, and is, standing up
+#define MOBILITY_STAND (1<<1)
+/// can pickup items
+#define MOBILITY_PICKUP (1<<2)
+/// can hold and use items
+#define MOBILITY_USE (1<<3)
+/// can pull things
+#define MOBILITY_PULL (1<<4)
+
+#define MOBILITY_FLAGS_DEFAULT (MOBILITY_MOVE | MOBILITY_STAND | MOBILITY_PICKUP | MOBILITY_USE | MOBILITY_PULL)

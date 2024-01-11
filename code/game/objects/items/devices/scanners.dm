@@ -13,10 +13,10 @@ REAGENT SCANNER
 	icon = 'icons/obj/device.dmi'
 	icon_state = "t-ray0"
 	var/on = FALSE
-	slot_flags = SLOT_BELT
+	slot_flags = SLOT_FLAG_BELT
 	w_class = WEIGHT_CLASS_SMALL
 	item_state = "electronic"
-	materials = list(MAT_METAL=150)
+	materials = list(MAT_METAL = 300)
 	origin_tech = "magnets=1;engineering=1"
 
 /obj/item/t_scanner/Destroy()
@@ -57,40 +57,48 @@ REAGENT SCANNER
 			var/mutable_appearance/MA = new(O)
 			MA.alpha = 128
 			MA.dir = O.dir
+			if(MA.layer < TURF_LAYER)
+				MA.layer += TRAY_SCAN_LAYER_OFFSET
+			MA.plane = GAME_PLANE
 			I.appearance = MA
 			t_ray_images += I
 	if(length(t_ray_images))
 		flick_overlay(t_ray_images, list(viewer.client), flick_time)
 
-
-/proc/chemscan(mob/living/user, mob/living/M)
+/proc/get_chemscan_results(mob/living/user, mob/living/M)
+	var/msgs = list()
 	if(ishuman(M))
 		var/mob/living/carbon/human/H = M
 		if(H.reagents)
 			if(H.reagents.reagent_list.len)
-				to_chat(user, "<span class='notice'>Subject contains the following reagents:</span>")
+				msgs += "<span class='boldnotice'>Subject contains the following reagents:</span>"
 				for(var/datum/reagent/R in H.reagents.reagent_list)
-					to_chat(user, "<span class='notice'>[R.volume]u of [R.name][R.overdosed ? "</span> - <span class = 'boldannounce'>OVERDOSING</span>" : ".</span>"]")
+					msgs += "<span class='notice'>[R.volume]u of [R.name][R.overdosed ? "</span> - <span class = 'boldannounce'>OVERDOSING</span>" : ".</span>"]"
 			else
-				to_chat(user, "<span class = 'notice'>Subject contains no reagents.</span>")
+				msgs += "<span class='notice'>Subject contains no reagents.</span>"
 			if(H.reagents.addiction_list.len)
-				to_chat(user, "<span class='danger'>Subject is addicted to the following reagents:</span>")
+				msgs += "<span class='danger'>Subject is addicted to the following reagents:</span>"
 				for(var/datum/reagent/R in H.reagents.addiction_list)
-					to_chat(user, "<span class='danger'>[R.name] Stage: [R.addiction_stage]/5</span>")
-			else
-				to_chat(user, "<span class='notice'>Subject is not addicted to any reagents.</span>")
+					msgs += "<span class='danger'>[R.name] Stage: [R.addiction_stage]/5</span>"
+
+	return msgs
+
+/proc/chemscan(mob/living/user, mob/living/M)
+	if(ishuman(M))
+		var/list/results = get_chemscan_results(user, M)
+		to_chat(user, results.Join("<br>"))
 
 /obj/item/healthanalyzer
 	name = "health analyzer"
+	desc = "A hand-held body scanner able to distinguish vital signs of the subject."
 	icon = 'icons/obj/device.dmi'
 	icon_state = "health"
 	item_state = "healthanalyzer"
 	belt_icon = "health_analyzer"
-	desc = "A hand-held body scanner able to distinguish vital signs of the subject."
 	flags = CONDUCT | NOBLUDGEON
-	slot_flags = SLOT_BELT
+	slot_flags = SLOT_FLAG_BELT
+	w_class = WEIGHT_CLASS_SMALL
 	throwforce = 3
-	w_class = WEIGHT_CLASS_TINY
 	throw_speed = 3
 	throw_range = 7
 	materials = list(MAT_METAL=200)
@@ -98,13 +106,19 @@ REAGENT SCANNER
 	var/mode = 1
 	var/advanced = FALSE
 
+/obj/item/healthanalyzer/examine(mob/user)
+	. = ..()
+	. += "<span class='info'>Use [src] in hand to swap between showing specific limb damage.</span>"
+
 /obj/item/healthanalyzer/attack(mob/living/M, mob/living/user)
 	if((HAS_TRAIT(user, TRAIT_CLUMSY) || user.getBrainLoss() >= 60) && prob(50))
+		var/list/msgs = list()
 		user.visible_message("<span class='warning'>[user] analyzes the floor's vitals!</span>", "<span class='notice'>You stupidly try to analyze the floor's vitals!</span>")
-		to_chat(user, "<span class='info'>Analyzing results for The floor:\n\tOverall status: Healthy</span>")
-		to_chat(user, "<span class='info'>Key: <font color='blue'>Suffocation</font>/<font color='green'>Toxin</font>/<font color='#FFA500'>Burn</font>/<font color='red'>Brute</font></span>")
-		to_chat(user, "<span class='info'>\tDamage specifics: <font color='blue'>0</font> - <font color='green'>0</font> - <font color='#FFA500'>0</font> - <font color='red'>0</font></span>")
-		to_chat(user, "<span class='info'>Body temperature: ???</span>")
+		msgs += "<span class='info'>Analyzing results for The floor:\n\tOverall status: Healthy</span>"
+		msgs += "<span class='info'>Key: <font color='blue'>Suffocation</font>/<font color='green'>Toxin</font>/<font color='#FFA500'>Burn</font>/<font color='red'>Brute</font></span>"
+		msgs += "<span class='info'>\tDamage specifics: <font color='blue'>0</font> - <font color='green'>0</font> - <font color='#FFA500'>0</font> - <font color='red'>0</font></span>"
+		msgs += "<span class='info'>Body temperature: ???</span>"
+		to_chat(user, chat_box_healthscan(msgs.Join("<br>")))
 		return
 
 	user.visible_message("<span class='notice'>[user] analyzes [M]'s vitals.</span>", "<span class='notice'>You analyze [M]'s vitals.</span>")
@@ -115,14 +129,25 @@ REAGENT SCANNER
 
 // Used by the PDA medical scanner too
 /proc/healthscan(mob/user, mob/living/M, mode = 1, advanced = FALSE)
+	var/list/msgs = list()
+	if(issimple_animal(M))
+		// no box here, keep it simple.
+		if(M.stat == DEAD)
+			to_chat(user, "<span class='notice'>Analyzing Results for [M]:\n\t Overall Status: <font color='red'>Dead</font></span>")
+		else
+			to_chat(user, "<span class='notice'>Analyzing Results for [M]:\n\t Overall Status: [round(M.health / M.maxHealth * 100, 0.1)]% Healthy")
+		to_chat(user, "\t Damage Specifics: <font color='red'>[M.maxHealth - M.health]</font>")
+		return
 	if(!ishuman(M) || ismachineperson(M))
 		//these sensors are designed for organic life
-		to_chat(user, "<span class='notice'>Analyzing Results for ERROR:\n\t Overall Status: ERROR</span>")
-		to_chat(user, "\t Key: <font color='blue'>Suffocation</font>/<font color='green'>Toxin</font>/<font color='#FFA500'>Burns</font>/<font color='red'>Brute</font>")
-		to_chat(user, "\t Damage Specifics: <font color='blue'>?</font> - <font color='green'>?</font> - <font color='#FFA500'>?</font> - <font color='red'>?</font>")
-		to_chat(user, "<span class='notice'>Body Temperature: [M.bodytemperature-T0C]&deg;C ([M.bodytemperature*1.8-459.67]&deg;F)</span>")
-		to_chat(user, "<span class='warning'><b>Warning: Blood Level ERROR: --% --cl.</span><span class='notice'>Type: ERROR</span>")
-		to_chat(user, "<span class='notice'>Subject's pulse: <font color='red'>-- bpm.</font></span>")
+
+		msgs += "<span class='notice'>Analyzing Results for ERROR:\n\t Overall Status: ERROR</span>"
+		msgs += "\t Key: <span class='healthscan_oxy'>Suffocation</span>/<font color='green'>Toxin</font>/<font color='#FFA500'>Burns</font>/<font color='red'>Brute</font>"
+		msgs += "\t Damage Specifics: <span class='healthscan_oxy'>?</span> - <font color='green'>?</font> - <font color='#FFA500'>?</font> - <font color='red'>?</font>"
+		msgs += "<span class='notice'>Body Temperature: [M.bodytemperature-T0C]&deg;C ([M.bodytemperature*1.8-459.67]&deg;F)</span>"
+		msgs += "<span class='warning'><b>Warning: Blood Level ERROR: --% --cl.</span><span class='notice'>Type: ERROR</span>"
+		msgs += "<span class='notice'>Subject's pulse: <font color='red'>-- bpm.</font></span>"
+		to_chat(user, chat_box_healthscan(msgs.Join("<br>")))
 		return
 
 	var/mob/living/carbon/human/H = M
@@ -143,70 +168,61 @@ REAGENT SCANNER
 		else
 			status = "[H.health]% Healthy"
 
-	to_chat(user, "<span class='notice'>Analyzing Results for [H]:\n\t Overall Status: [status]")
-	to_chat(user, "\t Key: <font color='blue'>Suffocation</font>/<font color='green'>Toxin</font>/<font color='#FFA500'>Burns</font>/<font color='red'>Brute</font>")
-	to_chat(user, "\t Damage Specifics: <font color='blue'>[OX]</font> - <font color='green'>[TX]</font> - <font color='#FFA500'>[BU]</font> - <font color='red'>[BR]</font>")
-	to_chat(user, "<span class='notice'>Body Temperature: [H.bodytemperature-T0C]&deg;C ([H.bodytemperature*1.8-459.67]&deg;F)</span>")
+	msgs += "<span class='notice'>Analyzing Results for [H]:\n\t Overall Status: [status]"
+	msgs += "\t Key: <span class='healthscan_oxy'>Suffocation</span>/<font color='green'>Toxin</font>/<font color='#FFA500'>Burns</font>/<font color='red'>Brute</font>"
+	msgs += "\t Damage Specifics: <span class='healthscan_oxy'>[OX]</span> - <font color='green'>[TX]</font> - <font color='#FFA500'>[BU]</font> - <font color='red'>[BR]</font>"
 	if(H.timeofdeath && (H.stat == DEAD || (HAS_TRAIT(H, TRAIT_FAKEDEATH))))
-		to_chat(user, "<span class='notice'>Time of Death: [station_time_timestamp("hh:mm:ss", H.timeofdeath)]</span>")
+		msgs += "<span class='notice'>Time of Death: [station_time_timestamp("hh:mm:ss", H.timeofdeath)]</span>"
 		var/tdelta = round(world.time - H.timeofdeath)
-		if(tdelta < DEFIB_TIME_LIMIT && !DNR)
-			to_chat(user, "<span class='danger'>Subject died [DisplayTimeText(tdelta)] ago, defibrillation may be possible!</span>")
+		if(H.is_revivable() && !DNR)
+			msgs += "<span class='danger'>Subject died [DisplayTimeText(tdelta)] ago, defibrillation may be possible!</span>"
 		else
-			to_chat(user, "<font color='red'>Subject died [DisplayTimeText(tdelta)] ago.</font>")
+			msgs += "<font color='red'>Subject died [DisplayTimeText(tdelta)] ago.</font>"
 
 	if(mode == 1)
 		var/list/damaged = H.get_damaged_organs(1,1)
-		to_chat(user, "<span class='notice'>Localized Damage, Brute/Burn:</span>")
-		if(length(damaged) > 0)
+		if(length(damaged))
+			msgs += "<span class='notice'>Localized Damage, Brute/Burn:</span>"
 			for(var/obj/item/organ/external/org in damaged)
-				to_chat(user, "\t\t<span class='info'>[capitalize(org.name)]: [(org.brute_dam > 0) ? "<font color='red'>[org.brute_dam]</font></span>" : "<font color='red'>0</font>"]-[(org.burn_dam > 0) ? "<font color='#FF8000'>[org.burn_dam]</font>" : "<font color='#FF8000'>0</font>"]")
-
-	OX = H.getOxyLoss() > 50 ? 	"<font color='blue'><b>Severe oxygen deprivation detected</b></font>" 		: 	"Subject bloodstream oxygen level normal"
-	TX = H.getToxLoss() > 50 ? 	"<font color='green'><b>Dangerous amount of toxins detected</b></font>" 	: 	"Subject bloodstream toxin level minimal"
-	BU = H.getFireLoss() > 50 ? 	"<font color='#FFA500'><b>Severe burn damage detected</b></font>" 			:	"Subject burn injury status O.K"
-	BR = H.getBruteLoss() > 50 ? "<font color='red'><b>Severe anatomical damage detected</b></font>" 		: 	"Subject brute-force injury status O.K"
-	if(HAS_TRAIT(H, TRAIT_FAKEDEATH))
-		OX = fake_oxy > 50 ? 		"<span class='danger'>Severe oxygen deprivation detected</span>" 	: 	"<span class='notice'>Subject bloodstream oxygen level normal</span>"
-	to_chat(user, "[OX] | [TX] | [BU] | [BR]")
+				msgs += "\t\t<span class='info'>[capitalize(org.name)]: [(org.brute_dam > 0) ? "<font color='red'>[org.brute_dam]</font></span>" : "<font color='red'>0</font>"]-[(org.burn_dam > 0) ? "<font color='#FF8000'>[org.burn_dam]</font>" : "<font color='#FF8000'>0</font>"]"
 
 	if(advanced)
-		chemscan(user, H)
+		msgs.Add(get_chemscan_results(user, H))
 	for(var/thing in H.viruses)
 		var/datum/disease/D = thing
 		if(D.visibility_flags & HIDDEN_SCANNER)
 			continue
 		// Snowflaking heart problems, because they are special (and common).
 		if(istype(D, /datum/disease/critical))
-			to_chat(user, "<span class='alert'><b>Warning: Subject is undergoing [D.name].</b>\nStage: [D.stage]/[D.max_stages].\nPossible Cure: [D.cure_text]</span>")
+			msgs += "<span class='alert'><b>Warning: Subject is undergoing [D.name].</b>\nStage: [D.stage]/[D.max_stages].\nPossible Cure: [D.cure_text]</span>"
 			continue
-		to_chat(user, "<span class='alert'><b>Warning: [D.form] detected</b>\nName: [D.name].\nType: [D.spread_text].\nStage: [D.stage]/[D.max_stages].\nPossible Cure: [D.cure_text]</span>")
+		msgs += "<span class='alert'><b>Warning: [D.form] detected</b>\nName: [D.name].\nType: [D.spread_text].\nStage: [D.stage]/[D.max_stages].\nPossible Cure: [D.cure_text]</span>"
 	if(H.undergoing_cardiac_arrest())
 		var/obj/item/organ/internal/heart/heart = H.get_int_organ(/obj/item/organ/internal/heart)
 		if(heart && !(heart.status & ORGAN_DEAD))
-			to_chat(user, "<span class='alert'><b>The patient's heart has stopped.</b>\nPossible Cure: Electric Shock</span>")
+			msgs += "<span class='alert'><b>The patient's heart has stopped.</b>\nPossible Cure: Electric Shock</span>"
 		else if(heart && (heart.status & ORGAN_DEAD))
-			to_chat(user, "<span class='alert'><b>Subject's heart is necrotic.</b></span>")
+			msgs += "<span class='alert'><b>Subject's heart is necrotic.</b></span>"
 		else if(!heart)
-			to_chat(user, "<span class='alert'><b>Subject has no heart.</b></span>")
+			msgs += "<span class='alert'><b>Subject has no heart.</b></span>"
 
 	if(H.getStaminaLoss())
-		to_chat(user, "<span class='info'>Subject appears to be suffering from fatigue.</span>")
+		msgs += "<span class='info'>Subject appears to be suffering from fatigue.</span>"
 	if(H.getCloneLoss())
-		to_chat(user, "<span class='warning'>Subject appears to have [H.getCloneLoss() > 30 ? "severe" : "minor"] cellular damage.</span>")
-	if(H.has_brain_worms())
-		to_chat(user, "<span class='warning'>Subject suffering from aberrant brain activity. Recommend further scanning.</span>")
+		msgs += "<span class='warning'>Subject appears to have [H.getCloneLoss() > 30 ? "severe" : "minor"] cellular damage.</span>"
 
 	if(H.get_int_organ(/obj/item/organ/internal/brain))
 		if(H.getBrainLoss() >= 100)
-			to_chat(user, "<span class='warning'>Subject is brain dead.</span>")
+			msgs += "<span class='warning'>Subject is brain dead.</span>"
 		else if(H.getBrainLoss() >= 60)
-			to_chat(user, "<span class='warning'>Severe brain damage detected. Subject likely to have dementia.</span>")
+			msgs += "<span class='warning'>Severe brain damage detected. Subject likely to have dementia.</span>"
 		else if(H.getBrainLoss() >= 10)
-			to_chat(user, "<span class='warning'>Significant brain damage detected. Subject may have had a concussion.</span>")
+			msgs += "<span class='warning'>Significant brain damage detected. Subject may have had a concussion.</span>"
 	else
-		to_chat(user, "<span class='warning'>Subject has no brain.</span>")
-
+		msgs += "<span class='warning'>Subject has no brain.</span>"
+	var/broken_bone = FALSE
+	var/internal_bleed = FALSE
+	var/burn_wound = FALSE
 	for(var/name in H.bodyparts_by_name)
 		var/obj/item/organ/external/e = H.bodyparts_by_name[name]
 		if(!e)
@@ -214,27 +230,26 @@ REAGENT SCANNER
 		var/limb = e.name
 		if(e.status & ORGAN_BROKEN)
 			if((e.limb_name in list("l_arm", "r_arm", "l_hand", "r_hand", "l_leg", "r_leg", "l_foot", "r_foot")) && !(e.status & ORGAN_SPLINTED))
-				to_chat(user, "<span class='warning'>Unsecured fracture in subject [limb]. Splinting recommended for transport.</span>")
+				msgs += "<span class='warning'>Unsecured fracture in subject [limb]. Splinting recommended for transport.</span>"
+			broken_bone = TRUE
 		if(e.has_infected_wound())
-			to_chat(user, "<span class='warning'>Infected wound detected in subject [limb]. Disinfection recommended.</span>")
+			msgs += "<span class='warning'>Infected wound detected in subject [limb]. Disinfection recommended.</span>"
+		burn_wound = burn_wound || (e.status & ORGAN_BURNT)
+		internal_bleed = internal_bleed || (e.status & ORGAN_INT_BLEEDING)
+	if(broken_bone)
+		msgs += "<span class='warning'>Bone fractures detected. Advanced scanner required for location.</span>"
+	if(internal_bleed)
+		msgs += "<span class='warning'>Internal bleeding detected. Advanced scanner required for location.</span>"
+	if(burn_wound)
+		msgs += "<span class='warning'>Critical burn detected. Examine patient's body for location.</span>"
 
-	for(var/name in H.bodyparts_by_name)
-		var/obj/item/organ/external/e = H.bodyparts_by_name[name]
-		if(!e)
-			continue
-		if(e.status & ORGAN_BROKEN)
-			to_chat(user, "<span class='warning'>Bone fractures detected. Advanced scanner required for location.</span>")
-			break
-	for(var/obj/item/organ/external/e in H.bodyparts)
-		if(e.status & ORGAN_INT_BLEEDING)
-			to_chat(user, "<span class='warning'>Internal bleeding detected. Advanced scanner required for location.</span>")
-			break
 	var/blood_id = H.get_blood_id()
 	if(blood_id)
 		if(H.bleed_rate)
-			to_chat(user, "<span class='danger'>Subject is bleeding!</span>")
+			msgs += "<span class='danger'>Subject is bleeding!</span>"
 		var/blood_percent =  round((H.blood_volume / BLOOD_VOLUME_NORMAL)*100)
 		var/blood_type = H.dna.blood_type
+		var/blood_volume = round(H.blood_volume)
 		if(blood_id != "blood")//special blood substance
 			var/datum/reagent/R = GLOB.chemical_reagents_list[blood_id]
 			if(R)
@@ -242,48 +257,44 @@ REAGENT SCANNER
 			else
 				blood_type = blood_id
 		if(H.blood_volume <= BLOOD_VOLUME_SAFE && H.blood_volume > BLOOD_VOLUME_OKAY)
-			to_chat(user, "<span class='danger'>LOW blood level [blood_percent] %, [H.blood_volume] cl,</span> <span class='info'>type: [blood_type]</span>")
+			msgs += "<span class='danger'>LOW blood level [blood_percent] %, [blood_volume] cl,</span> <span class='info'>type: [blood_type]</span>"
 		else if(H.blood_volume <= BLOOD_VOLUME_OKAY)
-			to_chat(user, "<span class='danger'>CRITICAL blood level [blood_percent] %, [H.blood_volume] cl,</span> <span class='info'>type: [blood_type]</span>")
+			msgs += "<span class='danger'>CRITICAL blood level [blood_percent] %, [blood_volume] cl,</span> <span class='info'>type: [blood_type]</span>"
 		else
-			to_chat(user, "<span class='info'>Blood level [blood_percent] %, [H.blood_volume] cl, type: [blood_type]</span>")
+			msgs += "<span class='info'>Blood level [blood_percent] %, [blood_volume] cl, type: [blood_type]</span>"
 
-	to_chat(user, "<span class='notice'>Subject's pulse: <font color='[H.pulse == PULSE_THREADY || H.pulse == PULSE_NONE ? "red" : "blue"]'>[H.get_pulse(GETPULSE_TOOL)] bpm.</font></span>")
+	msgs += "<span class='notice'>Body Temperature: [round(H.bodytemperature-T0C, 0.01)]&deg;C ([round(H.bodytemperature*1.8-459.67, 0.01)]&deg;F)</span>"
+	msgs += "<span class='notice'>Subject's pulse: <font color='[H.pulse == PULSE_THREADY || H.pulse == PULSE_NONE ? "red" : "blue"]'>[H.get_pulse()] bpm.</font></span>"
+
 	var/implant_detect
 	for(var/obj/item/organ/internal/O in H.internal_organs)
 		if(O.is_robotic())
 			implant_detect += "[H.name] is modified with a [O.name].<br>"
 	if(implant_detect)
-		to_chat(user, "<span class='notice'>Detected cybernetic modifications:</span>")
-		to_chat(user, "<span class='notice'>[implant_detect]</span>")
+		msgs += "<span class='notice'>Detected cybernetic modifications:</span>"
+		msgs += "<span class='notice'>[implant_detect]</span>"
 	if(H.gene_stability < 40)
-		to_chat(user, "<span class='userdanger'>Subject's genes are quickly breaking down!</span>")
+		msgs += "<span class='userdanger'>Subject's genes are quickly breaking down!</span>"
 	else if(H.gene_stability < 70)
-		to_chat(user, "<span class='danger'>Subject's genes are showing signs of spontaneous breakdown.</span>")
+		msgs += "<span class='danger'>Subject's genes are showing signs of spontaneous breakdown.</span>"
 	else if(H.gene_stability < 85)
-		to_chat(user, "<span class='warning'>Subject's genes are showing minor signs of instability.</span>")
-	else
-		to_chat(user, "<span class='notice'>Subject's genes are stable.</span>")
+		msgs += "<span class='warning'>Subject's genes are showing minor signs of instability.</span>"
 
 	if(HAS_TRAIT(H, TRAIT_HUSK))
-		to_chat(user, "<span class='danger'>Subject is husked. Application of synthflesh is recommended.</span>")
+		msgs += "<span class='danger'>Subject is husked. Application of synthflesh is recommended.</span>"
 
 	if(H.radiation > RAD_MOB_SAFE)
-		to_chat(user, "<span class='danger'>Subject is irradiated.</span>")
+		msgs += "<span class='danger'>Subject is irradiated.</span>"
+
+	to_chat(user, chat_box_healthscan(msgs.Join("<br>")))
 
 /obj/item/healthanalyzer/attack_self(mob/user)
-	toggle_mode()
-
-/obj/item/healthanalyzer/verb/toggle_mode()
-	set name = "Switch Verbosity"
-	set category = "Object"
-
 	mode = !mode
 	switch(mode)
 		if(1)
-			to_chat(usr, "The scanner now shows specific limb damage.")
+			to_chat(user, "<span class='notice'>The scanner now shows specific limb damage.</span>")
 		if(0)
-			to_chat(usr, "The scanner no longer shows limb damage.")
+			to_chat(user, "<span class='notice'>The scanner no longer shows limb damage.</span>")
 
 /obj/item/healthanalyzer/attackby(obj/item/I, mob/user, params)
 	if(istype(I, /obj/item/healthupgrade))
@@ -300,6 +311,7 @@ REAGENT SCANNER
 	return ..()
 
 /obj/item/healthanalyzer/advanced
+	name = "advanced health analyzer"
 	advanced = TRUE
 
 /obj/item/healthanalyzer/advanced/Initialize(mapload)
@@ -309,26 +321,26 @@ REAGENT SCANNER
 
 /obj/item/healthupgrade
 	name = "Health Analyzer Upgrade"
+	desc = "An upgrade unit that can be installed on a health analyzer for expanded functionality."
 	icon = 'icons/obj/device.dmi'
 	icon_state = "healthupgrade"
-	desc = "An upgrade unit that can be installed on a health analyzer for expanded functionality."
 	w_class = WEIGHT_CLASS_TINY
 	origin_tech = "magnets=2;biotech=2"
 	usesound = 'sound/items/deconstruct.ogg'
 
 /obj/item/analyzer
-	desc = "A hand-held environmental scanner which reports current gas levels."
 	name = "analyzer"
+	desc = "A hand-held environmental scanner which reports current gas levels."
 	icon = 'icons/obj/device.dmi'
 	icon_state = "atmos"
 	item_state = "analyzer"
+	slot_flags = SLOT_FLAG_BELT
 	w_class = WEIGHT_CLASS_SMALL
 	flags = CONDUCT
-	slot_flags = SLOT_BELT
 	throwforce = 0
 	throw_speed = 3
 	throw_range = 7
-	materials = list(MAT_METAL=30, MAT_GLASS=20)
+	materials = list(MAT_METAL = 210, MAT_GLASS = 140)
 	origin_tech = "magnets=1;engineering=1"
 	var/cooldown = FALSE
 	var/cooldown_time = 250
@@ -344,7 +356,7 @@ REAGENT SCANNER
 		return
 
 	var/turf/location = user.loc
-	if(!( istype(location, /turf) ))
+	if(!isturf(location))
 		return
 
 	var/datum/gas_mixture/environment = location.return_air()
@@ -362,8 +374,9 @@ REAGENT SCANNER
 		var/n2_concentration = environment.nitrogen/total_moles
 		var/co2_concentration = environment.carbon_dioxide/total_moles
 		var/plasma_concentration = environment.toxins/total_moles
+		var/n2o_concentration = environment.sleeping_agent/total_moles
 
-		var/unknown_concentration =  1-(o2_concentration+n2_concentration+co2_concentration+plasma_concentration)
+		var/unknown_concentration =  1-(o2_concentration+n2_concentration+co2_concentration+plasma_concentration+n2o_concentration)
 		if(abs(n2_concentration - N2STANDARD) < 20)
 			to_chat(user, "<span class='info'>Nitrogen: [round(n2_concentration*100)] %</span>")
 		else
@@ -382,6 +395,9 @@ REAGENT SCANNER
 		if(plasma_concentration > 0.01)
 			to_chat(user, "<span class='info'>Plasma: [round(plasma_concentration*100)] %</span>")
 
+		if(n2o_concentration > 0.01)
+			to_chat(user, "<span class='info'>Nitrous Oxide: [round(n2o_concentration*100)] %</span>")
+
 		if(unknown_concentration > 0.01)
 			to_chat(user, "<span class='alert'>Unknown: [round(unknown_concentration*100)] %</span>")
 
@@ -395,7 +411,7 @@ REAGENT SCANNER
 	if(!user.incapacitated() && Adjacent(user))
 
 		if(cooldown)
-			to_chat(user, "<span class='warning'>[src]'s barometer function is prepraring itself.</span>")
+			to_chat(user, "<span class='warning'>[src]'s barometer function is preparing itself.</span>")
 			return
 
 		var/turf/T = get_turf(user)
@@ -432,7 +448,7 @@ REAGENT SCANNER
 			else
 				to_chat(user, "<span class='warning'>[src]'s barometer function says a storm will land in approximately [butchertime(fixed)].</span>")
 		cooldown = TRUE
-		addtimer(CALLBACK(src,/obj/item/analyzer/proc/ping), cooldown_time)
+		addtimer(CALLBACK(src, PROC_REF(ping)), cooldown_time)
 
 /obj/item/analyzer/proc/ping()
 	if(isliving(loc))
@@ -460,11 +476,11 @@ REAGENT SCANNER
 	item_state = "analyzer"
 	w_class = WEIGHT_CLASS_SMALL
 	flags = CONDUCT
-	slot_flags = SLOT_BELT
+	slot_flags = SLOT_FLAG_BELT
 	throwforce = 5
 	throw_speed = 4
 	throw_range = 20
-	materials = list(MAT_METAL=30, MAT_GLASS=20)
+	materials = list(MAT_METAL=300, MAT_GLASS=200)
 	origin_tech = "magnets=2;biotech=1;plasmatech=2"
 	var/details = FALSE
 	var/datatoprint = ""
@@ -535,6 +551,7 @@ REAGENT SCANNER
 	icon_state = "adv_spectrometer_s"
 	item_state = "analyzer"
 	origin_tech = "biotech=2"
+	slot_flags = SLOT_FLAG_BELT
 	w_class = WEIGHT_CLASS_SMALL
 	flags = CONDUCT
 	throwforce = 0
@@ -548,8 +565,7 @@ REAGENT SCANNER
 	if(!isslime(M))
 		to_chat(user, "<span class='warning'>This device can only scan slimes!</span>")
 		return
-	var/mob/living/simple_animal/slime/T = M
-	slime_scan(T, user)
+	slime_scan(M, user)
 
 /proc/slime_scan(mob/living/simple_animal/slime/T, mob/living/user)
 	to_chat(user, "========================")
@@ -568,7 +584,7 @@ REAGENT SCANNER
 		if(T.slime_mutation[3] == T.slime_mutation[4])
 			if(T.slime_mutation[2] == T.slime_mutation[1])
 				to_chat(user, "Possible mutation: [T.slime_mutation[3]]")
-				to_chat(user, "Genetic destability: [T.mutation_chance/2] % chance of mutation on splitting")
+				to_chat(user, "Genetic destability: [T.mutation_chance] % chance of mutation on splitting")
 			else
 				to_chat(user, "Possible mutations: [T.slime_mutation[1]], [T.slime_mutation[2]], [T.slime_mutation[3]] (x2)")
 				to_chat(user, "Genetic destability: [T.mutation_chance] % chance of mutation on splitting")
@@ -585,23 +601,24 @@ REAGENT SCANNER
 
 /obj/item/bodyanalyzer
 	name = "handheld body analyzer"
+	desc = "A handheld scanner capable of deep-scanning an entire body."
 	icon = 'icons/obj/device.dmi'
 	icon_state = "bodyanalyzer_0"
 	item_state = "healthanalyser"
-	desc = "A handheld scanner capable of deep-scanning an entire body."
-	slot_flags = SLOT_BELT
+	slot_flags = SLOT_FLAG_BELT
+	w_class = WEIGHT_CLASS_SMALL
 	throwforce = 3
-	w_class = WEIGHT_CLASS_TINY
 	throw_speed = 5
 	throw_range = 10
 	origin_tech = "magnets=6;biotech=6"
 	var/obj/item/stock_parts/cell/cell
 	var/cell_type = /obj/item/stock_parts/cell/upgraded
 	var/ready = TRUE // Ready to scan
+	var/printing = FALSE
 	var/time_to_use = 0 // How much time remaining before next scan is available.
 	var/usecharge = 750
-	var/scan_time = 10 SECONDS //how long does it take to scan
-	var/scan_cd = 60 SECONDS //how long before we can scan again
+	var/scan_time = 5 SECONDS //how long does it take to scan
+	var/scan_cd = 30 SECONDS //how long before we can scan again
 
 /obj/item/bodyanalyzer/get_cell()
 	return cell
@@ -628,20 +645,22 @@ REAGENT SCANNER
 	playsound(src, 'sound/machines/defib_saftyon.ogg', 50, 0)
 	update_icon()
 
-/obj/item/bodyanalyzer/update_icon(printing = FALSE)
-	overlays.Cut()
-	var/percent = cell.percent()
+/obj/item/bodyanalyzer/update_icon_state()
+	if(!cell)
+		icon_state = "bodyanalyzer_0"
+		return
 	if(ready)
 		icon_state = "bodyanalyzer_1"
 	else
 		icon_state = "bodyanalyzer_2"
 
+/obj/item/bodyanalyzer/update_overlays()
+	. = ..()
+	var/percent = cell.percent()
 	var/overlayid = round(percent / 10)
-	overlayid = "bodyanalyzer_charge[overlayid]"
-	overlays += icon(icon, overlayid)
-
+	. += "bodyanalyzer_charge[overlayid]"
 	if(printing)
-		overlays += icon(icon, "bodyanalyzer_printing")
+		. += "bodyanalyzer_printing"
 
 /obj/item/bodyanalyzer/attack(mob/living/M, mob/living/carbon/human/user)
 	if(user.incapacitated() || !user.Adjacent(M))
@@ -688,15 +707,17 @@ REAGENT SCANNER
 			else
 				cell.use(usecharge)
 			ready = FALSE
-			update_icon(TRUE)
-			addtimer(CALLBACK(src, /obj/item/bodyanalyzer/.proc/setReady), scan_cd)
-			addtimer(CALLBACK(src, /obj/item/bodyanalyzer/.proc/update_icon), 20)
-
+			printing = TRUE
+			update_icon()
+			addtimer(CALLBACK(src, TYPE_PROC_REF(/obj/item/bodyanalyzer, setReady)), scan_cd)
+			addtimer(VARSET_CALLBACK(src, printing, FALSE), 1.4 SECONDS)
+			addtimer(CALLBACK(src, TYPE_PROC_REF(/atom, update_icon), UPDATE_OVERLAYS), 1.5 SECONDS)
 	else if(iscorgi(M) && M.stat == DEAD)
 		to_chat(user, "<span class='notice'>You wonder if [M.p_they()] was a good dog. <b>[src] tells you they were the best...</b></span>") // :'(
 		playsound(loc, 'sound/machines/ping.ogg', 50, 0)
 		ready = FALSE
-		addtimer(CALLBACK(src, /obj/item/bodyanalyzer/.proc/setReady), scan_cd)
+		update_icon(UPDATE_ICON_STATE)
+		addtimer(CALLBACK(src, TYPE_PROC_REF(/obj/item/bodyanalyzer, setReady)), scan_cd)
 		time_to_use = world.time + scan_cd
 	else
 		to_chat(user, "<span class='notice'>Scanning error detected. Invalid specimen.</span>")
@@ -753,9 +774,6 @@ REAGENT SCANNER
 	dat += "Body Temperature: [target.bodytemperature-T0C]&deg;C ([target.bodytemperature*1.8-459.67]&deg;F)<br>"
 
 	dat += "<hr>"
-
-	if(target.has_brain_worms())
-		dat += "Large growth detected in frontal lobe, possibly cancerous. Surgical removal is recommended.<br>"
 
 	var/blood_percent =  round((target.blood_volume / BLOOD_VOLUME_NORMAL))
 	blood_percent *= 100

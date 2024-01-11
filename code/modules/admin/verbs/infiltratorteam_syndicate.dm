@@ -85,9 +85,10 @@ GLOBAL_VAR_INIT(sent_syndicate_infiltration_team, 0)
 				new_syndicate_infiltrator.key = theguy.key
 				new_syndicate_infiltrator.internal = new_syndicate_infiltrator.s_store
 				new_syndicate_infiltrator.update_action_buttons_icon()
+				dust_if_respawnable(theguy)
 			infiltrators -= theguy
 		to_chat(new_syndicate_infiltrator, "<span class='danger'>You are a [!syndicate_leader_selected?"Infiltrator":"<B>Lead Infiltrator</B>"] in the service of the Syndicate. \nYour current mission is: <B>[input]</B></span>")
-		to_chat(new_syndicate_infiltrator, "<span class='notice'>You are equipped with an uplink implant to help you achieve your objectives. ((activate it via button in top left of screen))</span>")
+		to_chat(new_syndicate_infiltrator, "<span class='notice'>You are equipped with an uplink bio-chip to help you achieve your objectives. ((activate it via button in top left of screen))</span>")
 		new_syndicate_infiltrator.faction += "syndicate"
 		GLOB.data_core.manifest_inject(new_syndicate_infiltrator)
 		if(syndicate_leader_selected)
@@ -102,7 +103,7 @@ GLOBAL_VAR_INIT(sent_syndicate_infiltration_team, 0)
 		to_chat(new_syndicate_infiltrator, "<span class='notice'>You have more helpful information stored in your Notes.</span>")
 		new_syndicate_infiltrator.mind.store_memory("<B>Mission:</B> [input] ")
 		new_syndicate_infiltrator.mind.store_memory("<B>Team Leader:</B> [team_leader] ")
-		new_syndicate_infiltrator.mind.store_memory("<B>Starting Equipment:</B> <BR>- Syndicate Headset ((.h for your radio))<BR>- Chameleon Jumpsuit ((right click to Change Color))<BR> - Agent ID card ((disguise as another job))<BR> - Uplink Implant ((top left of screen)) <BR> - Dust Implant ((destroys your body on death)) <BR> - Combat Gloves ((insulated, disguised as black gloves)) <BR> - Anything bought with your uplink implant")
+		new_syndicate_infiltrator.mind.store_memory("<B>Starting Equipment:</B> <BR>- Syndicate Headset ((.h for your radio))<BR>- Chameleon Jumpsuit ((right click to Change Color))<BR> - Agent ID card ((disguise as another job))<BR> - Uplink Bio-chip ((top left of screen)) <BR> - Dust Bio-chip ((destroys your body on death)) <BR> - Combat Gloves ((insulated, disguised as black gloves)) <BR> - Anything bought with your uplink bio-chip")
 		var/datum/atom_hud/antag/opshud = GLOB.huds[ANTAG_HUD_OPS]
 		opshud.join_hud(new_syndicate_infiltrator.mind.current)
 		set_antag_hud(new_syndicate_infiltrator.mind.current, "hudoperative")
@@ -116,7 +117,7 @@ GLOBAL_VAR_INIT(sent_syndicate_infiltration_team, 0)
 
 // ---------------------------------------------------------------------------------------------------------
 
-/client/proc/create_syndicate_infiltrator(obj/spawn_location, syndicate_leader_selected = 0, uplink_tc = 20, is_mgmt = 0)
+/client/proc/create_syndicate_infiltrator(obj/spawn_location, syndicate_leader_selected = 0, uplink_tc = 100, is_mgmt = 0)
 	var/mob/living/carbon/human/new_syndicate_infiltrator = new(spawn_location.loc)
 
 	var/syndicate_infiltrator_name = random_name(pick(MALE,FEMALE))
@@ -140,47 +141,47 @@ GLOBAL_VAR_INIT(sent_syndicate_infiltration_team, 0)
 
 /mob/living/carbon/human/proc/equip_syndicate_infiltrator(syndicate_leader_selected = 0, num_tc, flag_mgmt)
 	// Storage items
-	equip_to_slot_or_del(new /obj/item/storage/backpack(src), slot_back)
-	equip_to_slot_or_del(new /obj/item/storage/box/survival(src), slot_in_backpack)
-	equip_to_slot_or_del(new /obj/item/clothing/under/chameleon(src), slot_w_uniform)
+	equip_to_slot_or_del(new /obj/item/storage/backpack(src), SLOT_HUD_BACK)
+	equip_to_slot_or_del(new /obj/item/storage/box/survival(src), SLOT_HUD_IN_BACKPACK)
+	equip_to_slot_or_del(new /obj/item/clothing/under/chameleon(src), SLOT_HUD_JUMPSUIT)
 	if(!flag_mgmt)
-		equip_to_slot_or_del(new /obj/item/flashlight(src), slot_in_backpack)
-		equip_to_slot_or_del(new /obj/item/storage/belt/utility/full/multitool(src), slot_belt)
+		equip_to_slot_or_del(new /obj/item/flashlight(src), SLOT_HUD_IN_BACKPACK)
+		equip_to_slot_or_del(new /obj/item/storage/belt/utility/full/multitool(src), SLOT_HUD_BELT)
 
 	var/obj/item/clothing/gloves/combat/G = new /obj/item/clothing/gloves/combat(src)
 	G.name = "black gloves"
-	equip_to_slot_or_del(G, slot_gloves)
+	equip_to_slot_or_del(G, SLOT_HUD_GLOVES)
 
 	// Implants:
 	// Uplink
-	var/obj/item/implant/uplink/sit/U = new /obj/item/implant/uplink/sit(src)
+	var/obj/item/bio_chip/uplink/sit/U = new /obj/item/bio_chip/uplink/sit(src)
 	U.implant(src)
-	if (flag_mgmt)
-		U.hidden_uplink.uses = 500
+	if(flag_mgmt)
+		U.hidden_uplink.uses = 2500
 	else
 		U.hidden_uplink.uses = num_tc
 	// Dust
-	var/obj/item/implant/dust/D = new /obj/item/implant/dust(src)
+	var/obj/item/bio_chip/dust/D = new /obj/item/bio_chip/dust(src)
 	D.implant(src)
 
 	// Radio & PDA
 	var/obj/item/radio/R = new /obj/item/radio/headset/syndicate/syndteam(src)
 	R.set_frequency(SYNDTEAM_FREQ)
-	equip_to_slot_or_del(R, slot_l_ear)
-	equip_or_collect(new /obj/item/pda(src), slot_in_backpack)
+	equip_to_slot_or_del(R, SLOT_HUD_LEFT_EAR)
+	equip_or_collect(new /obj/item/pda(src), SLOT_HUD_IN_BACKPACK)
 
 	// Other gear
-	equip_to_slot_or_del(new /obj/item/clothing/shoes/chameleon/noslip(src), slot_shoes)
+	equip_to_slot_or_del(new /obj/item/clothing/shoes/chameleon/noslip(src), SLOT_HUD_SHOES)
 
 	var/obj/item/card/id/syndicate/W = new(src)
-	if (flag_mgmt)
+	if(flag_mgmt)
 		W.icon_state = "commander"
 	else
 		W.icon_state = "id"
 	W.access = list(ACCESS_MAINT_TUNNELS,ACCESS_EXTERNAL_AIRLOCKS)
 	W.assignment = "Assistant"
 	W.access += get_access("Assistant")
-	W.access += list(ACCESS_MEDICAL, ACCESS_ENGINE, ACCESS_CARGO, ACCESS_RESEARCH)
+	W.access += list(ACCESS_MEDICAL, ACCESS_CONSTRUCTION, ACCESS_CARGO, ACCESS_RESEARCH)
 	if(flag_mgmt)
 		W.assignment = "Syndicate Management Consultant"
 		W.access += get_syndicate_access("Syndicate Commando")
@@ -190,6 +191,6 @@ GLOBAL_VAR_INIT(sent_syndicate_infiltration_team, 0)
 		W.access += get_syndicate_access("Syndicate Operative")
 	W.name = "[real_name]'s ID Card ([W.assignment])"
 	W.registered_name = real_name
-	equip_to_slot_or_del(W, slot_wear_id)
+	equip_to_slot_or_del(W, SLOT_HUD_WEAR_ID)
 
 	return 1

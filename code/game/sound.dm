@@ -57,7 +57,7 @@ falloff_distance - Distance at which falloff begins. Sound is at peak volume (in
 	//allocate a channel if necessary now so its the same for everyone
 	channel = channel || SSsounds.random_available_channel()
 
- 	// Looping through the player list has the added bonus of working for mobs inside containers
+	// Looping through the player list has the added bonus of working for mobs inside containers
 	var/sound/S = sound(get_sfx(soundin))
 	var/maxdistance = SOUND_RANGE + extrarange
 
@@ -161,6 +161,13 @@ falloff_distance - Distance at which falloff begins. Sound is at peak volume (in
 
 	SEND_SOUND(src, S)
 
+/proc/sound_to_playing_players_on_station_level(soundin, volume = 100, vary = FALSE, frequency = 0, channel = 0, pressure_affected = FALSE, sound/S)
+	if(!S)
+		S = sound(get_sfx(soundin))
+	for(var/mob/m as anything in GLOB.player_list)
+		if(!isnewplayer(m) && is_station_level(m.z))
+			m.playsound_local(m, null, volume, vary, frequency, null, channel, pressure_affected, S)
+
 /proc/sound_to_playing_players(soundin, volume = 100, vary = FALSE, frequency = 0, channel = 0, pressure_affected = FALSE, sound/S)
 	if(!S)
 		S = sound(get_sfx(soundin))
@@ -189,6 +196,10 @@ falloff_distance - Distance at which falloff begins. Sound is at peak volume (in
 /proc/get_sfx(soundin)
 	if(istext(soundin))
 		switch(soundin)
+			if("patchpack")
+				soundin = pick('sound/effects/CC0/patchpack1.ogg', 'sound/effects/CC0/patchpack2.ogg', 'sound/effects/CC0/patchpack3.ogg', 'sound/effects/CC0/patchpack4.ogg', 'sound/effects/CC0/patchpack5.ogg')
+			if("pillbottle")
+				soundin = pick('sound/effects/CC0/pillbottle1.ogg', 'sound/effects/CC0/pillbottle2.ogg', 'sound/effects/CC0/pillbottle3.ogg', 'sound/effects/CC0/pillbottle4.ogg')
 			if("shatter")
 				soundin = pick('sound/effects/glassbr1.ogg','sound/effects/glassbr2.ogg','sound/effects/glassbr3.ogg')
 			if("explosion")
@@ -221,8 +232,8 @@ falloff_distance - Distance at which falloff begins. Sound is at peak volume (in
 				soundin = pick('sound/weapons/effects/ric1.ogg', 'sound/weapons/effects/ric2.ogg','sound/weapons/effects/ric3.ogg','sound/weapons/effects/ric4.ogg','sound/weapons/effects/ric5.ogg')
 			if("terminal_type")
 				soundin = pick('sound/machines/terminal_button01.ogg', 'sound/machines/terminal_button02.ogg', 'sound/machines/terminal_button03.ogg',
-							  'sound/machines/terminal_button04.ogg', 'sound/machines/terminal_button05.ogg', 'sound/machines/terminal_button06.ogg',
-							  'sound/machines/terminal_button07.ogg', 'sound/machines/terminal_button08.ogg')
+							'sound/machines/terminal_button04.ogg', 'sound/machines/terminal_button05.ogg', 'sound/machines/terminal_button06.ogg',
+							'sound/machines/terminal_button07.ogg', 'sound/machines/terminal_button08.ogg')
 			if("growls")
 				soundin = pick('sound/goonstation/voice/growl1.ogg', 'sound/goonstation/voice/growl2.ogg', 'sound/goonstation/voice/growl3.ogg')
 

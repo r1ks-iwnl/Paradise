@@ -17,11 +17,11 @@
 
 //  Generic non-item
 /obj/item/storage/bag
-	allow_quick_gather = 1
-	allow_quick_empty = 1
+	allow_quick_gather = TRUE
+	allow_quick_empty = TRUE
 	display_contents_with_number = 1 // should work fine now
 	use_to_pickup = 1
-	slot_flags = SLOT_BELT
+	slot_flags = SLOT_FLAG_BELT
 
 // -----------------------------
 //          Trash bag
@@ -32,7 +32,8 @@
 	icon = 'icons/obj/janitor.dmi'
 	icon_state = "trashbag"
 	belt_icon = "trashbag"
-	w_class = WEIGHT_CLASS_BULKY
+	lefthand_file = 'icons/mob/inhands/equipment/custodial_lefthand.dmi'
+	righthand_file = 'icons/mob/inhands/equipment/custodial_righthand.dmi'
 	max_w_class = WEIGHT_CLASS_SMALL
 	slot_flags = null
 	storage_slots = 30
@@ -40,12 +41,42 @@
 	can_hold = list() // any
 	cant_hold = list(/obj/item/disk/nuclear)
 
+/obj/item/storage/bag/trash/proc/update_weight()
+	if(!length(contents))
+		w_class = WEIGHT_CLASS_SMALL
+		return
+
+	w_class = WEIGHT_CLASS_BULKY
+
+/obj/item/storage/bag/trash/remove_from_storage(obj/item/I, atom/new_location)
+	. = ..()
+	update_weight()
+
+/obj/item/storage/bag/trash/can_be_inserted(obj/item/I, stop_messages = FALSE)
+	if(isstorage(loc) && !istype(loc, /obj/item/storage/backpack/holding))
+		to_chat(usr, "<span class='warning'>You can't seem to fit [I] into [src].</span>")
+		return FALSE
+	if(ishuman(loc)) // If the trashbag is on a humanoid, they can't store things in it while it's in their pockets
+		var/mob/living/carbon/human/H = loc
+		if(H.l_store == src || H.r_store == src)
+			to_chat(usr, "<span class='warning'>You can't seem to fit [I] into [src].</span>")
+			return FALSE
+	. = ..()
+
+/obj/item/storage/bag/trash/Initialize(mapload)
+	. = ..()
+	update_weight()
+
+/obj/item/storage/bag/trash/handle_item_insertion(obj/item/I, prevent_warning)
+	. = ..()
+	update_weight()
+
 /obj/item/storage/bag/trash/suicide_act(mob/user)
 	user.visible_message("<span class='suicide'>[user] puts [src] over [user.p_their()] head and starts chomping at the insides! Disgusting!</span>")
 	playsound(loc, 'sound/items/eatfood.ogg', 50, 1, -1)
 	return TOXLOSS
 
-/obj/item/storage/bag/trash/update_icon()
+/obj/item/storage/bag/trash/update_icon_state()
 	switch(contents.len)
 		if(21 to INFINITY)
 			icon_state = "[initial(icon_state)]3"
@@ -59,14 +90,12 @@
 		var/mob/living/carbon/human/H = loc
 		H.update_inv_l_hand()
 		H.update_inv_r_hand()
-	..()
 
 /obj/item/storage/bag/trash/cyborg
 
 /obj/item/storage/bag/trash/proc/janicart_insert(mob/user, obj/structure/janitorialcart/J)
+	J.mybag = src
 	J.put_in_cart(src, user)
-	J.mybag=src
-	J.update_icon()
 
 /obj/item/storage/bag/trash/cyborg/janicart_insert(mob/user, obj/structure/janitorialcart/J)
 	return
@@ -81,6 +110,11 @@
 	storage_slots = 60
 	flags_2 = NO_MAT_REDEMPTION_2
 
+/obj/item/storage/bag/trash/bluespace/cyborg
+
+/obj/item/storage/bag/trash/bluespace/cyborg/janicart_insert(mob/user, obj/structure/janitorialcart/J)
+	return
+
 // -----------------------------
 //        Plastic Bag
 // -----------------------------
@@ -91,7 +125,7 @@
 	icon = 'icons/obj/trash.dmi'
 	icon_state = "plasticbag"
 	item_state = "plasticbag"
-	slot_flags = SLOT_HEAD|SLOT_BELT
+	slot_flags = SLOT_FLAG_HEAD|SLOT_FLAG_BELT
 	throwforce = 0
 	w_class = WEIGHT_CLASS_BULKY
 	max_w_class = WEIGHT_CLASS_SMALL
@@ -102,14 +136,14 @@
 
 /obj/item/storage/bag/plasticbag/mob_can_equip(M as mob, slot)
 
-	if(slot==slot_head && contents.len)
+	if(slot==SLOT_HUD_HEAD && contents.len)
 		to_chat(M, "<span class='warning'>You need to empty the bag first!</span>")
 		return 0
 	return ..()
 
 
 /obj/item/storage/bag/plasticbag/equipped(mob/user, slot)
-	if(slot==slot_head)
+	if(slot==SLOT_HUD_HEAD)
 		storage_slots = 0
 		START_PROCESSING(SSobj, src)
 	return
@@ -118,7 +152,7 @@
 	if(is_equipped())
 		if(ishuman(loc))
 			var/mob/living/carbon/human/H = loc
-			if(H.get_item_by_slot(slot_head) == src)
+			if(H.get_item_by_slot(SLOT_HUD_HEAD) == src)
 				if(H.internal)
 					return
 				H.AdjustLoseBreath(2 SECONDS)
@@ -137,7 +171,7 @@
 	icon = 'icons/obj/mining.dmi'
 	icon_state = "satchel"
 	origin_tech = "engineering=2"
-	slot_flags = SLOT_BELT | SLOT_POCKET
+	slot_flags = SLOT_FLAG_BELT | SLOT_FLAG_POCKET
 	w_class = WEIGHT_CLASS_NORMAL
 	storage_slots = 10
 	max_combined_w_class = 200 //Doesn't matter what this is, so long as it's more or equal to storage_slots * ore.w_class
@@ -172,7 +206,7 @@
 	max_combined_w_class = 100 //Doesn't matter what this is, so long as it's more or equal to storage_slots * plants.w_class
 	max_w_class = WEIGHT_CLASS_NORMAL
 	w_class = WEIGHT_CLASS_TINY
-	can_hold = list(/obj/item/reagent_containers/food/snacks/grown,/obj/item/seeds,/obj/item/grown,/obj/item/reagent_containers/food/snacks/grown/ash_flora)
+	can_hold = list(/obj/item/reagent_containers/food/snacks/grown,/obj/item/seeds,/obj/item/grown,/obj/item/reagent_containers/food/snacks/grown/ash_flora,/obj/item/reagent_containers/food/snacks/honeycomb)
 	resistance_flags = FLAMMABLE
 
 /obj/item/storage/bag/plants/portaseeder
@@ -181,19 +215,28 @@
 	icon_state = "portaseeder"
 	origin_tech = "biotech=3;engineering=2"
 
-/obj/item/storage/bag/plants/portaseeder/verb/dissolve_contents()
-	set name = "Activate Seed Extraction"
-	set category = "Object"
-	set desc = "Activate to convert your plants into plantable seeds."
+/obj/item/storage/bag/plants/portaseeder/examine(mob/user)
+	. = ..()
+	if(Adjacent(user))
+		. += "<span class='notice'>You can <b>Alt-Shift-Click</b> to convert the plants inside to seeds.</span>"
 
-	if(usr.incapacitated())
+/obj/item/storage/bag/plants/portaseeder/proc/process_plants(mob/user)
+	if(!length(contents))
+		to_chat(user, "<span class='warning'>[src] has no seeds inside!</span>")
 		return
+	var/had_anything = FALSE
 	for(var/obj/item/O in contents)
-		seedify(O, 1)
-	for(var/mob/M in range(1))
-		if(M.s_active == src)
-			close(M)
+		had_anything |= seedify(O, 1)
+	hide_from_all()
+	if(had_anything)
+		to_chat(user, "<span class='notice'>[src] whirrs a bit as it converts the plants inside to seeds.</span>")
+	else
+		to_chat(user, "<span class='warning'>[src] whirrs a bit but stops. Doesn't seem like it could convert anything inside.</span>")
+	playsound(user, "sound/machines/ding.ogg", 25)
 
+/obj/item/storage/bag/plants/portaseeder/AltShiftClick(mob/user)
+	if(Adjacent(user) && ishuman(user) && !user.incapacitated(FALSE, TRUE))
+		process_plants(user)
 
 // -----------------------------
 //        Sheet Snatcher
@@ -210,7 +253,7 @@
 	var/capacity = 300; //the number of sheets it can carry.
 	w_class = WEIGHT_CLASS_NORMAL
 
-	allow_quick_empty = 1 // this function is superceded
+	allow_quick_empty = TRUE // this function is superceded
 
 /obj/item/storage/bag/sheetsnatcher/can_be_inserted(obj/item/W as obj, stop_messages = 0)
 	if(!istype(W,/obj/item/stack/sheet) || istype(W,/obj/item/stack/sheet/mineral/sandstone) || istype(W,/obj/item/stack/sheet/wood))
@@ -290,8 +333,7 @@
 	return
 
 
-// Modified quick_empty verb drops appropriate sized stacks
-/obj/item/storage/bag/sheetsnatcher/quick_empty()
+/obj/item/storage/bag/sheetsnatcher/drop_inventory(mob/user)
 	var/location = get_turf(src)
 	for(var/obj/item/stack/sheet/S in contents)
 		while(S.amount)
@@ -301,8 +343,8 @@
 			S.amount -= stacksize
 		if(!S.amount)
 			qdel(S) // todo: there's probably something missing here
-	if(usr.s_active)
-		usr.s_active.show_to(usr)
+	if(user.s_active)
+		user.s_active.show_to(user)
 	update_icon()
 
 // Instead of removing
@@ -379,6 +421,7 @@
 	throw_range = 5
 	w_class = WEIGHT_CLASS_BULKY
 	flags = CONDUCT
+	slot_flags = null
 	materials = list(MAT_METAL=3000)
 	cant_hold = list(/obj/item/disk/nuclear) // Prevents some cheesing
 
@@ -405,58 +448,51 @@
 		if(prob(10))
 			M.Weaken(4 SECONDS)
 
-/obj/item/storage/bag/tray/proc/rebuild_overlays()
-	overlays.Cut()
+/obj/item/storage/bag/tray/update_icon_state()
+	return
+
+/obj/item/storage/bag/tray/update_overlays()
+	. = ..()
 	for(var/obj/item/I in contents)
-		overlays += image("icon" = I.icon, "icon_state" = I.icon_state, "layer" = -1)
-
-/obj/item/storage/bag/tray/remove_from_storage(obj/item/W as obj, atom/new_location)
-	..()
-	rebuild_overlays()
-
-/obj/item/storage/bag/tray/handle_item_insertion(obj/item/I, prevent_warning = 0)
-	overlays += image("icon" = I.icon, "icon_state" = I.icon_state, "layer" = -1)
-	..()
+		. += image(icon = I.icon, icon_state = I.icon_state, layer = -1)
 
 /obj/item/storage/bag/tray/cyborg
 
 /obj/item/storage/bag/tray/cyborg/afterattack(atom/target, mob/user as mob)
-	if( isturf(target) || istype(target,/obj/structure/table) )
-		var/foundtable = istype(target,/obj/structure/table/)
-		if( !foundtable ) //it must be a turf!
+	if(isturf(target) || istype(target,/obj/structure/table))
+		var/found_table = istype(target,/obj/structure/table/)
+		if(!found_table) //it must be a turf!
 			for(var/obj/structure/table/T in target)
-				foundtable = 1
+				found_table = TRUE
 				break
 
 		var/turf/dropspot
-		if( !foundtable ) // don't unload things onto walls or other silly places.
+		if(!found_table) // don't unload things onto walls or other silly places.
 			dropspot = user.loc
-		else if( isturf(target) ) // they clicked on a turf with a table in it
+		else if(isturf(target)) // they clicked on a turf with a table in it
 			dropspot = target
 		else					// they clicked on a table
 			dropspot = target.loc
 
-		overlays = null
-
-		var/droppedSomething = 0
+		var/dropped_something = FALSE
 
 		for(var/obj/item/I in contents)
 			I.loc = dropspot
 			contents.Remove(I)
-			droppedSomething = 1
-			if(!foundtable && isturf(dropspot))
+			dropped_something = TRUE
+			if(!found_table && isturf(dropspot))
 				// if no table, presume that the person just shittily dropped the tray on the ground and made a mess everywhere!
 				spawn()
 					for(var/i = 1, i <= rand(1,2), i++)
 						if(I)
 							step(I, pick(NORTH,SOUTH,EAST,WEST))
 							sleep(rand(2,4))
-		if( droppedSomething )
-			if( foundtable )
+		if(dropped_something)
+			if(found_table)
 				user.visible_message("<span class='notice'>[user] unloads [user.p_their()] service tray.</span>")
 			else
 				user.visible_message("<span class='notice'>[user] drops all the items on [user.p_their()] tray.</span>")
-
+		update_icon(UPDATE_OVERLAYS)
 	return ..()
 
 
@@ -466,8 +502,8 @@
 /obj/item/storage/bag/tray/cookies_tray/populate_contents() // By Azule Utama, thank you a lot!
 	for(var/i in 1 to 6)
 		var/obj/item/C = new cookie(src)
-		handle_item_insertion(C)    // Done this way so the tray actually has the cookies visible when spawned
-	rebuild_overlays()
+		C.in_inventory = TRUE
+	update_icon(UPDATE_OVERLAYS)
 
 /obj/item/storage/bag/tray/cookies_tray/sugarcookie
 	cookie = /obj/item/reagent_containers/food/snacks/sugarcookie
@@ -484,7 +520,10 @@
 	storage_slots = 50
 	max_combined_w_class = 200
 	w_class = WEIGHT_CLASS_TINY
-	can_hold = list(/obj/item/reagent_containers/food/pill,/obj/item/reagent_containers/glass/beaker,/obj/item/reagent_containers/glass/bottle)
+	can_hold = list(/obj/item/reagent_containers/pill,
+					/obj/item/reagent_containers/patch,
+					/obj/item/reagent_containers/glass/beaker,
+					/obj/item/reagent_containers/glass/bottle)
 	resistance_flags = FLAMMABLE
 /*
  *  Biowaste bag (mostly for xenobiologists)
@@ -498,5 +537,24 @@
 	storage_slots = 25
 	max_combined_w_class = 200
 	w_class = WEIGHT_CLASS_TINY
-	can_hold = list(/obj/item/slime_extract,/obj/item/reagent_containers/food/snacks/monkeycube,/obj/item/reagent_containers/syringe,/obj/item/reagent_containers/glass/beaker,/obj/item/reagent_containers/glass/bottle,/obj/item/reagent_containers/iv_bag,/obj/item/reagent_containers/hypospray/autoinjector)
+	can_hold = list(/obj/item/slime_extract, /obj/item/reagent_containers/food/snacks/monkeycube,
+					/obj/item/reagent_containers/syringe, /obj/item/reagent_containers/glass/beaker,
+					/obj/item/reagent_containers/glass/bottle, /obj/item/reagent_containers/iv_bag,
+					/obj/item/reagent_containers/hypospray/autoinjector/epinephrine)
+	resistance_flags = FLAMMABLE
+
+/*
+ *	Mail bag
+ */
+
+/obj/item/storage/bag/mail
+	name = "mail bag"
+	desc = "A bag for envelopes, stamps, pens, and papers."
+	icon = 'icons/obj/bureaucracy.dmi'
+	icon_state = "mailbag"
+	item_state = "mailbag"
+	storage_slots = 14
+	max_combined_w_class = 28
+	w_class = WEIGHT_CLASS_TINY
+	can_hold = list(/obj/item/envelope, /obj/item/stamp, /obj/item/pen, /obj/item/paper, /obj/item/mail_scanner)
 	resistance_flags = FLAMMABLE

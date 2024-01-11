@@ -1,3 +1,6 @@
+/// The amount of time necessary for a structure to be able to produce items after being built
+#define CULT_STRUCTURE_COOLDOWN 60 SECONDS
+
 /obj/structure/cult
 	density = TRUE
 	anchored = TRUE
@@ -24,13 +27,6 @@
 	icon_state = "pylon"
 	light_range = 1.5
 	light_color = LIGHT_COLOR_RED
-
-/obj/structure/cult/archives
-	name = "Desk"
-	desc = "A desk covered in arcane manuscripts and tomes in unknown languages. Looking at the text makes your skin crawl."
-	icon_state = "archives"
-	light_range = 1.5
-	light_color = LIGHT_COLOR_FIRE
 
 //Cult versions cuase fuck map conflicts
 /obj/structure/cult/functional
@@ -74,7 +70,7 @@
 		to_chat(user, "[heathen_message]")
 		return
 	if(invisibility)
-		to_chat(user, "<span class='cultitalic'>The magic in [src] is being channeled into Redspace, reveal the structure first!</span>")
+		to_chat(user, "<span class='cultitalic'>The magic in [src] is being suppressed, reveal the structure first!</span>")
 		return
 	if(HAS_TRAIT(user, TRAIT_HULK))
 		to_chat(user, "<span class='danger'>You cannot seem to manipulate this structure with your bulky hands!</span>")
@@ -93,7 +89,7 @@
 	if(!QDELETED(src) && picked_type && Adjacent(user) && !user.incapacitated() && cooldowntime <= world.time)
 		cooldowntime = world.time + creation_delay
 		var/obj/O = new picked_type
-		if(istype(O, /obj/structure) || !user.put_in_hands(O))
+		if(isstructure(O) || !user.put_in_hands(O))
 			O.forceMove(get_turf(src))
 		to_chat(user, replacetext("[creation_message]", "%ITEM%", "[O.name]"))
 
@@ -155,6 +151,7 @@
 /obj/structure/cult/functional/altar/Initialize(mapload)
 	. = ..()
 	icon_state = SSticker.cultdat?.altar_icon_state
+	cooldowntime = world.time + CULT_STRUCTURE_COOLDOWN
 
 /obj/structure/cult/functional/forge
 	name = "daemon forge"
@@ -215,7 +212,7 @@ GLOBAL_LIST_INIT(blacklisted_pylon_turfs, typecacheof(list(
 	/turf/simulated/floor/engine/cult,
 	/turf/space,
 	/turf/simulated/wall/indestructible,
-	/turf/simulated/floor/plating/lava,
+	/turf/simulated/floor/lava,
 	/turf/simulated/floor/chasm,
 	/turf/simulated/wall/cult,
 	/turf/simulated/wall/cult/artificer
@@ -246,7 +243,7 @@ GLOBAL_LIST_INIT(blacklisted_pylon_turfs, typecacheof(list(
 
 /obj/structure/cult/functional/pylon/Destroy()
 	STOP_PROCESSING(SSobj, src)
-	..()
+	return ..()
 
 /obj/structure/cult/functional/pylon/cult_conceal()
 	STOP_PROCESSING(SSobj, src)
@@ -265,7 +262,7 @@ GLOBAL_LIST_INIT(blacklisted_pylon_turfs, typecacheof(list(
 		for(var/mob/living/L in range(5, src))
 			if(iscultist(L) || iswizard(L) || isshade(L) || isconstruct(L))
 				if(L.health != L.maxHealth)
-					new /obj/effect/temp_visual/heal(get_turf(src), "#960000")
+					new /obj/effect/temp_visual/heal(get_turf(src), COLOR_HEALING_GREEN)
 
 					if(ishuman(L))
 						L.heal_overall_damage(1, 1, TRUE, FALSE, TRUE)
@@ -294,9 +291,9 @@ GLOBAL_LIST_INIT(blacklisted_pylon_turfs, typecacheof(list(
 
 		var/turf/T = safepick(validturfs)
 		if(T)
-			if(istype(T, /turf/simulated/floor))
+			if(isfloorturf(T))
 				T.ChangeTurf(/turf/simulated/floor/engine/cult)
-			if(istype(T, /turf/simulated/wall))
+			if(iswallturf(T))
 				T.ChangeTurf(/turf/simulated/wall/cult/artificer)
 		else
 			var/turf/simulated/floor/engine/cult/F = safepick(cultturfs)
@@ -346,3 +343,5 @@ GLOBAL_LIST_INIT(blacklisted_pylon_turfs, typecacheof(list(
 
 /obj/effect/gateway/Crossed(atom/movable/AM, oldloc)
 	return
+
+#undef CULT_STRUCTURE_COOLDOWN

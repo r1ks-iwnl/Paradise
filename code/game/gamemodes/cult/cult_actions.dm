@@ -47,7 +47,7 @@
 	var/title
 	var/large = FALSE
 	var/living_message
-	if(istype(user, /mob/living/simple_animal/slaughter/cult)) //Harbringers of the Slaughter
+	if(istype(user, /mob/living/simple_animal/demon/slaughter/cult)) //Harbringers of the Slaughter
 		title = "<b>Harbringer of the Slaughter</b>"
 		large = TRUE
 	else
@@ -81,7 +81,7 @@
 		if(iscultist(M))
 			to_chat(M, living_message)
 		else if((M in GLOB.dead_mob_list) && !isnewplayer(M))
-			to_chat(M, "<span class='cultspeech'>[title] ([ghost_follow_link(user, ghost=M)]): [message]</span>")
+			to_chat(M, "<span class='cultlarge'>[title] ([ghost_follow_link(user, ghost=M)]): [message]</span>")
 
 
 //Objectives

@@ -98,7 +98,7 @@
 				var/datum/ai_law/AL = locate(params["edit_law"]) in owner.laws.all_laws()
 				// Dont allow non-admins to edit their own malf laws
 				if(istype(AL, /datum/ai_law/zero) && (!check_rights(R_ADMIN)))
-					to_chat(usr, "<span class='warning'>You cant edit that law.</span>")
+					to_chat(usr, "<span class='warning'>You can't edit that law.</span>")
 					return
 				if(AL)
 					var/new_law = sanitize(input(usr, "Enter new law. Leaving the field blank will cancel the edit.", "Edit Law", AL.law))
@@ -111,7 +111,7 @@
 				var/datum/ai_law/AL = locate(params["delete_law"]) in owner.laws.all_laws()
 				// Dont allow non-admins to delete their own malf laws
 				if(istype(AL, /datum/ai_law/zero) && (!check_rights(R_ADMIN)))
-					to_chat(usr, "<span class='warning'>You cant delete that law.</span>")
+					to_chat(usr, "<span class='warning'>You can't delete that law.</span>")
 					return
 				if(AL && is_malf(usr))
 					owner.delete_law(AL)
@@ -125,12 +125,17 @@
 				owner.statelaws(ALs)
 
 		if("transfer_laws")
-			if(is_malf(usr))
-				var/datum/ai_laws/ALs = locate(params["transfer_laws"]) in (is_admin(usr) ? admin_laws : player_laws)
-				if(ALs)
-					log_and_message_admins("has transfered the [ALs.name] laws to [owner].")
-					ALs.sync(owner, 0)
-					current_view = 0
+			if(!is_malf(usr))
+				return
+			var/admin_overwrite = is_admin(usr)
+			var/datum/ai_laws/ALs = locate(params["transfer_laws"]) in (admin_overwrite ? admin_laws : player_laws)
+			if(!ALs)
+				return
+			if(admin_overwrite && alert("Do you want to overwrite [owner]'s zeroth law? If the chosen lawset has no zeroth law while [owner] has one, it will get removed!", "Load Lawset", "Yes", "No") != "Yes")
+				admin_overwrite = FALSE
+			log_and_message_admins("has transfered the [ALs.name] laws to [owner][admin_overwrite ? " and overwrote their zeroth law":""].")
+			ALs.sync(owner, FALSE, admin_overwrite)
+			current_view = 0
 
 		if("notify_laws")
 			to_chat(owner, "<span class='danger'>Law Notice</span>")

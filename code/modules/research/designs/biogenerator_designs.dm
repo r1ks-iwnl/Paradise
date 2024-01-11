@@ -3,7 +3,7 @@
 ///////////////////////////////////
 
 /datum/design/milk
-	name = "10 milk"
+	name = "10u milk"
 	id = "milk"
 	build_type = BIOGENERATOR
 	materials = list(MAT_BIOMASS = 20)
@@ -11,7 +11,7 @@
 	category = list("initial","Food")
 
 /datum/design/cream
-	name = "10 cream"
+	name = "10u cream"
 	id = "cream"
 	build_type = BIOGENERATOR
 	materials = list(MAT_BIOMASS = 30)
@@ -57,6 +57,38 @@
 	build_type = BIOGENERATOR
 	materials = list(MAT_BIOMASS = 250)
 	build_path = /obj/item/reagent_containers/food/snacks/monkeycube
+	category = list("initial", "Food")
+
+/datum/design/farwa_cube
+	name = "Farwa cube"
+	id = "fcube"
+	build_type = BIOGENERATOR
+	materials = list(MAT_BIOMASS = 250)
+	build_path = /obj/item/reagent_containers/food/snacks/monkeycube/farwacube
+	category = list("initial", "Food")
+
+/datum/design/wolpin_cube
+	name = "Wolpin cube"
+	id = "wcube"
+	build_type = BIOGENERATOR
+	materials = list(MAT_BIOMASS = 250)
+	build_path = /obj/item/reagent_containers/food/snacks/monkeycube/wolpincube
+	category = list("initial", "Food")
+
+/datum/design/stok_cube
+	name = "Stok cube"
+	id = "scube"
+	build_type = BIOGENERATOR
+	materials = list(MAT_BIOMASS = 250)
+	build_path = /obj/item/reagent_containers/food/snacks/monkeycube/stokcube
+	category = list("initial", "Food")
+
+/datum/design/neaera_cube
+	name = "Neaera cube"
+	id = "ncube"
+	build_type = BIOGENERATOR
+	materials = list(MAT_BIOMASS = 250)
+	build_path = /obj/item/reagent_containers/food/snacks/monkeycube/neaeracube
 	category = list("initial", "Food")
 
 /datum/design/ez_nut
@@ -106,6 +138,14 @@
 	materials = list(MAT_BIOMASS = 5)
 	build_path = /obj/item/reagent_containers/glass/bottle/nutrient/empty
 	category = list("initial", "Botany Chemicals")
+
+/datum/design/soil
+	name = "Clump of Soil"
+	id = "soil"
+	build_type = BIOGENERATOR
+	materials = list(MAT_BIOMASS = 50)
+	build_path = /obj/item/stack/sheet/soil
+	category = list("initial", "Organic Materials")
 
 /datum/design/cloth
 	name = "Roll of cloth"

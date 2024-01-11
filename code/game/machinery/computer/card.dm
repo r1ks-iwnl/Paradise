@@ -48,9 +48,11 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 		/datum/job/judge,
 		/datum/job/blueshield,
 		/datum/job/nanotrasenrep,
-		/datum/job/barber,
-		/datum/job/chaplain
-	)
+		/datum/job/chaplain,
+		/datum/job/officer,
+		/datum/job/qm
+)
+
 	//The scaling factor of max total positions in relation to the total amount of people on board the station in %
 	var/max_relative_positions = 30 //30%: Seems reasonable, limit of 6 @ 20 players
 
@@ -62,13 +64,17 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 /obj/machinery/computer/card/Initialize()
 	..()
 	Radio = new /obj/item/radio(src)
-	Radio.listening = 0
+	Radio.listening = FALSE
 	Radio.config(list("Command" = 0))
 	Radio.follow_target = src
 
 /obj/machinery/computer/card/Destroy()
 	QDEL_NULL(Radio)
 	return ..()
+
+/obj/machinery/computer/card/examine(mob/user)
+	. = ..()
+	. += "<span class='notice'>You can <b>Alt-Click</b> [src] to remove the ID cards in it.</span>"
 
 /obj/machinery/computer/card/proc/is_centcom()
 	return FALSE
@@ -79,9 +85,6 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 	if(scan)
 		return check_access(scan)
 	return FALSE
-
-/obj/machinery/computer/card/proc/get_target_rank()
-	return modify && modify.assignment ? modify.assignment : "Unassigned"
 
 /obj/machinery/computer/card/proc/format_jobs(list/jobs, targetrank, list/jobformats)
 	var/list/formatted = list()
@@ -122,30 +125,29 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 			"skin" = skin)))
 	return formatted
 
-/obj/machinery/computer/card/verb/eject_id()
-	set category = null
-	set name = "Eject ID Card"
-	set src in oview(1)
-
-	if(usr.incapacitated())
+/obj/machinery/computer/card/AltClick(mob/user)
+	if(user.stat || HAS_TRAIT(user, TRAIT_HANDS_BLOCKED) || !Adjacent(user))
 		return
 
 	if(scan)
-		to_chat(usr, "You remove \the [scan] from \the [src].")
-		scan.forceMove(get_turf(src))
-		if(!usr.get_active_hand() && Adjacent(usr))
-			usr.put_in_hands(scan)
+		to_chat(user, "<span class='notice'>You remove \the [scan] from \the [src].</span>")
+		if(!user.get_active_hand())
+			user.put_in_hands(scan)
+		else if(!user.put_in_inactive_hand(scan))
+			scan.forceMove(get_turf(src))
 		scan = null
 		playsound(src, 'sound/machines/terminal_insert_disc.ogg', 50, 0)
+		return
 	else if(modify)
-		to_chat(usr, "You remove \the [modify] from \the [src].")
-		modify.forceMove(get_turf(src))
-		if(!usr.get_active_hand() && Adjacent(usr))
-			usr.put_in_hands(modify)
+		to_chat(user, "<span class='notice'>You remove \the [modify] from \the [src].</span>")
+		if(!user.get_active_hand())
+			user.put_in_hands(modify)
+		else if(!user.put_in_inactive_hand(modify))
+			modify.forceMove(get_turf(src))
 		modify = null
 		playsound(src, 'sound/machines/terminal_insert_disc.ogg', 50, 0)
 	else
-		to_chat(usr, "There is nothing to remove from the console.")
+		to_chat(user, "There is nothing to remove from the console.")
 
 /obj/machinery/computer/card/attackby(obj/item/card/id/id_card, mob/user, params)
 	if(!istype(id_card))
@@ -182,6 +184,8 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 			return FALSE
 		if(!job_in_department(job, FALSE))
 			return FALSE
+		if(job.job_banned_gamemode) // you cannot open a slot for more sec/legal after revs win
+			return FALSE
 		if((job.total_positions > GLOB.player_list.len * (max_relative_positions / 100)))
 			return FALSE
 		if(opened_positions[job.title] < 0)
@@ -199,6 +203,8 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 		if(job_blacklisted_partial(job))
 			return FALSE
 		if(!job_in_department(job, FALSE))
+			return FALSE
+		if(job.job_banned_gamemode) // you cannot edit this slot after revs win
 			return FALSE
 		if(job in SSjobs.prioritized_jobs) // different to above
 			return FALSE
@@ -240,7 +246,7 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 		return TRUE
 	if(!targetjob || !targetjob.title)
 		return FALSE
-	if(targetjob.title in get_subordinates(scan.assignment, include_assistants))
+	if(targetjob.title in get_subordinates(scan.rank, include_assistants))
 		return TRUE
 	return FALSE
 
@@ -312,7 +318,8 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 	data["mode"] = mode
 	data["modify_name"] = modify ? modify.name : FALSE
 	data["modify_owner"] = modify && modify.registered_name ? modify.registered_name : "-----"
-	data["modify_rank"] = get_target_rank()
+	data["modify_rank"] = modify?.rank ? modify.rank : FALSE
+	data["modify_assignment"] = modify?.assignment ? modify.assignment : "Unassigned"
 	data["modify_lastlog"] = modify && modify.lastlog ? modify.lastlog : FALSE
 	data["scan_name"] = scan ? scan.name : FALSE
 	data["scan_rank"] = scan ? scan.rank : FALSE
@@ -328,21 +335,23 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 			if(modify)
 				if(!scan)
 					return data
-				else if(target_dept)
-					data["jobs_dept"] = get_subordinates(scan.assignment, FALSE)
-					data["canterminate"] = has_idchange_access()
+
+				data["jobFormats"] = SSjobs.format_jobs_for_id_computer(modify)
+				data["jobs_assistant"] = GLOB.assistant_positions
+				data["canterminate"] = has_idchange_access()
+
+				if(target_dept)
+					data["jobs_dept"] = get_subordinates(scan.rank, FALSE)
 				else
 					data["account_number"] = modify ? modify.associated_account_number : null
 					data["jobs_top"] = list("Captain", "Custom")
 					data["jobs_engineering"] = GLOB.engineering_positions
 					data["jobs_medical"] = GLOB.medical_positions
 					data["jobs_science"] = GLOB.science_positions
-					data["jobs_security"] = GLOB.security_positions
+					data["jobs_security"] = GLOB.active_security_positions
 					data["jobs_service"] = GLOB.service_positions
 					data["jobs_supply"] = GLOB.supply_positions - "Head of Personnel"
-					data["jobs_assistant"] = GLOB.assistant_positions
-					data["jobs_centcom"] = get_all_centcom_jobs()
-					data["jobFormats"] = SSjobs.format_jobs_for_id_computer(modify)
+					data["jobs_centcom"] = get_all_centcom_jobs() + get_all_ERT_jobs()
 					data["current_skin"] = modify.icon_state
 					data["card_skins"] = format_card_skins(get_station_card_skins())
 					data["all_centcom_skins"] = is_centcom() ? format_card_skins(get_centcom_card_skins()) : FALSE
@@ -369,13 +378,13 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 				data["records"] = SSjobs.format_job_change_records(data["iscentcom"])
 		if(IDCOMPUTER_SCREEN_DEPT) // DEPARTMENT EMPLOYEE LIST
 			if(is_authenticated(user) && scan) // .requires both (aghosts don't count)
-				data["jobs_dept"] = get_subordinates(scan.assignment, FALSE)
+				data["jobs_dept"] = get_subordinates(scan.rank, FALSE)
 				data["people_dept"] = get_employees(data["jobs_dept"])
 	return data
 
 /obj/machinery/computer/card/proc/regenerate_id_name()
 	if(modify)
-		modify.name = text("[modify.registered_name]'s ID Card ([modify.assignment])")
+		modify.name = "[modify.registered_name]'s ID Card ([modify.assignment])"
 
 /obj/machinery/computer/card/ui_act(action, params)
 	if(..())
@@ -389,7 +398,7 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 			if(scan)
 				if(ishuman(usr))
 					scan.forceMove(get_turf(src))
-					if(!usr.get_active_hand() && Adjacent(usr))
+					if(Adjacent(usr))
 						usr.put_in_hands(scan)
 					scan = null
 					playsound(src, 'sound/machines/terminal_insert_disc.ogg', 50, 0)
@@ -415,7 +424,7 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 				regenerate_id_name()
 				if(ishuman(usr))
 					modify.forceMove(get_turf(src))
-					if(!usr.get_active_hand() && Adjacent(usr))
+					if(Adjacent(usr))
 						usr.put_in_hands(modify)
 					modify = null
 					playsound(src, 'sound/machines/terminal_insert_disc.ogg', 50, 0)
@@ -448,9 +457,9 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 				return
 			var/t1 = params["assign_target"]
 			if(target_dept)
-				if(modify.assignment == "Demoted")
+				if(modify.assignment == "Demoted" || modify.assignment == "Terminated")
 					playsound(get_turf(src), 'sound/machines/buzz-sigh.ogg', 50, 0)
-					visible_message("<span class='warning'>[src]: Reassigning a demoted individual requires a full ID computer.</span>")
+					visible_message("<span class='warning'>[src]: Reassigning a demoted or terminated individual requires a full ID computer.</span>")
 					return FALSE
 				if(!job_in_department(SSjobs.GetJob(modify.rank), FALSE))
 					playsound(get_turf(src), 'sound/machines/buzz-sigh.ogg', 50, 0)
@@ -511,11 +520,11 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 		if("demote")
 			if(modify.assignment == "Demoted")
 				playsound(get_turf(src), 'sound/machines/buzz-sigh.ogg', 50, 0)
-				visible_message("<span class='notice'>[src]: Demoted crew cannot be demoted any further. If further action is warranted, ask the Captain about Termination.</span>")
+				visible_message("<span class='warning'>[src]: Demoted crew cannot be demoted any further. If further action is warranted, ask the Captain about Termination.</span>")
 				return FALSE
 			if(!job_in_department(SSjobs.GetJob(modify.rank), FALSE))
 				playsound(get_turf(src), 'sound/machines/buzz-sigh.ogg', 50, 0)
-				visible_message("<span class='notice'>[src]: Heads may only demote members of their own department.</span>")
+				visible_message("<span class='warning'>[src]: Heads may only demote members of their own department.</span>")
 				return FALSE
 			var/reason = sanitize(copytext(input("Enter legal reason for demotion. Enter nothing to cancel.","Legal Demotion"), 1, MAX_MESSAGE_LEN))
 			if(!reason || !is_authenticated(usr) || !modify)
@@ -541,7 +550,7 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 		if("terminate")
 			if(!has_idchange_access()) // because captain/HOP can use this even on dept consoles
 				playsound(get_turf(src), 'sound/machines/buzz-sigh.ogg', 50, 0)
-				visible_message("<span class='notice'>[src]: Only the Captain or HOP may completely terminate the employment of a crew member.</span>")
+				visible_message("<span class='warning'>[src]: Only the Captain or HOP may completely terminate the employment of a crew member.</span>")
 				return FALSE
 			var/jobnamedata = modify.getRankAndAssignment()
 			var/reason = sanitize(copytext(input("Enter legal reason for termination. Enter nothing to cancel.", "Employment Termination"), 1, MAX_MESSAGE_LEN))
@@ -635,7 +644,7 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 			var/temp_name = reject_bad_name(input(usr, "Who is this ID for?", "ID Card Renaming", modify.registered_name), TRUE)
 			if(!modify || !temp_name)
 				playsound(get_turf(src), 'sound/machines/buzz-sigh.ogg', 50, 0)
-				visible_message("<span class='notice'>[src] buzzes rudely.</span>")
+				visible_message("<span class='warning'>[src] buzzes rudely.</span>")
 				return FALSE
 			modify.registered_name = temp_name
 			regenerate_id_name()
@@ -644,7 +653,8 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 			var/account_num = input(usr, "Account Number", "Input Number", null) as num|null
 			if(!scan || !modify)
 				return FALSE
-			modify.associated_account_number = clamp(round(account_num), 0, 999999)
+			modify.associated_account_number = clamp(round(account_num), 1000000, 9999999) //force a 7 digit number
+			//for future reference, you should never be able to modify the money account datum through the card computer
 			return
 		if("skin")
 			if(!modify)
@@ -754,6 +764,14 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 	icon_screen = "idcmo"
 	req_access = list(ACCESS_CMO)
 	circuit = /obj/item/circuitboard/card/minor/cmo
+
+/obj/machinery/computer/card/minor/qm
+	name = "supply management console"
+	target_dept = TARGET_DEPT_SUP
+	icon_screen = "idqm"
+	light_color = COLOR_BROWN_ORANGE
+	req_access = list(ACCESS_QM)
+	circuit = /obj/item/circuitboard/card/minor/qm
 
 /obj/machinery/computer/card/minor/rd
 	name = "science management console"

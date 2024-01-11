@@ -22,7 +22,7 @@
 									/datum/vampire_passive/vision = 100,
 									/obj/effect/proc_holder/spell/vampire/self/specialize = 150,
 									/datum/vampire_passive/regen = 200,
-									/obj/effect/proc_holder/spell/turf_teleport/shadow_step = 250)
+									/datum/vampire_passive/vision/advanced = 500)
 
 	/// list of the peoples UIDs that we have drained, and how much blood from each one
 	var/list/drained_humans = list()
@@ -52,7 +52,6 @@
 	owner.current.create_log(CONVERSION_LOG, "De-vampired")
 	draining = null
 	QDEL_NULL(subclass)
-	QDEL_LIST(powers)
 	return ..()
 
 /datum/antagonist/vampire/add_owner_to_gamemode()
@@ -67,14 +66,13 @@
 
 /datum/antagonist/vampire/proc/force_add_ability(path)
 	var/spell = new path(owner)
+	powers += spell
 	if(istype(spell, /obj/effect/proc_holder/spell))
 		owner.AddSpell(spell)
 	if(istype(spell, /datum/vampire_passive))
 		var/datum/vampire_passive/passive = spell
 		passive.owner = owner.current
 		passive.on_apply(src)
-	powers += spell
-	owner.current.update_sight() // Life updates conditionally, so we need to update sight here in case the vamp gets new vision based on his powers. Maybe one day refactor to be more OOP and on the vampire's ability datum.
 
 /datum/antagonist/vampire/proc/get_ability(path)
 	for(var/datum/power as anything in powers)
@@ -99,8 +97,8 @@
 	var/datum/hud/hud = mob_override.hud_used
 	if(hud?.vampire_blood_display)
 		hud.remove_vampire_hud()
-	mob_override.dna.species.hunger_type = initial(mob_override.dna.species.hunger_type)
-	mob_override.dna.species.hunger_icon = initial(mob_override.dna.species.hunger_icon)
+	mob_override.dna?.species.hunger_type = initial(mob_override.dna.species.hunger_type)
+	mob_override.dna?.species.hunger_icon = initial(mob_override.dna.species.hunger_icon)
 	owner.current.alpha = 255
 	REMOVE_TRAITS_IN(owner.current, "vampire")
 
@@ -116,7 +114,7 @@
 		draining = null
 		return
 	add_attack_logs(owner.current, H, "vampirebit & is draining their blood.", ATKLOG_ALMOSTALL)
-	owner.current.visible_message("<span class='danger'>[owner] grabs [H]'s neck harshly and sinks in [owner.current.p_their()] fangs!</span>", "<span class='danger'>You sink your fangs into [H] and begin to drain [H.p_their()] blood.</span>", "<span class='notice'>You hear a soft puncture and a wet sucking noise.</span>")
+	owner.current.visible_message("<span class='danger'>[owner.current] grabs [H]'s neck harshly and sinks in [owner.current.p_their()] fangs!</span>", "<span class='danger'>You sink your fangs into [H] and begin to drain [H.p_their()] blood.</span>", "<span class='notice'>You hear a soft puncture and a wet sucking noise.</span>")
 	if(!iscarbon(owner.current))
 		H.LAssailant = null
 	else
@@ -265,9 +263,9 @@
 			hud.show_hud(hud.hud_version)
 		hud.vampire_blood_display.maptext = "<div align='center' valign='middle' style='position:relative; top:0px; left:6px'><font face='Small Fonts' color='#ce0202'>[bloodusable]</font></div>"
 	handle_vampire_cloak()
-	if(istype(get_turf(owner.current), /turf/space))
+	if(isspaceturf(get_turf(owner.current)))
 		check_sun()
-	if(istype(get_area(owner.current), /area/chapel) && !get_ability(/datum/vampire_passive/full))
+	if(istype(get_area(owner.current), /area/station/service/chapel) && !get_ability(/datum/vampire_passive/full) && bloodtotal > 0)
 		vamp_burn(7)
 	nullified = max(0, nullified - 2)
 
@@ -331,22 +329,22 @@
 	check_vampire_upgrade(TRUE)
 
 /datum/antagonist/vampire/give_objectives()
-	add_objective(/datum/objective/blood)
-	add_objective(/datum/objective/assassinate)
-	add_objective(/datum/objective/steal)
+	add_antag_objective(/datum/objective/blood)
+	add_antag_objective(/datum/objective/assassinate)
+	add_antag_objective(/datum/objective/steal)
 
 	if(prob(20)) // 20% chance of getting survive. 80% chance of getting escape.
-		add_objective(/datum/objective/survive)
+		add_antag_objective(/datum/objective/survive)
 	else
-		add_objective(/datum/objective/escape)
+		add_antag_objective(/datum/objective/escape)
 
 /datum/antagonist/vampire/greet()
-	var/dat
+	var/list/messages = list()
 	SEND_SOUND(owner.current, sound('sound/ambience/antag/vampalert.ogg'))
-	dat = "<span class='danger'>You are a Vampire!</span><br>"
-	dat += {"To bite someone, target the head and use harm intent with an empty hand. Drink blood to gain new powers.
-		You are weak to holy things, starlight and fire. Don't go into space and avoid the Chaplain, the chapel and especially Holy Water."}
-	to_chat(owner.current, dat)
+	messages.Add("<span class='danger'>You are a Vampire!</span><br>")
+	messages.Add("To bite someone, target the head and use harm intent with an empty hand. Drink blood to gain new powers. \
+		You are weak to holy things, starlight and fire. Don't go into space and avoid the Chaplain, the chapel and especially Holy Water.")
+	return messages
 
 /datum/antagonist/vampire/apply_innate_effects(mob/living/mob_override)
 	mob_override = ..()
@@ -354,8 +352,8 @@
 		owner.som = new()
 		owner.som.masters += owner
 
-	mob_override.dna.species.hunger_type = "vampire"
-	mob_override.dna.species.hunger_icon = 'icons/mob/screen_hunger_vampire.dmi'
+	mob_override.dna?.species.hunger_type = "vampire"
+	mob_override.dna?.species.hunger_icon = 'icons/mob/screen_hunger_vampire.dmi'
 	check_vampire_upgrade(FALSE)
 
 /datum/hud/proc/remove_vampire_hud()

@@ -8,16 +8,21 @@
 /obj/item/melee/classic_baton
 	name = "police baton"
 	desc = "A wooden truncheon for beating criminal scum."
+	icon = 'icons/obj/baton.dmi'
 	icon_state = "baton"
 	item_state = "classic_baton"
-	slot_flags = SLOT_BELT
+	slot_flags = SLOT_FLAG_BELT
 	force = 12 //9 hit crit
 	w_class = WEIGHT_CLASS_NORMAL
 	// Settings
 	/// Whether the baton can stun silicon mobs
 	var/affect_silicon = FALSE
+	/// The amount of stamina damage the baton does per swing
+	var/stamina_damage = 30
+	/// How much melee armour is ignored by the stamina damage
+	var/stamina_armour_pen = 0
 	/// The stun time (in seconds) for non-silicons
-	var/stun_time = 6 SECONDS
+	var/knockdown_duration = 6 SECONDS
 	/// The stun time (in seconds) for silicons
 	var/stun_time_silicon = 10 SECONDS
 	/// Cooldown in seconds between two knockdowns
@@ -36,9 +41,9 @@
 
 	add_fingerprint(user)
 	if(HAS_TRAIT(user, TRAIT_CLUMSY) && prob(50))
-		user.visible_message("<span class='danger'>[user] accidentally clubs [user.p_them()]self with [src]!</span>", \
-							 "<span class='userdanger'>You accidentally club yourself with [src]!</span>")
-		user.Weaken(stun_time)
+		user.visible_message("<span class='danger'>[user] accidentally clubs [user.p_themselves()] with [src]!</span>", \
+							"<span class='userdanger'>You accidentally club yourself with [src]!</span>")
+		user.KnockDown(knockdown_duration)
 		if(ishuman(user))
 			var/mob/living/carbon/human/H = user
 			H.apply_damage(force * 2, BRUTE, "head")
@@ -50,10 +55,9 @@
 		return ..()
 	if(on_cooldown)
 		return
-	if(issilicon(target) && !affect_silicon)
+	if((issilicon(target) || isbot(target)) && !affect_silicon)
 		return ..()
-	else
-		stun(target, user)
+	baton_knockdown(target, user)
 
 /**
   * Called when a target is about to be hit non-lethally.
@@ -62,31 +66,43 @@
   * * target - The mob about to be hit
   * * user - The attacking user
   */
-/obj/item/melee/classic_baton/proc/stun(mob/living/target, mob/living/user)
+/obj/item/melee/classic_baton/proc/baton_knockdown(mob/living/target, mob/living/user)
+	if(user.mind?.martial_art?.no_baton && user.mind?.martial_art?.can_use(user))
+		to_chat(user, user.mind.martial_art.no_baton_reason)
+		return
+	var/user_UID = user.UID()
+	if(HAS_TRAIT_FROM(target, TRAIT_WAS_BATONNED, user_UID)) // prevents double baton cheese.
+		return FALSE
 	if(issilicon(target))
 		user.visible_message("<span class='danger'>[user] pulses [target]'s sensors with [src]!</span>",\
-							 "<span class='danger'>You pulse [target]'s sensors with [src]!</span>")
+							"<span class='danger'>You pulse [target]'s sensors with [src]!</span>")
 		on_silicon_stun(target, user)
-	else
-		// Check for shield/countering
-		if(ishuman(target))
-			var/mob/living/carbon/human/H = target
-			if(H.check_shields(src, 0, "[user]'s [name]", MELEE_ATTACK))
-				return FALSE
-			if(check_martial_counter(H, user))
-				return FALSE
+
+	// Check for shield/countering
+	else if(ishuman(target))
+		var/mob/living/carbon/human/H = target
+		if(H.check_shields(src, 0, "[user]'s [name]", MELEE_ATTACK))
+			return FALSE
 		user.visible_message("<span class='danger'>[user] knocks down [target] with [src]!</span>",\
-							 "<span class='danger'>You knock down [target] with [src]!</span>")
+							"<span class='danger'>You knock down [target] with [src]!</span>")
 		on_non_silicon_stun(target, user)
+
+	else if(isbot(target))
+		user.visible_message("<span class='danger'>[user] pulses [target]'s sensors with [src]!</span>",\
+							"<span class='danger'>You pulse [target]'s sensors with [src]!</span>")
+		var/mob/living/simple_animal/bot/H = target
+		H.disable(stun_time_silicon)
 	// Visuals and sound
 	user.do_attack_animation(target)
 	playsound(target, stun_sound, 75, TRUE, -1)
-	add_attack_logs(user, target, "Stunned with [src]")
+	add_attack_logs(user, target, "Knocked down with [src]")
 	// Hit 'em
 	target.LAssailant = iscarbon(user) ? user : null
-	target.Weaken(stun_time)
+	target.KnockDown(knockdown_duration)
 	on_cooldown = TRUE
-	addtimer(CALLBACK(src, .proc/cooldown_finished), cooldown)
+	addtimer(VARSET_CALLBACK(src, on_cooldown, FALSE), cooldown)
+	ADD_TRAIT(target, TRAIT_WAS_BATONNED, user_UID) // so one person cannot hit the same person with two separate batons
+	addtimer(CALLBACK(src, PROC_REF(baton_delay), target, user_UID), 2 SECONDS)
 	return TRUE
 
 /**
@@ -108,13 +124,16 @@
   * * user - The attacking user
   */
 /obj/item/melee/classic_baton/proc/on_non_silicon_stun(mob/living/target, mob/living/user)
-	return
+	var/armour = target.run_armor_check("chest", armour_penetration_percentage = stamina_armour_pen) // returns their chest melee armour
+	var/percentage_reduction = 0
+	if(ishuman(target))
+		percentage_reduction = (100 - ARMOUR_VALUE_TO_PERCENTAGE(armour)) / 100
+	else
+		percentage_reduction = (100 - armour) / 100 // converts the % into a decimal
+	target.adjustStaminaLoss(stamina_damage * percentage_reduction)
 
-/**
-  * Called some time after a non-lethal attack
-  */
-/obj/item/melee/classic_baton/proc/cooldown_finished()
-	on_cooldown = FALSE
+/obj/item/melee/classic_baton/proc/baton_delay(mob/living/target, user_UID)
+	REMOVE_TRAIT(target, TRAIT_WAS_BATONNED, user_UID)
 
 /**
   * # Fancy Cane
@@ -126,8 +145,8 @@
 	item_state = "cane_nt"
 	needs_permit = FALSE
 
-/obj/item/melee/classic_baton/ntcane/is_crutch()
-	return TRUE
+/obj/item/melee/classic_baton/ntcane/get_crutch_efficiency()
+	return 2
 
 /**
   * # Telescopic Baton
@@ -135,8 +154,9 @@
 /obj/item/melee/classic_baton/telescopic
 	name = "telescopic baton"
 	desc = "A compact yet robust personal defense weapon. Can be concealed when folded."
+	icon_state = "telebaton_0" // For telling what it is when mapping
 	item_state = null
-	slot_flags = SLOT_BELT
+	slot_flags = SLOT_FLAG_BELT
 	w_class = WEIGHT_CLASS_SMALL
 	needs_permit = FALSE
 	on = FALSE
@@ -145,7 +165,7 @@
 	/// Force when extended
 	var/force_on = 10
 	/// Item state when extended
-	var/item_state_on = "nullrod"
+	var/item_state_on = "tele_baton"
 	/// Icon state when concealed
 	var/icon_state_off = "telebaton_0"
 	/// Icon state when extended
@@ -178,7 +198,7 @@
 	else
 		to_chat(user, "<span class='notice'>You collapse [src].</span>")
 		item_state = null //no sprite for concealment even when in hand
-		slot_flags = SLOT_BELT
+		slot_flags = SLOT_FLAG_BELT
 		w_class = WEIGHT_CLASS_SMALL
 		force = force_off //not so robust now
 		attack_verb = attack_verb_off

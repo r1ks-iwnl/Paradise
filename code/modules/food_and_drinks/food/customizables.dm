@@ -9,32 +9,34 @@ do {\
 /obj/item/reagent_containers/food/snacks/breadslice/attackby(obj/item/W, mob/user, params)
 	if(istype(W, /obj/item/reagent_containers/food/snacks) && !(W.flags & NODROP))
 		MAKE_CUSTOM_FOOD(W, user, /obj/item/reagent_containers/food/snacks/customizable/sandwich)
-	else
-		..()
+		return
+	..()
 
 /obj/item/reagent_containers/food/snacks/bun/attackby(obj/item/W, mob/user, params)
 	if(istype(W, /obj/item/reagent_containers/food/snacks) && !(W.flags & NODROP))
 		MAKE_CUSTOM_FOOD(W, user, /obj/item/reagent_containers/food/snacks/customizable/burger)
+		return
+	..()
 
 /obj/item/reagent_containers/food/snacks/sliceable/flatdough/attackby(obj/item/W, mob/user, params)
 	if(istype(W, /obj/item/reagent_containers/food/snacks) && !(W.flags & NODROP))
 		MAKE_CUSTOM_FOOD(W, user, /obj/item/reagent_containers/food/snacks/customizable/pizza)
-	else
-		..()
+		return
+	..()
 
 
 /obj/item/reagent_containers/food/snacks/boiledspaghetti/attackby(obj/item/W, mob/user, params)
 	if(istype(W, /obj/item/reagent_containers/food/snacks) && !(W.flags & NODROP))
 		MAKE_CUSTOM_FOOD(W, user, /obj/item/reagent_containers/food/snacks/customizable/pasta)
-	else
-		..()
+		return
+	..()
 
 
 /obj/item/trash/plate/attackby(obj/item/W, mob/user, params)
 	if(istype(W, /obj/item/reagent_containers/food/snacks) && !(W.flags & NODROP))
 		MAKE_CUSTOM_FOOD(W, user, /obj/item/reagent_containers/food/snacks/customizable/fullycustom)
-	else
-		..()
+		return
+	..()
 
 #undef MAKE_CUSTOM_FOOD
 
@@ -51,15 +53,6 @@ do {\
 		qdel(src)
 	else
 		..()
-
-/obj/item/reagent_containers/food/snacks/customizable/sandwich
-	name = "sandwich"
-	desc = "A sandwich! A timeless classic."
-	icon_state = "breadslice"
-	baseicon = "sandwichcustom"
-	basename = "sandwich"
-
-
 
 /obj/item/reagent_containers/food/snacks/customizable
 	name = "sandwich"
@@ -86,6 +79,13 @@ do {\
 	if(top)
 		top_image = new(icon, "[baseicon]_top")
 		add_overlay(top_image)
+
+/obj/item/reagent_containers/food/snacks/customizable/sandwich
+	name = "sandwich"
+	desc = "A sandwich! A timeless classic."
+	icon_state = "sandwichcustom"
+	baseicon = "sandwichcustom"
+	basename = "sandwich"
 
 /obj/item/reagent_containers/food/snacks/customizable/pizza
 	name = "personal pizza"
@@ -419,7 +419,7 @@ do {\
 
 
 /obj/item/reagent_containers/food/snacks/customizable/Destroy()
-	QDEL_LIST(ingredients)
+	QDEL_LIST_CONTENTS(ingredients)
 	qdel(top_image)
 	return ..()
 

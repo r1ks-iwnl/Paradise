@@ -8,7 +8,7 @@
 	w_class = WEIGHT_CLASS_BULKY
 	var/list/possible_appearances = list("Assistant", "Clown", "Mime",
 		"Traitor", "Nuke Op", "Cultist", "Revolutionary", "Wizard", "Shadowling", "Xenomorph", "Swarmer",
-		"Deathsquad Officer", "Ian", "Slaughter Demon",
+		"Deathsquad Commando", "Ian", "Slaughter Demon",
 		"Laughter Demon", "Xenomorph Maid", "Security Officer", "Terror Spider")
 	var/pushed_over = FALSE //If the cutout is pushed over and has to be righted
 	var/deceptive = FALSE //If the cutout actually appears as what it portray and not a discolored version
@@ -79,7 +79,7 @@
 	if(pushed_over)
 		to_chat(user, "<span class='warning'>Right [src] first!</span>")
 		return
-	var/new_appearance = input(user, "Choose a new appearance for [src].", "26th Century Deception") as null|anything in possible_appearances
+	var/new_appearance = tgui_input_list(user, "Choose a new appearance for [src]", "26th Century Deception", possible_appearances)
 	if(!Adjacent(usr))
 		user.visible_message("<span class='danger'>You need to be closer!</span>")
 		return
@@ -146,9 +146,9 @@
 		//	name = random_name(pick(MALE,FEMALE),"Unathi")
 		//	desc = "A cardboard cutout of an ash walker."
 		//	icon_state = "cutout_free_antag"
-		if("Deathsquad Officer")
-			name = pick(GLOB.commando_names)
-			desc = "A cardboard cutout of a death commando."
+		if("Deathsquad Commando")
+			name = pick(GLOB.deathsquad_names)
+			desc = "A cardboard cutout of a Deathsquad Commando, from that show about loose-cannon ERT Officers."
 			icon_state = "cutout_deathsquad"
 		if("Ian")
 			name = "Ian"

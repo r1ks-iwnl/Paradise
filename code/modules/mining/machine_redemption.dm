@@ -55,11 +55,11 @@
 	/// The currently inserted design disk.
 	var/obj/item/disk/design_disk/inserted_disk
 
-/obj/machinery/mineral/ore_redemption/New()
-	..()
+
+/obj/machinery/mineral/ore_redemption/Initialize(mapload)
+	. = ..()
+	AddComponent(/datum/component/material_container, list(MAT_METAL, MAT_GLASS, MAT_SILVER, MAT_GOLD, MAT_DIAMOND, MAT_PLASMA, MAT_URANIUM, MAT_BANANIUM, MAT_TRANQUILLITE, MAT_TITANIUM, MAT_BLUESPACE), INFINITY, FALSE, /obj/item/stack, null, CALLBACK(src, PROC_REF(on_material_insert)))
 	ore_buffer = list()
-	// Components
-	AddComponent(/datum/component/material_container, list(MAT_METAL, MAT_GLASS, MAT_SILVER, MAT_GOLD, MAT_DIAMOND, MAT_PLASMA, MAT_URANIUM, MAT_BANANIUM, MAT_TRANQUILLITE, MAT_TITANIUM, MAT_BLUESPACE), INFINITY, FALSE, /obj/item/stack, null, CALLBACK(src, .proc/on_material_insert))
 	files = new /datum/research/smelter(src)
 	// Stock parts
 	component_parts = list()
@@ -71,8 +71,8 @@
 	component_parts += new /obj/item/stack/sheet/glass(null)
 	RefreshParts()
 
-/obj/machinery/mineral/ore_redemption/upgraded/New()
-	..()
+/obj/machinery/mineral/ore_redemption/upgraded/Initialize(mapload)
+	. = ..()
 	component_parts = list()
 	component_parts += new /obj/item/circuitboard/ore_redemption(null)
 	component_parts += new /obj/item/stock_parts/matter_bin/super(null)
@@ -91,8 +91,8 @@
 	req_access = list(ACCESS_FREE_GOLEMS)
 	req_access_claim = ACCESS_FREE_GOLEMS
 
-/obj/machinery/mineral/ore_redemption/golem/New()
-	..()
+/obj/machinery/mineral/ore_redemption/golem/Initialize(mapload)
+	. = ..()
 	component_parts = list()
 	component_parts += new /obj/item/circuitboard/ore_redemption/golem(null)
 	component_parts += new /obj/item/stock_parts/matter_bin(null)
@@ -112,8 +112,8 @@
 	req_access = list()
 	anyone_claim = TRUE
 
-/obj/machinery/mineral/ore_redemption/labor/New()
-	..()
+/obj/machinery/mineral/ore_redemption/labor/Initialize(mapload)
+	. = ..()
 	component_parts = list()
 	component_parts += new /obj/item/circuitboard/ore_redemption/labor(null)
 	component_parts += new /obj/item/stock_parts/matter_bin(null)
@@ -135,39 +135,35 @@
 	return ..()
 
 /obj/machinery/mineral/ore_redemption/RefreshParts()
-	var/P = 1
-	var/S = 1
-	for(var/sp in component_parts)
-		var/obj/item/stock_parts/SP = sp
-		if(!istype(SP))
-			continue
-		switch(SP.type)
-			if(/obj/item/stock_parts/micro_laser)
-				P = BASE_POINT_MULT + (POINT_MULT_ADD_PER_RATING * SP.rating)
-			if(/obj/item/stock_parts/matter_bin)
-				S = BASE_SHEET_MULT + (SHEET_MULT_ADD_PER_RATING * SP.rating)
-			// Manipulators do nothing
+	var/P = BASE_POINT_MULT
+	var/S = BASE_SHEET_MULT
+	for(var/obj/item/stock_parts/micro_laser/M in component_parts)
+		P += POINT_MULT_ADD_PER_RATING * M.rating
+	for(var/obj/item/stock_parts/matter_bin/M in component_parts)
+		S += SHEET_MULT_ADD_PER_RATING * M.rating
+		// Manipulators do nothing
 	// Update our values
 	point_upgrade = P
 	sheet_per_ore = S
 	SStgui.update_uis(src)
 
 /obj/machinery/mineral/ore_redemption/power_change()
-	..()
-	update_icon()
-	if(inserted_id && !powered())
+	if(!..())
+		return
+	update_icon(UPDATE_ICON_STATE)
+	if(inserted_id && !(stat & NOPOWER))
 		visible_message("<span class='notice'>The ID slot indicator light flickers on [src] as it spits out a card before powering down.</span>")
 		inserted_id.forceMove(get_turf(src))
 		inserted_id = null
 
-/obj/machinery/mineral/ore_redemption/update_icon()
-	if(powered())
+/obj/machinery/mineral/ore_redemption/update_icon_state()
+	if(has_power())
 		icon_state = initial(icon_state)
 	else
 		icon_state = "[initial(icon_state)]-off"
 
 /obj/machinery/mineral/ore_redemption/process()
-	if(panel_open || !powered())
+	if(panel_open || !has_power())
 		return
 	// Check if the input turf has a [/obj/structure/ore_box] to draw ore from. Otherwise suck ore from the turf
 	var/atom/input = get_step(src, input_dir)
@@ -194,7 +190,7 @@
 /obj/machinery/mineral/ore_redemption/attackby(obj/item/I, mob/user, params)
 	if(exchange_parts(user, I))
 		return
-	if(!powered())
+	if(!has_power())
 		return ..()
 
 	if(istype(I, /obj/item/card/id))
@@ -209,7 +205,7 @@
 		SStgui.update_uis(src)
 		interact(user)
 		user.visible_message("<span class='notice'>[user] inserts [I] into [src].</span>",
-						 	 "<span class='notice'>You insert [I] into [src].</span>")
+							"<span class='notice'>You insert [I] into [src].</span>")
 		return
 	return ..()
 
@@ -221,7 +217,7 @@
 	if(!panel_open)
 		return
 	. = TRUE
-	if(!powered())
+	if(!has_power())
 		return
 	if(!I.tool_start_check(src, user, 0))
 		return
@@ -235,7 +231,7 @@
 		return TRUE
 
 /obj/machinery/mineral/ore_redemption/wrench_act(mob/user, obj/item/I)
-	if(default_unfasten_wrench(user, I))
+	if(default_unfasten_wrench(user, I, time = 6 SECONDS))
 		return TRUE
 
 /obj/machinery/mineral/ore_redemption/attack_ghost(mob/user)
@@ -256,7 +252,7 @@
 	var/datum/component/material_container/materials = GetComponent(/datum/component/material_container)
 
 	// General info
-	data["id"] = inserted_id ? list("name" = "[inserted_id.registered_name] ([inserted_id.assignment])", "points" = inserted_id.mining_points) : null
+	data["id"] = inserted_id ? list("name" = "[inserted_id.registered_name] ([inserted_id.assignment])", "points" = inserted_id.mining_points, "total_points" = inserted_id.total_mining_points) : null
 	data["points"] = points
 	data["disk"] = inserted_disk ? list(
 		"name" = inserted_disk.name,
@@ -286,6 +282,7 @@
 		alloys += list(list(
 			"id" = D.id,
 			"name" = D.name,
+			"description" = D.desc,
 			"amount" = get_num_smeltable_alloy(D)
 		))
 	data["alloys"] = alloys
@@ -303,7 +300,8 @@
 				return
 			if(anyone_claim || (req_access_claim in inserted_id.access))
 				inserted_id.mining_points += points
-				to_chat(usr, "<span class='notice'>[points] points claimed.</span>")
+				inserted_id.total_mining_points += points
+				to_chat(usr, "<span class='notice'><b>[points] Mining Points</b> claimed. You have earned a total of <b>[inserted_id.total_mining_points] Mining Points</b> this Shift!</span>")
 				points = 0
 			else
 				to_chat(usr, "<span class='warning'>Required access not found.</span>")
@@ -375,7 +373,7 @@
 
 	ui = SStgui.try_update_ui(user, src, ui_key, ui, force_open)
 	if(!ui)
-		ui = new(user, src, ui_key, "OreRedemption", name, 400, 600)
+		ui = new(user, src, ui_key, "OreRedemption", name, 500, 600)
 		ui.open()
 		ui.set_autoupdate(FALSE)
 
@@ -470,7 +468,7 @@
 		if(!(C.department in supply_consoles))
 			continue
 		if(!supply_consoles[C.department] || length(supply_consoles[C.department] - mats_in_stock))
-			C.createMessage("Ore Redemption Machine", "New Minerals Available!", msg, 1) // RQ_NORMALPRIORITY
+			C.createMessage("Ore Redemption Machine", "New Minerals Available!", msg, RQ_NORMALPRIORITY)
 
 /**
   * Tries to insert the ID card held by the given user into the machine.

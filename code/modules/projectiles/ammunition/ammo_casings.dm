@@ -29,14 +29,6 @@
 	muzzle_flash_strength = MUZZLE_FLASH_STRENGTH_NORMAL
 	muzzle_flash_range = MUZZLE_FLASH_RANGE_STRONG
 
-/obj/item/ammo_casing/c38
-	desc = "A .38 bullet casing."
-	caliber = "38"
-	icon_state = "r-casing"
-	projectile_type = /obj/item/projectile/bullet/c38
-	muzzle_flash_strength = MUZZLE_FLASH_STRENGTH_NORMAL
-	muzzle_flash_range = MUZZLE_FLASH_RANGE_NORMAL
-
 /obj/item/ammo_casing/c38/invisible
 	projectile_type = /obj/item/projectile/bullet/mime
 	muzzle_flash_effect = null // invisible eh
@@ -60,6 +52,10 @@
 
 /obj/item/ammo_casing/c10mm/hp
 	projectile_type = /obj/item/projectile/bullet/midbullet3/hp
+
+/obj/item/ammo_casing/overgrown
+	projectile_type = /obj/item/projectile/bullet/midbullet3/overgrown
+	icon_state = "peashooter_bullet"
 
 /obj/item/ammo_casing/c9mm
 	desc = "A 9mm bullet casing."
@@ -156,7 +152,7 @@
 	icon_state = "cshell"
 	projectile_type = /obj/item/projectile/bullet/pellet/rubber
 	pellets = 6
-	variance = 25
+	variance = 35
 	materials = list(MAT_METAL=4000)
 
 
@@ -177,7 +173,7 @@
 	projectile_type = /obj/item/projectile/bullet/pellet/weak
 	materials = list(MAT_METAL=250)
 	pellets = 10
-	variance = 25
+	variance = 35
 	muzzle_flash_strength = MUZZLE_FLASH_STRENGTH_NORMAL
 	muzzle_flash_range = MUZZLE_FLASH_RANGE_NORMAL
 
@@ -213,7 +209,7 @@
 	projectile_type = /obj/item/projectile/bullet/meteorshot
 
 /obj/item/ammo_casing/shotgun/pulseslug
-	name = "pulse slug"
+	name = "proto pulse slug"
 	desc = "A delicate device which can be loaded into a shotgun. The primer acts as a button which triggers the gain medium and fires a powerful \
 	energy blast. While the heat and power drain limit it to one use, it can still allow an operator to engage targets that ballistic ammunition \
 	would have difficulty with."
@@ -255,11 +251,13 @@
 	muzzle_flash_range = MUZZLE_FLASH_RANGE_NORMAL
 	muzzle_flash_color = LIGHT_COLOR_LIGHTBLUE
 
-/obj/item/ammo_casing/shotgun/laserslug
-	name = "laser slug"
-	desc = "An advanced shotgun shell that uses a micro laser to replicate the effects of a laser weapon in a ballistic package."
+/obj/item/ammo_casing/shotgun/lasershot
+	name = "lasershot"
+	desc = "An advanced shotgun shell that uses a multitude of lenses to split a high-powered laser into eight small pellets."
 	icon_state = "lshell"
-	projectile_type = /obj/item/projectile/beam/laser
+	projectile_type = /obj/item/projectile/beam/scatter
+	pellets = 8
+	variance = 35
 	muzzle_flash_strength = MUZZLE_FLASH_STRENGTH_NORMAL
 	muzzle_flash_range = MUZZLE_FLASH_RANGE_NORMAL
 	muzzle_flash_color = LIGHT_COLOR_DARKRED
@@ -306,10 +304,23 @@
 	muzzle_flash_range = MUZZLE_FLASH_RANGE_NORMAL
 	materials = list(MAT_METAL=250)
 
+/obj/item/ammo_casing/shotgun/confetti
+	name = "confettishot"
+	desc = "It's party time!"
+	icon_state = "partyshell"
+	projectile_type = /obj/item/projectile/bullet/confetti
+
 /obj/item/ammo_casing/a556
 	desc = "A 5.56mm bullet casing."
 	caliber = "a556"
 	projectile_type = /obj/item/projectile/bullet/heavybullet
+	muzzle_flash_strength = MUZZLE_FLASH_STRENGTH_NORMAL
+	muzzle_flash_range = MUZZLE_FLASH_RANGE_NORMAL
+
+/obj/item/ammo_casing/a545
+	desc = "A 5.45x39mm bullet casing."
+	caliber = "a545"
+	projectile_type = /obj/item/projectile/bullet/midbullet3
 	muzzle_flash_strength = MUZZLE_FLASH_STRENGTH_NORMAL
 	muzzle_flash_range = MUZZLE_FLASH_RANGE_NORMAL
 
@@ -325,7 +336,7 @@
 	name = "rocket shell"
 	desc = "A high explosive designed to be fired from a launcher."
 	icon_state = "rocketshell"
-	projectile_type = /obj/item/missile
+	projectile_type = /obj/item/projectile/missile
 	caliber = "rocket"
 	muzzle_flash_strength = MUZZLE_FLASH_STRENGTH_STRONG
 	muzzle_flash_range = MUZZLE_FLASH_RANGE_STRONG
@@ -333,12 +344,11 @@
 /obj/item/ammo_casing/caseless
 	desc = "A caseless bullet casing."
 
-/obj/item/ammo_casing/caseless/fire(atom/target as mob|obj|turf, mob/living/user as mob|obj, params, distro, quiet, zone_override = "", spread)
+/obj/item/ammo_casing/caseless/fire(atom/target as mob|obj|turf, mob/living/user as mob|obj, params, distro, quiet, zone_override = "", spread, atom/firer_source_atom)
 	if(..())
-		loc = null
-		return 1
-	else
-		return 0
+		qdel(src)
+		return TRUE
+	return FALSE
 
 /obj/item/ammo_casing/caseless/a75
 	desc = "A .75 bullet casing."
@@ -364,14 +374,17 @@
 	caliber = "foam_force"
 	icon = 'icons/obj/guns/toy.dmi'
 	icon_state = "foamdart"
-	var/modified = 0
+	var/modified = FALSE
 	harmful = FALSE
 
-/obj/item/ammo_casing/caseless/foam_dart/update_icon()
-	..()
+/obj/item/ammo_casing/caseless/foam_dart/update_desc()
+	. = ..()
+	if(modified)
+		desc = "Its nerf or nothing! ... Although, this one doesn't look too safe."
+
+/obj/item/ammo_casing/caseless/foam_dart/update_icon_state()
 	if(modified)
 		icon_state = "foamdart_empty"
-		desc = "Its nerf or nothing! ... Although, this one doesn't look too safe."
 		if(BB)
 			BB.icon_state = "foamdart_empty"
 	else
@@ -382,16 +395,22 @@
 /obj/item/ammo_casing/caseless/foam_dart/attackby(obj/item/A, mob/user, params)
 	..()
 	var/obj/item/projectile/bullet/reusable/foam_dart/FD = BB
-	if(istype(A, /obj/item/screwdriver) && !modified)
-		modified = 1
-		FD.damage_type = BRUTE
-		update_icon()
-	else if((istype(A, /obj/item/pen)) && modified && !FD.pen)
+	if((is_pen(A)) && modified && !FD.pen)
 		if(!user.unEquip(A))
 			return
 		add_pen(A)
 		to_chat(user, "<span class='notice'>You insert [A] into [src].</span>")
-	return
+
+/obj/item/ammo_casing/caseless/foam_dart/screwdriver_act(mob/living/user, obj/item/I)
+	if(modified)
+		return
+
+	var/obj/item/projectile/bullet/reusable/foam_dart/FD = BB
+	I.play_tool_sound(src)
+	modified = TRUE
+	FD.damage_type = BRUTE
+	update_icon()
+	return TRUE
 
 /obj/item/ammo_casing/caseless/foam_dart/proc/add_pen(obj/item/pen/P)
 	var/obj/item/projectile/bullet/reusable/foam_dart/FD = BB
@@ -424,11 +443,15 @@
 	projectile_type = /obj/item/projectile/bullet/reusable/foam_dart/sniper
 	icon_state = "foamdartsniper"
 
-/obj/item/ammo_casing/caseless/foam_dart/sniper/update_icon()
-	..()
+
+/obj/item/ammo_casing/caseless/foam_dart/sniper/update_desc()
+	. = ..()
+	if(modified)
+		desc = "Its nerf or nothing! ... Although, this one doesn't look too safe."
+
+/obj/item/ammo_casing/caseless/foam_dart/sniper/update_icon_state()
 	if(modified)
 		icon_state = "foamdartsniper_empty"
-		desc = "Its nerf or nothing! ... Although, this one doesn't look too safe."
 		if(BB)
 			BB.icon_state = "foamdartsniper_empty"
 	else
@@ -458,11 +481,12 @@
 	projectile_type = /obj/item/projectile/bullet/cap
 	muzzle_flash_strength = MUZZLE_FLASH_STRENGTH_NORMAL
 	muzzle_flash_range = MUZZLE_FLASH_RANGE_NORMAL
+	harmful = FALSE
 
-/obj/item/ammo_casing/laser
-	desc = "An experimental laser casing."
+/obj/item/ammo_casing/caseless/laser
+	desc = "An experimental laser casing, designed to vaporize when fired."
 	caliber = "laser"
-	projectile_type = /obj/item/projectile/beam/laser
+	projectile_type = /obj/item/projectile/beam/laser/ik //Subtype that breaks on firing if emp'd
 	muzzle_flash_effect = /obj/effect/temp_visual/target_angled/muzzle_flash/energy
 	muzzle_flash_strength = MUZZLE_FLASH_STRENGTH_WEAK
 	muzzle_flash_range = MUZZLE_FLASH_RANGE_NORMAL

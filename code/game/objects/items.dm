@@ -1,11 +1,15 @@
 GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effects/fire.dmi', "icon_state" = "fire"))
+GLOBAL_DATUM_INIT(welding_sparks, /mutable_appearance, mutable_appearance('icons/effects/welding_effect.dmi', "welding_sparks", GASFIRE_LAYER, ABOVE_LIGHTING_PLANE))
+
 /obj/item
 	name = "item"
 	icon = 'icons/obj/items.dmi'
 	blocks_emissive = EMISSIVE_BLOCK_GENERIC
+	mouse_drag_pointer = MOUSE_ACTIVE_POINTER
 
 	move_resist = null // Set in the Initialise depending on the item size. Unless it's overriden by a specific item
 	var/discrete = 0 // used in item_attack.dm to make an item not show an attack message to viewers
+	/// The icon state used to display the item in your inventory. If null then the icon_state value itself will be used
 	var/item_state = null
 	var/lefthand_file = 'icons/mob/inhands/items_lefthand.dmi'
 	var/righthand_file = 'icons/mob/inhands/items_righthand.dmi'
@@ -64,19 +68,22 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 	var/permeability_coefficient = 1 // for chemicals/diseases
 	var/siemens_coefficient = 1 // for electrical admittance/conductance (electrocution checks and shit)
 	var/slowdown = 0 // How much clothing is slowing you down. Negative values speeds you up
-	var/armour_penetration = 0 //percentage of armour effectiveness to remove
+	/// Flat armour reduction, occurs after percentage armour penetration.
+	var/armour_penetration_flat = 0
+	/// Percentage armour reduction, happens before flat armour reduction.
+	var/armour_penetration_percentage = 0
 	var/list/allowed = null //suit storage stuff.
 	var/obj/item/uplink/hidden/hidden_uplink = null // All items can have an uplink hidden inside, just remember to add the triggers.
 
-	var/needs_permit = 0			//Used by security bots to determine if this item is safe for public use.
+	var/needs_permit = FALSE			//Used by security bots to determine if this item is safe for public use.
 
 	var/strip_delay = DEFAULT_ITEM_STRIP_DELAY
 	var/put_on_delay = DEFAULT_ITEM_PUTON_DELAY
 	var/breakouttime = 0
 	var/flags_cover = 0 //for flags such as GLASSESCOVERSEYES
 
-	var/block_chance = 0
-	var/hit_reaction_chance = 0 //If you want to have something unrelated to blocking/armour piercing etc. Maybe not needed, but trying to think ahead/allow more freedom
+	/// Used to give a reaction chance on hit that is not a block. If less than 0, will remove the block message, allowing overides.
+	var/hit_reaction_chance = 0
 
 	// Needs to be in /obj/item because corgis can wear a lot of
 	// non-clothing items
@@ -128,8 +135,6 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 
 /obj/item/New()
 	..()
-	for(var/path in actions_types)
-		new path(src, action_icon[path], action_icon_state[path])
 
 	if(!hitsound)
 		if(damtype == "fire")
@@ -142,8 +147,14 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 
 /obj/item/Initialize(mapload)
 	. = ..()
-	if(istype(loc, /obj/item/storage)) //marks all items in storage as being such
+	for(var/path in actions_types)
+		new path(src, action_icon[path], action_icon_state[path])
+	if(isstorage(loc)) //marks all items in storage as being such
 		in_storage = TRUE
+
+// this proc is used to add text for items with ABSTRACT flag after default examine text
+/obj/item/proc/customised_abstract_text(mob/living/carbon/owner)
+	return
 
 /obj/item/proc/determine_move_resist()
 	switch(w_class)
@@ -166,9 +177,14 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 	if(ismob(loc))
 		var/mob/m = loc
 		m.unEquip(src, 1)
-	QDEL_LIST(actions)
+	QDEL_LIST_CONTENTS(actions)
 	master = null
 	return ..()
+
+/obj/item/proc/alert_admins_on_destroy()
+	SIGNAL_HANDLER
+	message_admins("[src] has been destroyed at [ADMIN_COORDJMP(src)].")
+	log_game("[src] has been destroyed at ([x],[y],[z]) in the location [loc].")
 
 /obj/item/proc/check_allowed_items(atom/target, not_inside, target_self)
 	if(((src in target) && !target_self) || (!isturf(target.loc) && !isturf(target) && not_inside))
@@ -179,20 +195,6 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 /obj/item/blob_act(obj/structure/blob/B)
 	if(B && B.loc == loc)
 		qdel(src)
-
-/obj/item/verb/move_to_top()
-	set name = "Move To Top"
-	set category = null
-	set src in oview(1)
-
-	if(!istype(src.loc, /turf) || usr.stat || usr.restrained() )
-		return
-
-	var/turf/T = src.loc
-
-	src.loc = null
-
-	src.loc = T
 
 /obj/item/examine(mob/user)
 	var/size
@@ -239,8 +241,7 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 /obj/item/burn()
 	if(!QDELETED(src))
 		var/turf/T = get_turf(src)
-		var/obj/effect/decal/cleanable/ash/A = new(T)
-		A.desc += "\nLooks like this used to be \an [name] some time ago."
+		new /obj/effect/decal/cleanable/ash(T)
 		..()
 
 /obj/item/acid_melt()
@@ -258,7 +259,7 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 
 /obj/item/attack_hand(mob/user as mob, pickupfireoverride = FALSE)
 	if(!user) return 0
-	if(hasorgans(user))
+	if(ishuman(user))
 		var/mob/living/carbon/human/H = user
 		var/obj/item/organ/external/temp = H.bodyparts_by_name["r_hand"]
 		if(user.hand)
@@ -291,13 +292,16 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 			if(!H.gloves || (!(H.gloves.resistance_flags & (UNACIDABLE|ACID_PROOF))))
 				to_chat(user, "<span class='warning'>The acid on [src] burns your hand!</span>")
 				var/obj/item/organ/external/affecting = H.get_organ("[user.hand ? "l" : "r" ]_arm")
-				if(affecting && affecting.receive_damage( 0, 5 ))		// 5 burn damage
+				if(affecting && affecting.receive_damage(0, 5))		// 5 burn damage
 					H.UpdateDamageIcon()
 
-	if(istype(src.loc, /obj/item/storage))
+	if(isstorage(src.loc))
 		//If the item is in a storage item, take it out
 		var/obj/item/storage/S = src.loc
 		S.remove_from_storage(src)
+
+	if(..())
+		return
 
 	if(throwing)
 		throwing.finalize(FALSE)
@@ -323,7 +327,7 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 /obj/item/attack_alien(mob/user)
 	var/mob/living/carbon/alien/A = user
 
-	if(!A.has_fine_manipulation)
+	if(!A.has_fine_manipulation && !HAS_TRAIT(src, TRAIT_XENO_INTERACTABLE))
 		if(src in A.contents) // To stop Aliens having items stuck in their pockets
 			A.unEquip(src)
 		to_chat(user, "<span class='warning'>Your claws aren't capable of such fine manipulation!</span>")
@@ -343,7 +347,7 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 // Due to storage type consolidation this should get used more now.
 // I have cleaned it up a little, but it could probably use more.  -Sayu
 /obj/item/attackby(obj/item/I, mob/user, params)
-	if(istype(I, /obj/item/storage))
+	if(isstorage(I))
 		var/obj/item/storage/S = I
 		if(S.use_to_pickup)
 			if(S.pickup_all_on_tile) //Mode is set to collect all items on a tile and we clicked on a valid one.
@@ -371,7 +375,7 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 			else if(S.can_be_inserted(src))
 				S.handle_item_insertion(src)
 	else if(istype(I, /obj/item/stack/tape_roll))
-		if(istype(src, /obj/item/storage)) //Don't tape the bag if we can put the duct tape inside it instead
+		if(isstorage(src)) //Don't tape the bag if we can put the duct tape inside it instead
 			var/obj/item/storage/bag = src
 			if(bag.can_be_inserted(I))
 				return ..()
@@ -393,11 +397,12 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 		return ..()
 
 /obj/item/proc/hit_reaction(mob/living/carbon/human/owner, atom/movable/hitby, attack_text = "the attack", final_block_chance = 0, damage = 0, attack_type = MELEE_ATTACK)
-	SEND_SIGNAL(src, COMSIG_ITEM_HIT_REACT, args)
-	if(prob(final_block_chance))
-		owner.visible_message("<span class='danger'>[owner] blocks [attack_text] with [src]!</span>")
-		return 1
-	return 0
+	var/signal_result = SEND_SIGNAL(src, COMSIG_ITEM_HIT_REACT, owner, hitby, damage, attack_type) + prob(final_block_chance)
+	if(signal_result != 0)
+		if(hit_reaction_chance >= 0) //Normally used for non blocking hit reactions, but also used for displaying block message on actual blocks
+			owner.visible_message("<span class='danger'>[owner] blocks [attack_text] with [src]!</span>")
+		return signal_result
+	return FALSE
 
 // Generic use proc. Depending on the item, it uses up fuel, charges, sheets, etc.
 // Returns TRUE on success, FALSE on failure.
@@ -478,7 +483,7 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 	if(!initial)
 		if(equip_sound && slot == slot_bitfield_to_slot(slot_flags))
 			playsound(src, equip_sound, EQUIP_SOUND_VOLUME, TRUE, ignore_walls = FALSE)
-		else if(slot == slot_l_hand || slot == slot_r_hand)
+		else if(slot == SLOT_HUD_LEFT_HAND || slot == SLOT_HUD_RIGHT_HAND)
 			playsound(src, pickup_sound, PICKUP_SOUND_VOLUME, ignore_walls = FALSE)
 
 /obj/item/proc/item_action_slot_check(slot, mob/user)
@@ -544,11 +549,14 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 
 /obj/item/proc/get_loc_turf()
 	var/atom/L = loc
-	while(L && !istype(L, /turf/))
+	while(L && !isturf(L))
 		L = L.loc
 	return loc
 
 /obj/item/proc/eyestab(mob/living/carbon/M as mob, mob/living/carbon/user as mob)
+	if(force && HAS_TRAIT(user, TRAIT_PACIFISM))
+		to_chat(user, "<span class='warning'>You don't want to harm other living beings!</span>")
+		return FALSE
 
 	var/mob/living/carbon/human/H = M
 	if(istype(H) && ( \
@@ -560,7 +568,7 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 		to_chat(user, "<span class='danger'>You're going to need to remove that mask/helmet/glasses first!</span>")
 		return
 
-	if(istype(M, /mob/living/carbon/alien) || istype(M, /mob/living/simple_animal/slime))//Aliens don't have eyes./N     slimes also don't have eyes!
+	if(isalien(M) || isslime(M))//Aliens don't have eyes./N     slimes also don't have eyes!
 		to_chat(user, "<span class='warning'>You cannot locate any eyes on this creature!</span>")
 		return
 
@@ -575,12 +583,19 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 
 	user.do_attack_animation(M)
 
+	if(H.check_shields(src, force, "the [name]", MELEE_ATTACK, armour_penetration_flat, armour_penetration_percentage))
+		return FALSE
+
+	if(H.check_block())
+		visible_message("<span class='warning'>[H] blocks [src]!</span>")
+		return FALSE
+
 	if(M != user)
 		M.visible_message("<span class='danger'>[user] has stabbed [M] in the eye with [src]!</span>", \
 							"<span class='userdanger'>[user] stabs you in the eye with [src]!</span>")
 	else
 		user.visible_message( \
-			"<span class='danger'>[user] has stabbed [user.p_them()]self in the eyes with [src]!</span>", \
+			"<span class='danger'>[user] has stabbed [user.p_themselves()] in the eyes with [src]!</span>", \
 			"<span class='userdanger'>You stab yourself in the eyes with [src]!</span>" \
 		)
 
@@ -590,7 +605,8 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 		var/obj/item/organ/internal/eyes/eyes = H.get_int_organ(/obj/item/organ/internal/eyes)
 		if(!eyes) // should still get stabbed in the head
 			var/obj/item/organ/external/head/head = H.bodyparts_by_name["head"]
-			head.receive_damage(rand(10,14), 1)
+			if(head)
+				head.receive_damage(rand(10, 14), 1)
 			return
 		eyes.receive_damage(rand(3,4), 1)
 		if(eyes.damage >= eyes.min_bruised_damage)
@@ -608,7 +624,7 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 				if(M.stat != 2)
 					to_chat(M, "<span class='danger'>You go blind!</span>")
 		var/obj/item/organ/external/affecting = H.get_organ("head")
-		if(affecting.receive_damage(7))
+		if(istype(affecting) && affecting.receive_damage(7))
 			H.UpdateDamageIcon()
 	else
 		M.take_organ_damage(7)
@@ -629,7 +645,7 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 		if(w_class < WEIGHT_CLASS_BULKY)
 			itempush = FALSE //too light to push anything
 		if(isliving(hit_atom)) //Living mobs handle hit sounds differently.
-			if(is_hot(src))
+			if(get_heat())
 				var/mob/living/L = hit_atom
 				L.IgniteMob()
 			var/volume = get_volume_by_throwforce_and_or_w_class()
@@ -647,10 +663,10 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 			playsound(src, drop_sound, YEET_SOUND_VOLUME, ignore_walls = FALSE)
 		return hit_atom.hitby(src, 0, itempush, throwingdatum = throwingdatum)
 
-/obj/item/throw_at(atom/target, range, speed, mob/thrower, spin=1, diagonals_first = 0, datum/callback/callback, force)
+/obj/item/throw_at(atom/target, range, speed, mob/thrower, spin = 1, diagonals_first = 0, datum/callback/callback, force, dodgeable)
 	thrownby = thrower?.UID()
-	callback = CALLBACK(src, .proc/after_throw, callback) //replace their callback with our own
-	. = ..(target, range, speed, thrower, spin, diagonals_first, callback, force)
+	callback = CALLBACK(src, PROC_REF(after_throw), callback) //replace their callback with our own
+	. = ..(target, range, speed, thrower, spin, diagonals_first, callback, force, dodgeable)
 
 /obj/item/proc/after_throw(datum/callback/callback)
 	if(callback) //call the original callback
@@ -664,7 +680,7 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 /obj/item/proc/remove_item_from_storage(atom/newLoc) //please use this if you're going to snowflake an item out of a obj/item/storage
 	if(!newLoc)
 		return 0
-	if(istype(loc,/obj/item/storage))
+	if(isstorage(loc))
 		var/obj/item/storage/S = loc
 		S.remove_from_storage(src,newLoc)
 		return 1
@@ -683,7 +699,7 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 						"<span class='notice'>You wash [src] using [source].</span>")
 	return 1
 
-/obj/item/proc/is_crutch() //Does an item prop up a human mob and allow them to stand if they are missing a leg/foot?
+/obj/item/proc/get_crutch_efficiency() //Does an item prop up a human mob and allow them to stand if they are missing a leg/foot?
 	return 0
 
 // Return true if you don't want regular throw handling
@@ -713,15 +729,15 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 /obj/item/MouseEntered(location, control, params)
 	. = ..()
 	if(in_inventory || in_storage)
-		var/timedelay = 8
 		var/mob/user = usr
-		tip_timer = addtimer(CALLBACK(src, .proc/openTip, location, control, params, user), timedelay, TIMER_STOPPABLE)
+		if(!(user.client.prefs.toggles2 & PREFTOGGLE_2_HIDE_ITEM_TOOLTIPS))
+			tip_timer = addtimer(CALLBACK(src, PROC_REF(openTip), location, control, params, user), 8, TIMER_STOPPABLE)
 		if(QDELETED(src))
 			return
-		var/mob/living/L = user
 		if(!(user.client.prefs.toggles2 & PREFTOGGLE_2_SEE_ITEM_OUTLINES))
 			return
-		if(istype(L) && L.incapacitated(ignore_lying = TRUE))
+		var/mob/living/L = user
+		if(istype(L) && HAS_TRAIT(L, TRAIT_HANDS_BLOCKED))
 			apply_outline(L, COLOR_RED_GRAY) //if they're dead or handcuffed, let's show the outline as red to indicate that they can't interact with that right now
 		else
 			apply_outline(L) //if the player's alive and well we send the command with no color set, so it uses the theme's color
@@ -730,14 +746,17 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 	deltimer(tip_timer) //delete any in-progress timer if the mouse is moved off the item before it finishes
 	closeToolTip(usr)
 	remove_outline()
+	return ..()
 
 /obj/item/MouseDrop_T(obj/item/I, mob/user)
-	if(!user || user.incapacitated(ignore_lying = TRUE) || src == I)
+	if(!user || HAS_TRAIT(user, TRAIT_HANDS_BLOCKED) || src == I || !isliving(user))
 		return
 
-	if(loc && I.loc == loc && istype(loc, /obj/item/storage) && loc.Adjacent(user)) // Are we trying to swap two items in the storage?
+	if(loc && I.loc == loc && isstorage(loc) && loc.Adjacent(user)) // Are we trying to swap two items in the storage?
 		var/obj/item/storage/S = loc
 		S.swap_items(src, I, user)
+		remove_outline()
+		return TRUE
 	remove_outline() //get rid of the hover effect in case the mouse exit isn't called if someone drags and drops an item and somthing goes wrong
 
 /obj/item/proc/apply_outline(mob/user, outline_color = null)
@@ -783,31 +802,105 @@ GLOBAL_DATUM_INIT(fire_overlay, /image, image("icon" = 'icons/goonstation/effect
 		return
 	var/mob/owner = loc
 	var/flags = slot_flags
-	if(flags & SLOT_OCLOTHING)
+	if(flags & SLOT_FLAG_OCLOTHING)
 		owner.update_inv_wear_suit()
-	if(flags & SLOT_ICLOTHING)
+	if(flags & SLOT_FLAG_ICLOTHING)
 		owner.update_inv_w_uniform()
-	if(flags & SLOT_GLOVES)
+	if(flags & SLOT_FLAG_GLOVES)
 		owner.update_inv_gloves()
-	if(flags & SLOT_EYES)
+	if(flags & SLOT_FLAG_EYES)
 		owner.update_inv_glasses()
-	if(flags & SLOT_EARS)
+	if(flags & SLOT_FLAG_EARS)
 		owner.update_inv_ears()
-	if(flags & SLOT_MASK)
+	if(flags & SLOT_FLAG_MASK)
 		owner.update_inv_wear_mask()
-	if(flags & SLOT_HEAD)
+	if(flags & SLOT_FLAG_HEAD)
 		owner.update_inv_head()
-	if(flags & SLOT_FEET)
+	if(flags & SLOT_FLAG_FEET)
 		owner.update_inv_shoes()
-	if(flags & SLOT_ID)
+	if(flags & SLOT_FLAG_ID)
 		owner.update_inv_wear_id()
-	if(flags & SLOT_BELT)
+	if(flags & SLOT_FLAG_BELT)
 		owner.update_inv_belt()
-	if(flags & SLOT_BACK)
+	if(flags & SLOT_FLAG_BACK)
 		owner.update_inv_back()
-	if(flags & SLOT_PDA)
+	if(flags & SLOT_FLAG_PDA)
 		owner.update_inv_wear_pda()
 
 /// Called on cyborg items that need special charging behavior. Override as needed for specific items.
 /obj/item/proc/cyborg_recharge(coeff = 1, emagged = FALSE)
+	return
+
+// Access and Job stuff
+
+/obj/item/proc/get_job_name() //Used in secHUD icon generation
+	var/assignmentName = get_ID_assignment(if_no_id = "Unknown")
+	var/rankName = get_ID_rank(if_no_id = "Unknown")
+
+	var/job_icons = get_all_job_icons()
+	var/centcom = get_all_centcom_jobs()
+	var/solgov = get_all_solgov_jobs()
+	var/soviet = get_all_soviet_jobs()
+
+	if((assignmentName in centcom) || (rankName in centcom)) //Return with the NT logo if it is a Centcom job
+		return "Centcom"
+
+	if((assignmentName in solgov) || (rankName in solgov)) //Return with the SolGov logo if it is a SolGov job
+		return "solgov"
+
+	if((assignmentName in soviet) || (rankName in soviet)) //Return with the U.S.S.P logo if it is a Soviet job
+		return "soviet"
+
+	if(assignmentName in job_icons) //Check if the job has a hud icon
+		return assignmentName
+	if(rankName in job_icons)
+		return rankName
+
+	return "Unknown" //Return unknown if none of the above apply
+
+/obj/item/proc/get_ID_assignment(if_no_id = "No id")
+	var/obj/item/card/id/id = GetID()
+	if(istype(id)) // Make sure its actually an ID
+		return id.assignment
+	return if_no_id
+
+/obj/item/proc/get_ID_rank(if_no_id = "No id")
+	var/obj/item/card/id/id = GetID()
+	if(istype(id)) // Make sure its actually an ID
+		return id.rank
+	return if_no_id
+
+/obj/item/proc/GetAccess()
+	return list()
+
+/obj/item/proc/GetID()
+	return null
+
+/obj/item/proc/add_tape()
+	return
+
+/obj/item/proc/remove_tape()
+	return
+
+/obj/item/water_act(volume, temperature, source, method)
+	. = ..()
+	if(HAS_TRAIT(src, TRAIT_OIL_SLICKED))
+		slowdown = initial(slowdown)
+		remove_atom_colour(FIXED_COLOUR_PRIORITY)
+		REMOVE_TRAIT(src, TRAIT_OIL_SLICKED, "potion")
+		if(ishuman(loc))
+			var/mob/living/carbon/human/H = loc
+			H.regenerate_icons()
+
+/obj/item/cleaning_act(mob/user, atom/cleaner, cleanspeed, text_verb, text_description, text_targetname)
+	. = ..()
+	if(HAS_TRAIT(src, TRAIT_OIL_SLICKED))
+		slowdown = initial(slowdown)
+		remove_atom_colour(FIXED_COLOUR_PRIORITY)
+		REMOVE_TRAIT(src, TRAIT_OIL_SLICKED, "potion")
+		if(ishuman(loc))
+			var/mob/living/carbon/human/H = loc
+			H.regenerate_icons()
+
+/obj/item/proc/get_heat()
 	return

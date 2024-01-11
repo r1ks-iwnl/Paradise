@@ -30,12 +30,12 @@
 		/obj/item/multitool/ai_detect,
 		/obj/item/encryptionkey/binary,
 		/obj/item/jammer,
-		/obj/item/implanter/freedom,
+		/obj/item/clothing/under/syndicate/silicon_cham,
+		/obj/item/bio_chip_implanter/freedom,
 	)
 
 
-/obj/item/storage/box/syndie_kit/contractor/New()
-	..()
+/obj/item/storage/box/syndie_kit/contractor/populate_contents()
 	new /obj/item/paper/contractor_guide(src)
 	new /obj/item/contractor_uplink(src)
 	new /obj/item/storage/box/syndie_kit/contractor_loadout(src)
@@ -48,8 +48,7 @@
 	name = "contractor standard loadout box"
 	desc = "A standard issue box included in a contractor kit."
 
-/obj/item/storage/box/syndie_kit/contractor_loadout/New()
-	..()
+/obj/item/storage/box/syndie_kit/contractor_loadout/populate_contents()
 	new /obj/item/clothing/head/helmet/space/syndicate/contractor(src)
 	new /obj/item/clothing/suit/space/syndicate/contractor(src)
 	new /obj/item/melee/classic_baton/telescopic/contractor(src)

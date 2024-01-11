@@ -6,10 +6,11 @@
 /turf/simulated/mineral/volcanic/lava_land_surface,
 /area/lavaland/surface/outdoors)
 "c" = (
-/turf/simulated/floor/plating/lava/smooth/lava_land_surface,
+/turf/simulated/floor/lava/mapping_lava,
 /area/lavaland/surface/outdoors)
 "d" = (
-/turf/simulated/wall/rust,
+/obj/effect/spawner/random_spawners/wall_rusted_always,
+/turf/simulated/wall,
 /area/ruin/unpowered/misc_lavaruin)
 "e" = (
 /obj/structure/mirror{

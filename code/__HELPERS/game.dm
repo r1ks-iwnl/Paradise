@@ -95,7 +95,7 @@
 	var/BT = get_turf(B)
 	if(AT == BT)
 		return 1
-	var/list/line = getline(A, B)
+	var/list/line = get_line(A, B)
 	for(var/turf/T in line)
 		if(T == AT || T == BT)
 			break
@@ -111,7 +111,7 @@
 
 	return dist
 
-/proc/circlerangeturfs(center=usr,radius=3)
+/proc/circle_edge_turfs(center = usr, radius = 3) // Get the turfs on the edge of a circle. Currently only works for radius 3
 
 	var/turf/centerturf = get_turf(center)
 	var/list/turfs = new/list()
@@ -120,11 +120,13 @@
 	for(var/turf/T in range(radius, centerturf))
 		var/dx = T.x - centerturf.x
 		var/dy = T.y - centerturf.y
-		if(dx*dx + dy*dy <= rsq)
+		if(dx * dx + dy * dy <= (rsq - radius))
+			continue
+		if(dx * dx + dy * dy <= rsq)
 			turfs += T
 	return turfs
 
-/proc/circleviewturfs(center=usr,radius=3)		//Is there even a diffrence between this proc and circlerangeturfs()?
+/proc/circleviewturfs(center = usr, radius = 3) // All the turfs in a circle of the radius
 
 	var/turf/centerturf = get_turf(center)
 	var/list/turfs = new/list()
@@ -133,10 +135,22 @@
 	for(var/turf/T in view(radius, centerturf))
 		var/dx = T.x - centerturf.x
 		var/dy = T.y - centerturf.y
-		if(dx*dx + dy*dy <= rsq)
+		if(dx * dx + dy * dy <= rsq)
 			turfs += T
 	return turfs
 
+/proc/circlerangeturfs(center = usr, radius = 3)
+
+	var/turf/centerturf = get_turf(center)
+	var/list/turfs = new/list()
+	var/rsq = radius * (radius + 0.5)
+
+	for(var/turf/T in range(radius, centerturf))
+		var/dx = T.x - centerturf.x
+		var/dy = T.y - centerturf.y
+		if(dx * dx + dy * dy <= rsq)
+			turfs += T
+	return turfs
 
 
 //GLOBAL_VAR_INIT(debug_mob, 0)
@@ -162,7 +176,7 @@
 			L |= M
 			//log_world("[recursion_limit] = [M] - [get_turf(M)] - ([M.x], [M.y], [M.z])")
 
-		else if(include_radio && istype(A, /obj/item/radio))
+		else if(include_radio && isradio(A))
 			if(sight_check && !isInSight(A, O))
 				continue
 			L |= A
@@ -191,7 +205,7 @@
 			if(M.client || include_clientless)
 				hear += M
 			//log_world("Start = [M] - [get_turf(M)] - ([M.x], [M.y], [M.z])")
-		else if(istype(A, /obj/item/radio))
+		else if(isradio(A))
 			hear += A
 
 		if(isobj(A) || ismob(A))
@@ -229,7 +243,7 @@
 			var/turf/ear = get_turf(M)
 			if(ear)
 				// Ghostship is magic: Ghosts can hear radio chatter from anywhere
-				if(speaker_coverage[ear] || (istype(M, /mob/dead/observer) && M.get_preference(PREFTOGGLE_CHAT_GHOSTRADIO)))
+				if(speaker_coverage[ear] || (isobserver(M) && M.get_preference(PREFTOGGLE_CHAT_GHOSTRADIO)))
 					. |= M		// Since we're already looping through mobs, why bother using |= ? This only slows things down.
 	return .
 
@@ -346,7 +360,7 @@
 /proc/flick_overlay(image/I, list/show_to, duration)
 	for(var/client/C in show_to)
 		C.images += I
-	addtimer(CALLBACK(GLOBAL_PROC, /proc/remove_images_from_clients, I, show_to), duration, TIMER_CLIENT_TIME)
+	addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(remove_images_from_clients), I, show_to), duration, TIMER_CLIENT_TIME)
 
 /proc/flick_overlay_view(image/I, atom/target, duration) //wrapper for the above, flicks to everyone who can see the target atom
 	var/list/viewing = list()
@@ -382,7 +396,7 @@
 	var/dest_y
 
 /datum/projectile_data/New(var/src_x, var/src_y, var/time, var/distance, \
-						   var/power_x, var/power_y, var/dest_x, var/dest_y)
+						var/power_x, var/power_y, var/dest_x, var/dest_y)
 	src.src_x = src_x
 	src.src_y = src_y
 	src.time = time
@@ -451,10 +465,10 @@
 
 	var/list/candidate_ghosts = willing_ghosts.Copy()
 
-	to_chat(adminusr, "Candidate Ghosts:");
+	to_chat(adminclient, "Candidate Ghosts:");
 	for(var/mob/dead/observer/G in candidate_ghosts)
 		if(G.key && G.client)
-			to_chat(adminusr, "- [G] ([G.key])");
+			to_chat(adminclient, "- [G] ([G.key])");
 		else
 			candidate_ghosts -= G
 
@@ -499,7 +513,7 @@
 			for(var/mob/living/M in orange(7, T))
 				if(M.is_dead()) //we don't care about dead mobs
 					continue
-				if(!M.client && !istype(get_area(T), /area/toxins/xenobiology)) //we add an exception here for clientless mobs (apart from ones near xenobiology vents because it's usually filled with gold slime mobs who attack hostile mobs)
+				if(!M.client && !istype(get_area(T), /area/station/science/xenobiology)) //we add an exception here for clientless mobs (apart from ones near xenobiology vents because it's usually filled with gold slime mobs who attack hostile mobs)
 					continue
 				mobs_nearby = TRUE
 				break

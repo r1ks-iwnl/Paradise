@@ -19,11 +19,11 @@ GLOBAL_DATUM_INIT(global_prizes, /datum/prizes, new())
 	if(prize_counter.tickets >= item.cost)
 		new item.typepath(prize_counter.loc)
 		prize_counter.tickets -= item.cost
-		prize_counter.visible_message("<span class='notice'>Enjoy your prize!</span>")
-		return 1
+		to_chat(usr, "<span class='notice'>Enjoy your prize!</span>")
+		return TRUE
 	else
-		prize_counter.visible_message("<span class='warning'>Not enough tickets!</span>")
-		return 0
+		to_chat(usr, "<span class='warning'>Not enough tickets!</span>")
+		return FALSE
 
 //////////////////////////////////////
 //			prize_item datum		//
@@ -44,6 +44,30 @@ GLOBAL_DATUM_INIT(global_prizes, /datum/prizes, new())
 	desc = "A thin balloon for throwing liquid at people."
 	typepath = /obj/item/toy/balloon
 	cost = 10
+
+/datum/prize_item/plasticring
+	name = "White Plastic Ring"
+	desc = "A cheap ring made of plastic."
+	typepath = /obj/item/clothing/gloves/ring/plastic
+	cost = 10
+
+/datum/prize_item/plasticringb
+	name = "Blue Plastic Ring"
+	desc = "A cheap blue ring made of plastic."
+	typepath = /obj/item/clothing/gloves/ring/plastic/blue
+	cost = 10
+
+/datum/prize_item/plasticringr
+	name = "Red Plastic Ring"
+	desc = "A cheap red ring made of plastic."
+	typepath = /obj/item/clothing/gloves/ring/plastic/red
+	cost = 10
+
+/datum/prize_item/glassring
+	name = "Glass Ring"
+	desc = "No refunds if you end up dropping it."
+	typepath = /obj/item/clothing/gloves/ring/glass
+	cost = 15
 
 /datum/prize_item/spinningtoy
 	name = "Spinning Toy"
@@ -81,6 +105,24 @@ GLOBAL_DATUM_INIT(global_prizes, /datum/prizes, new())
 	typepath = /obj/item/deck/cards
 	cost = 25
 
+/datum/prize_item/tiny_cards
+	name = "Deck of Tiny Cards"
+	desc = "Anyone fancy a tiny game of 52-card Pickup?"
+	typepath = /obj/item/deck/cards/tiny
+	cost = 25
+
+/datum/prize_item/capgunammo
+	name = "Capgun Revolver Cylinder"
+	desc = "Reload your toy revolver with style."
+	typepath = /obj/item/ammo_box/caps
+	cost = 30
+
+/datum/prize_item/wallet
+	name = "Cheap Wallet"
+	desc = "A cheap and big enough for standard issue ID cards."
+	typepath = /obj/item/storage/wallet/cheap
+	cost = 30
+
 /datum/prize_item/crayons
 	name = "Box of Crayons"
 	desc = "A six-pack of crayons, just like back in kindergarten."
@@ -93,10 +135,22 @@ GLOBAL_DATUM_INIT(global_prizes, /datum/prizes, new())
 	typepath = /obj/item/toy/eight_ball
 	cost = 40
 
-/datum/prize_item/wallet
-	name = "Colored Wallet"
-	desc = "Brightly colored and big enough for standard issue ID cards."
-	typepath = /obj/item/storage/wallet/color
+/datum/prize_item/shadowring
+	name = "Shadow Ring"
+	desc = "Only darklords can wear this ring."
+	typepath = /obj/item/clothing/gloves/ring/shadow
+	cost = 40
+
+/datum/prize_item/unum
+	name = "Deck of UNUM! Cards"
+	desc = "Everyone's favorite card game!"
+	typepath = /obj/item/deck/unum
+	cost = 45
+
+/datum/prize_item/double_tiny_cards
+	name = "Double Deck of Tiny Cards"
+	desc = "Anyone fancy a tiny game of 108-card Pickup?"
+	typepath = /obj/item/deck/cards/tiny/doublecards
 	cost = 50
 
 /datum/prize_item/id_sticker
@@ -129,6 +183,12 @@ GLOBAL_DATUM_INIT(global_prizes, /datum/prizes, new())
 	name = "Toy Flash"
 	desc = "AUGH! MY EYES!"
 	typepath = /obj/item/toy/flash
+	cost = 50
+
+/datum/prize_item/toycuffs
+	name = "Toy Handcuffs"
+	desc = "Plastic and extremely cheaply made."
+	typepath = /obj/item/restraints/handcuffs/toy
 	cost = 50
 
 /datum/prize_item/minimeteor
@@ -189,6 +249,12 @@ GLOBAL_DATUM_INIT(global_prizes, /datum/prizes, new())
 	name = "Capgun Revolver"
 	desc = "Do you feel lucky... punk?"
 	typepath = /obj/item/gun/projectile/revolver/capgun
+	cost = 75
+
+/datum/prize_item/codex_gigas
+	name = "Toy Codex Gigas"
+	desc = "For helping you come up with writing ideas for your diabolical adventures."
+	typepath = /obj/item/toy/codex_gigas
 	cost = 75
 
 /datum/prize_item/pet_rock
@@ -287,12 +353,6 @@ GLOBAL_DATUM_INIT(global_prizes, /datum/prizes, new())
 	typepath = /obj/item/toy/figure/griffin
 	cost = 125
 
-/datum/prize_item/codex_gigas
-	name = "Toy Codex Gigas"
-	desc = "For helping you come up with writing ideas for your diabolical adventures."
-	typepath = /obj/item/toy/codex_gigas/
-	cost = 75
-
 /datum/prize_item/esword
 	name = "Toy Energy Sword"
 	desc = "A plastic replica of an energy blade."
@@ -311,6 +371,12 @@ GLOBAL_DATUM_INIT(global_prizes, /datum/prizes, new())
 	typepath = /obj/item/stack/tile/arcade_carpet/loaded
 	cost = 150
 
+/datum/prize_item/headpat
+	name = "Gloves of Headpats"
+	desc = "Gloves that fill you with an irresistable urge to give headpats."
+	typepath = /obj/item/clothing/gloves/fingerless/rapid/headpat
+	cost = 150
+
 /datum/prize_item/tommygun
 	name = "Tommy Gun"
 	desc = "A replica tommy gun that fires foam darts."
@@ -326,17 +392,11 @@ GLOBAL_DATUM_INIT(global_prizes, /datum/prizes, new())
 /datum/prize_item/chainsaw
 	name = "Toy Chainsaw"
 	desc = "A full-scale model chainsaw, based on that massacre in Space Texas."
-	typepath = /obj/item/twohanded/toy/chainsaw
+	typepath = /obj/item/toy/chainsaw
 	cost = 200
-
-/datum/prize_item/headpat
-	name = "Gloves of Headpats"
-	desc = "Gloves that fill you with an irresistable urge to give headpats."
-	typepath = /obj/item/clothing/gloves/fingerless/rapid/headpat
-	cost = 150
 
 /datum/prize_item/bike
 	name = "Awesome Bike!"
 	desc = "WOAH."
-	typepath = /obj/structure/chair/wheelchair/bike
-	cost = 10000	//max stack + 1 tickets.
+	typepath = /obj/vehicle/bike
+	cost = 7000

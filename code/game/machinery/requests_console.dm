@@ -1,7 +1,8 @@
 /******************** Requests Console ********************/
 /** Originally written by errorage, updated by: Carn, needs more work though. I just added some security fixes */
 
-//Request Console Department Types
+//Request Console Department Types.
+//For one console to be under multiple categories, you need to add the numbers with each other. For example, value of 6 will allow you to request supplies and relay info to that specific console.
 #define RC_ASSIST 1		//Request Assistance
 #define RC_SUPPLY 2		//Request Supplies
 #define RC_INFO   4		//Relay Info
@@ -19,17 +20,14 @@
 #define RCS_SHIPPING 9	// Print Shipping Labels/Packages
 #define RCS_SHIP_LOG 10	// View Shipping Label Log
 
-//Radio list
-#define ENGI_ROLES list("Atmospherics","Engineering","Chief Engineer's Desk","Telecoms Admin")
-#define SEC_ROLES list("Warden","Security","Brig Medbay","Head of Security's Desk")
-#define MISC_ROLES list("Bar","Chapel","Kitchen","Hydroponics","Janitorial")
-#define MED_ROLES list("Virology","Chief Medical Officer's Desk","Medbay")
-#define COM_ROLES list("Blueshield","NT Representative","Head of Personnel's Desk","Captain's Desk","Bridge")
-#define SCI_ROLES list("Robotics","Science","Research Director's Desk")
-
-#define RQ_NONEW_MESSAGES 0
-#define RQ_NORMALPRIORITY 1
-#define RQ_HIGHPRIORITY 2
+//Radio list. For a console to announce messages on a specific radio, it's "department" variable must be in the list below.
+#define ENGI_ROLES list("Atmospherics", "Engineering", "Chief Engineer's Desk")
+#define SEC_ROLES list("Warden", "Security", "Detective", "Head of Security's Desk")
+#define MISC_ROLES list("Bar", "Chapel", "Kitchen", "Hydroponics", "Janitorial")
+#define MED_ROLES list("Virology", "Chief Medical Officer's Desk", "Medbay")
+#define COM_ROLES list("Blueshield", "NT Representative", "Head of Personnel's Desk", "Captain's Desk", "Bridge")
+#define SCI_ROLES list("Robotics", "Science", "Research Director's Desk")
+#define SUPPLY_ROLES list("Cargo Bay", "Mining Dock", "Mining Outpost", "Quartermaster's Desk")
 
 GLOBAL_LIST_EMPTY(req_console_assistance)
 GLOBAL_LIST_EMPTY(req_console_supplies)
@@ -41,16 +39,13 @@ GLOBAL_LIST_EMPTY(allRequestConsoles)
 	desc = "A console intended to send requests to different departments on the station."
 	anchored = TRUE
 	icon = 'icons/obj/terminals.dmi'
-	icon_state = "req_comp0"
+	icon_state = "req_comp_off"
 	max_integrity = 300
-	armor = list(MELEE = 70, BULLET = 30, LASER = 30, ENERGY = 30, BOMB = 0, BIO = 0, RAD = 0, FIRE = 90, ACID = 90)
+	armor = list(MELEE = 70, BULLET = 30, LASER = 30, ENERGY = 30, BOMB = 0, RAD = 0, FIRE = 90, ACID = 90)
 	var/department = "Unknown" //The list of all departments on the station (Determined from this variable on each unit) Set this to the same thing if you want several consoles in one department
 	var/list/message_log = list() //List of all messages
 	var/departmentType = 0 		//Bitflag. Zero is reply-only. Map currently uses raw numbers instead of defines.
 	var/newmessagepriority = RQ_NONEW_MESSAGES
-		// RQ_NONEWMESSAGES = no new message
-		// RQ_NORMALPRIORITY = normal priority
-		// RQ_HIGHPRIORITY = high priority
 	var/screen = RCS_MAINMENU
 	var/silent = FALSE // set to TRUE for it not to beep all the time
 	var/announcementConsole = FALSE
@@ -63,7 +58,7 @@ GLOBAL_LIST_EMPTY(allRequestConsoles)
 	var/recipient = ""; //the department which will be receiving the message
 	var/priority = -1 ; //Priority of the message being sent
 	light_range = 0
-	var/datum/announcement/announcement = new
+	var/datum/announcer/announcer = new(config_type = /datum/announcement_configuration/requests_console)
 	var/list/shipping_log = list()
 	var/ship_tag_name = ""
 	var/ship_tag_index = 0
@@ -72,15 +67,24 @@ GLOBAL_LIST_EMPTY(allRequestConsoles)
 	var/radiochannel = ""
 
 /obj/machinery/requests_console/power_change()
-	..()
-	update_icon()
-
-/obj/machinery/requests_console/update_icon()
+	if(!..())
+		return
 	if(stat & NOPOWER)
-		if(icon_state != "req_comp_off")
-			icon_state = "req_comp_off"
+		set_light(0)
 	else
-		icon_state = "req_comp[newmessagepriority]"
+		set_light(1, LIGHTING_MINIMUM_POWER)
+	update_icon(UPDATE_ICON_STATE | UPDATE_OVERLAYS)
+
+/obj/machinery/requests_console/update_overlays()
+	. = ..()
+	underlays.Cut()
+
+	if(stat & NOPOWER)
+		return
+
+	. += "req_comp[newmessagepriority]"
+
+	underlays += emissive_appearance(icon, "req_comp_lightmask")
 
 /obj/machinery/requests_console/Initialize(mapload)
 	Radio = new /obj/item/radio(src)
@@ -89,8 +93,7 @@ GLOBAL_LIST_EMPTY(allRequestConsoles)
 	Radio.follow_target = src
 	. = ..()
 
-	announcement.title = "[department] announcement"
-	announcement.newscast = FALSE
+	announcer.config.default_title = "[department] announcement"
 
 	name = "[department] Requests Console"
 	GLOB.allRequestConsoles += src
@@ -101,6 +104,7 @@ GLOBAL_LIST_EMPTY(allRequestConsoles)
 	if(departmentType & RC_INFO)
 		GLOB.req_console_information |= department
 
+	update_icon()
 	// NOT BOOLEAN. DO NOT CONVERT.
 	set_light(1)
 
@@ -202,7 +206,7 @@ GLOBAL_LIST_EMPTY(allRequestConsoles)
 		if("sendAnnouncement")
 			if(!announcementConsole)
 				return
-			announcement.Announce(message)
+			announcer.Announce(message)
 			reset_message(TRUE)
 
 		if("department")
@@ -233,7 +237,7 @@ GLOBAL_LIST_EMPTY(allRequestConsoles)
 					radiochannel = "Science"
 				else if(recipient == "AI")
 					radiochannel = "AI Private"
-				else if(recipient == "Cargo Bay")
+				else if(recipient in SUPPLY_ROLES)
 					radiochannel = "Supply"
 				message_log.Add(list(list("Message sent to [recipient] at [station_time_timestamp()]", "[message]")))
 				Radio.autosay("Alert; a new requests console message received for [recipient] from [department]", null, "[radiochannel]")
@@ -250,7 +254,7 @@ GLOBAL_LIST_EMPTY(allRequestConsoles)
 				for(var/obj/machinery/requests_console/Console in GLOB.allRequestConsoles)
 					if(Console.department == department)
 						Console.newmessagepriority = RQ_NONEW_MESSAGES
-						Console.icon_state = "req_comp0"
+						Console.update_icon(UPDATE_OVERLAYS)
 						Console.set_light(1)
 			if(tempScreen == RCS_MAINMENU)
 				reset_message()
@@ -293,7 +297,7 @@ GLOBAL_LIST_EMPTY(allRequestConsoles)
 			var/obj/item/card/id/ID = I
 			if(ACCESS_RC_ANNOUNCE in ID.GetAccess())
 				announceAuth = 1
-				announcement.announcer = ID.assignment ? "[ID.assignment] [ID.registered_name]" : ID.registered_name
+				announcer.author = ID.assignment ? "[ID.assignment] [ID.registered_name]" : ID.registered_name
 			else
 				reset_message()
 				to_chat(user, "<span class='warning'>You are not authorized to send announcements.</span>")
@@ -319,7 +323,7 @@ GLOBAL_LIST_EMPTY(allRequestConsoles)
 	msgVerified = ""
 	msgStamped = ""
 	announceAuth = FALSE
-	announcement.announcer = ""
+	announcer.author = ""
 	ship_tag_name = ""
 	ship_tag_index = FALSE
 	if(mainmenu)
@@ -336,7 +340,7 @@ GLOBAL_LIST_EMPTY(allRequestConsoles)
 	capitalize(title)
 	if(newmessagepriority < priority)
 		newmessagepriority = priority
-		update_icon()
+		update_icon(UPDATE_ICON_STATE | UPDATE_OVERLAYS)
 	if(!silent)
 		playsound(loc, 'sound/machines/twobeep.ogg', 50, TRUE)
 		atom_say(title)
@@ -353,7 +357,3 @@ GLOBAL_LIST_EMPTY(allRequestConsoles)
 	sp.sortTag = tag_index
 	sp.update_desc()
 	print_cooldown = world.time + 600	//1 minute cooldown before you can print another label, but you can still configure the next one during this time
-
-#undef RQ_NONEW_MESSAGES
-#undef RQ_NORMALPRIORITY
-#undef RQ_HIGHPRIORITY

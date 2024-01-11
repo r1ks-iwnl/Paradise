@@ -24,7 +24,7 @@
 /obj/item/storage/part_replacer/afterattack(obj/machinery/M, mob/user, flag, params)
 	if(!flag && works_from_distance && istype(M))
 		// Make sure its in range
-		if(get_dist(src, M) <= (user.client.view + 2))
+		if(get_dist(src, M) <= (user.client.maxview() + 2))
 			if(M.component_parts)
 				M.exchange_parts(user, src)
 				user.Beam(M,icon_state="rped_upgrade", icon='icons/effects/effects.dmi', time=5)
@@ -37,6 +37,7 @@
 	name = "bluespace rapid part exchange device"
 	desc = "A version of the RPED that allows for replacement of parts and scanning from a distance, along with higher capacity for parts."
 	icon_state = "BS_RPED"
+	item_state = "BS_RPED"
 	w_class = WEIGHT_CLASS_NORMAL
 	storage_slots = 400
 	max_w_class = WEIGHT_CLASS_NORMAL
@@ -46,6 +47,15 @@
 	alt_sound = 'sound/items/pshoom_2.ogg'
 	usesound = 'sound/items/pshoom.ogg'
 	toolspeed = 0.5
+
+/obj/item/storage/part_replacer/bluespace/tier4/populate_contents()
+	for(var/amount in 1 to 30)
+		new /obj/item/stock_parts/capacitor/quadratic(src)
+		new /obj/item/stock_parts/manipulator/femto(src)
+		new /obj/item/stock_parts/matter_bin/bluespace(src)
+		new /obj/item/stock_parts/micro_laser/quadultra(src)
+		new /obj/item/stock_parts/scanning_module/triphasic(src)
+		new /obj/item/stock_parts/cell/bluespace(src)
 
 /obj/item/storage/part_replacer/proc/play_rped_sound()
 	//Plays the sound for RPED exchanging or installing parts.
@@ -68,11 +78,6 @@
 	var/rating = 1
 	toolspeed = 1
 	usesound = 'sound/items/deconstruct.ogg'
-
-/obj/item/stock_parts/New()
-	..()
-	src.pixel_x = rand(-5.0, 5)
-	src.pixel_y = rand(-5.0, 5)
 
 //Rank 1
 

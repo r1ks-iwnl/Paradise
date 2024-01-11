@@ -1,8 +1,10 @@
-#define AB_CHECK_RESTRAINED 1
-#define AB_CHECK_STUNNED 2
-#define AB_CHECK_LYING 4
-#define AB_CHECK_CONSCIOUS 8
-#define AB_CHECK_TURF 16
+#define AB_CHECK_RESTRAINED		(1<<0)
+#define AB_CHECK_STUNNED		(1<<1)
+#define AB_CHECK_LYING			(1<<2)
+#define AB_CHECK_CONSCIOUS		(1<<3)
+#define AB_CHECK_TURF			(1<<4)
+#define AB_CHECK_HANDS_BLOCKED	(1<<5)
+#define AB_CHECK_IMMOBILE		(1<<6)
 
 
 /datum/action
@@ -24,8 +26,10 @@
 	button.linked_action = src
 	button.name = name
 	button.actiontooltipstyle = buttontooltipstyle
-	if(desc)
-		button.desc = desc
+	var/list/our_description = list()
+	our_description += desc
+	our_description += button.desc
+	button.desc = our_description.Join(" ")
 
 /datum/action/Destroy()
 	if(owner)
@@ -53,24 +57,30 @@
 		return
 	if(M.client)
 		M.client.screen -= button
+		button.clean_up_keybinds(M)
 	button.moved = FALSE //so the button appears in its normal position when given to another owner.
 	button.locked = FALSE
 	M.actions -= src
 	M.update_action_buttons()
 
-/datum/action/proc/Trigger()
+/datum/action/proc/Trigger(left_click = TRUE)
 	if(!IsAvailable())
 		return FALSE
 	return TRUE
 
-/datum/action/proc/Process()
-	return
+/datum/action/proc/AltTrigger()
+	Trigger()
+	return FALSE
 
 /datum/action/proc/override_location() // Override to set coordinates manually
 	return
 
 /datum/action/proc/IsAvailable()// returns 1 if all checks pass
 	if(!owner)
+		return FALSE
+	if((check_flags & AB_CHECK_HANDS_BLOCKED) && HAS_TRAIT(owner, TRAIT_HANDS_BLOCKED))
+		return FALSE
+	if((check_flags & AB_CHECK_IMMOBILE) && HAS_TRAIT(owner, TRAIT_IMMOBILIZED))
 		return FALSE
 	if(check_flags & AB_CHECK_RESTRAINED)
 		if(owner.restrained())
@@ -81,8 +91,10 @@
 			if(L.IsStunned() || L.IsWeakened())
 				return FALSE
 	if(check_flags & AB_CHECK_LYING)
-		if(owner.lying)
-			return FALSE
+		if(isliving(owner))
+			var/mob/living/L = owner
+			if(IS_HORIZONTAL(L))
+				return FALSE
 	if(check_flags & AB_CHECK_CONSCIOUS)
 		if(owner.stat)
 			return FALSE
@@ -101,12 +113,10 @@
 		else
 			button.icon = button_icon
 			button.icon_state = background_icon_state
-		button.desc = desc
 
 		ApplyIcon(button)
-
-		// If the action isn't available, darken the button
-		if(!IsAvailable())
+		var/obj/effect/proc_holder/spell/S = target
+		if(istype(S) && S.cooldown_handler.should_draw_cooldown() || !IsAvailable())
 			apply_unavailable_effect()
 		else
 			return TRUE
@@ -130,7 +140,7 @@
 
 //Presets for item actions
 /datum/action/item_action
-	check_flags = AB_CHECK_RESTRAINED|AB_CHECK_STUNNED|AB_CHECK_LYING|AB_CHECK_CONSCIOUS
+	check_flags = AB_CHECK_RESTRAINED|AB_CHECK_STUNNED|AB_CHECK_HANDS_BLOCKED|AB_CHECK_CONSCIOUS
 	var/use_itemicon = TRUE
 
 /datum/action/item_action/New(Target, custom_icon, custom_icon_state)
@@ -147,12 +157,12 @@
 	I.actions -= src
 	return ..()
 
-/datum/action/item_action/Trigger(attack_self = TRUE) //Maybe we don't want to click the thing itself
+/datum/action/item_action/Trigger(left_click = TRUE, attack_self = TRUE) //Maybe we don't want to click the thing itself
 	if(!..())
 		return FALSE
 	if(target && attack_self)
 		var/obj/item/I = target
-		I.ui_action_click(owner, type)
+		I.ui_action_click(owner, type, left_click)
 	return TRUE
 
 /datum/action/item_action/ApplyIcon(obj/screen/movable/action_button/current_button)
@@ -172,6 +182,8 @@
 			I.appearance_flags = old_appearance_flags
 	else
 		..()
+
+
 /datum/action/item_action/toggle_light
 	name = "Toggle Light"
 
@@ -233,7 +245,7 @@
 /datum/action/item_action/toggle_welding_screen/plasmaman
 	name = "Toggle Welding Screen"
 
-/datum/action/item_action/toggle_welding_screen/plasmaman/Trigger()
+/datum/action/item_action/toggle_welding_screen/plasmaman/Trigger(left_click)
 	var/obj/item/clothing/head/helmet/space/plasmaman/H = target
 	if(istype(H))
 		H.toggle_welding_screen(owner)
@@ -249,7 +261,7 @@
 	desc = "Toggles if the club's blasts cause friendly fire."
 	button_icon_state = "vortex_ff_on"
 
-/datum/action/item_action/toggle_unfriendly_fire/Trigger()
+/datum/action/item_action/toggle_unfriendly_fire/Trigger(left_click)
 	if(..())
 		UpdateButtonIcon()
 
@@ -333,6 +345,16 @@
 /datum/action/item_action/YEEEAAAAAHHHHHHHHHHHHH
 	name = "YEAH!"
 
+/datum/action/item_action/laugh_track
+	name = "Laugh Track"
+
+/datum/action/item_action/whistle
+	name = "Whistle"
+
+/datum/action/item_action/floor_buffer
+	name = "Toggle Floor Buffer"
+	desc = "Movement speed is decreased while active."
+
 /datum/action/item_action/adjust
 
 /datum/action/item_action/adjust/New(Target)
@@ -361,7 +383,7 @@
 /datum/action/item_action/remove_tape
 	name = "Remove Duct Tape"
 
-/datum/action/item_action/remove_tape/Trigger(attack_self = FALSE)
+/datum/action/item_action/remove_tape/Trigger(left_click, attack_self = FALSE)
 	if(..())
 		var/datum/component/ducttape/DT = target.GetComponent(/datum/component/ducttape)
 		DT.remove_tape(target, usr)
@@ -381,10 +403,14 @@
 /datum/action/item_action/toggle_geiger_counter
 	name = "Toggle Geiger Counter"
 
-/datum/action/item_action/toggle_geiger_counter/Trigger()
+/datum/action/item_action/toggle_geiger_counter/Trigger(left_click)
 	var/obj/item/clothing/head/helmet/space/hardsuit/H = target
 	if(istype(H))
 		H.toggle_geiger_counter()
+
+/datum/action/item_action/toggle_radio_jammer
+	name = "Toggle Radio Jammer"
+	desc = "Turns your jammer on or off. Hush, you."
 
 /datum/action/item_action/hands_free
 	check_flags = AB_CHECK_CONSCIOUS
@@ -393,13 +419,13 @@
 	name = "Activate"
 
 /datum/action/item_action/hands_free/activate/always
-    check_flags = null
+	check_flags = null
 
 /datum/action/item_action/toggle_research_scanner
 	name = "Toggle Research Scanner"
 	button_icon_state = "scan_mode"
 
-/datum/action/item_action/toggle_research_scanner/Trigger()
+/datum/action/item_action/toggle_research_scanner/Trigger(left_click)
 	if(IsAvailable())
 		owner.research_scanner = !owner.research_scanner
 		to_chat(owner, "<span class='notice'>Research analyzer is now [owner.research_scanner ? "active" : "deactivated"].</span>")
@@ -407,7 +433,7 @@
 
 /datum/action/item_action/toggle_research_scanner/Remove(mob/living/L)
 	if(owner)
-		owner.research_scanner = 0
+		owner.research_scanner = FALSE
 	..()
 
 /datum/action/item_action/toggle_research_scanner/ApplyIcon(obj/screen/movable/action_button/current_button)
@@ -421,7 +447,7 @@
 	name = "Use Instrument"
 	desc = "Use the instrument specified"
 
-/datum/action/item_action/instrument/Trigger()
+/datum/action/item_action/instrument/Trigger(left_click)
 	if(istype(target, /obj/item/instrument))
 		var/obj/item/instrument/I = target
 		I.interact(usr)
@@ -432,6 +458,8 @@
 /datum/action/item_action/remove_badge
 	name = "Remove Holobadge"
 
+/datum/action/item_action/drop_gripped_item
+	name = "Drop gripped item"
 
 // Clown Acrobat Shoes
 /datum/action/item_action/slipping
@@ -450,9 +478,9 @@
 
 /datum/action/item_action/gravity_jump
 	name = "Gravity jump"
-	desc = "Directs a pulse of gravity in front of the user, pulling them foward rapidly."
+	desc = "Directs a pulse of gravity in front of the user, pulling them forward rapidly."
 
-/datum/action/item_action/gravity_jump/Trigger()
+/datum/action/item_action/gravity_jump/Trigger(left_click)
 	if(!IsAvailable())
 		return FALSE
 
@@ -482,13 +510,18 @@
 	name = "Use [target.name]"
 	button.name = name
 
+/datum/action/item_action/organ_action/use/eyesofgod/New(target)
+	..()
+	name = "See with the Eyes of the Gods"
+	button.name = name
+
 /datum/action/item_action/voice_changer/toggle
 	name = "Toggle Voice Changer"
 
 /datum/action/item_action/voice_changer/voice
 	name = "Set Voice"
 
-/datum/action/item_action/voice_changer/voice/Trigger()
+/datum/action/item_action/voice_changer/voice/Trigger(left_click)
 	if(!IsAvailable())
 		return FALSE
 
@@ -516,6 +549,10 @@
 	name = "View Storage"
 
 
+/datum/action/item_action/accessory/herald
+	name = "Mirror Walk"
+	desc = "Use near a mirror to enter it"
+
 //Preset for spells
 /datum/action/spell_action
 	check_flags = 0
@@ -527,7 +564,10 @@
 	var/obj/effect/proc_holder/spell/S = target
 	S.action = src
 	name = S.name
-	desc = S.desc
+	var/list/our_description = list()
+	our_description += S.desc
+	our_description += button.desc
+	button.desc = our_description.Join(" ")
 	button_icon = S.action_icon
 	button_icon_state = S.action_icon_state
 	background_icon_state = S.action_background_icon_state
@@ -538,12 +578,18 @@
 	S.action = null
 	return ..()
 
-/datum/action/spell_action/Trigger()
+/datum/action/spell_action/Trigger(left_click)
 	if(!..())
 		return FALSE
 	if(target)
 		var/obj/effect/proc_holder/spell = target
 		spell.Click()
+		return TRUE
+
+/datum/action/spell_action/AltTrigger()
+	if(target)
+		var/obj/effect/proc_holder/spell/spell = target
+		spell.AltClick(usr)
 		return TRUE
 
 /datum/action/spell_action/IsAvailable()
@@ -559,11 +605,8 @@
 	var/obj/effect/proc_holder/spell/S = target
 	if(!istype(S))
 		return ..()
-	var/progress = S.get_availability_percentage()
-	if(progress == 1)
-		return ..() // This means that the spell is charged but unavailable due to something else
 
-	var/alpha = 220 - 140 * progress
+	var/alpha = S.cooldown_handler.get_cooldown_alpha()
 
 	var/image/img = image('icons/mob/screen_white.dmi', icon_state = "template")
 	img.alpha = alpha
@@ -574,7 +617,8 @@
 	// Make a holder for the charge text
 	var/image/count_down_holder = image('icons/effects/effects.dmi', icon_state = "nothing")
 	count_down_holder.plane = FLOAT_PLANE + 1.1
-	count_down_holder.maptext = "<div style=\"font-size:6pt;color:[recharge_text_color];font:'Small Fonts';text-align:center;\" valign=\"bottom\">[round_down(progress * 100)]%</div>"
+	var/text = S.cooldown_handler.statpanel_info()
+	count_down_holder.maptext = "<div style=\"font-size:6pt;color:[recharge_text_color];font:'Small Fonts';text-align:center;\" valign=\"bottom\">[text]</div>"
 	button.add_overlay(count_down_holder)
 
 /*
@@ -595,7 +639,7 @@
 	check_flags = 0
 	var/active = FALSE
 
-/datum/action/innate/Trigger()
+/datum/action/innate/Trigger(left_click)
 	if(!..())
 		return FALSE
 	if(!active)
@@ -615,7 +659,7 @@
 	check_flags = 0
 	var/procname
 
-/datum/action/generic/Trigger()
+/datum/action/generic/Trigger(left_click)
 	if(!..())
 		return FALSE
 	if(target && procname)

@@ -18,8 +18,8 @@
 	resistance_flags = FLAMMABLE
 	origin_tech = "biotech=1"
 
-/obj/item/reagent_containers/food/snacks/grown/New(newloc, obj/item/seeds/new_seed = null)
-	..()
+/obj/item/reagent_containers/food/snacks/grown/Initialize(mapload, obj/item/seeds/new_seed = null)
+	. = ..()
 	if(!tastes)
 		tastes = list("[name]" = 1)
 
@@ -38,7 +38,7 @@
 
 	if(seed)
 		for(var/datum/plant_gene/trait/T in seed.genes)
-			T.on_new(src, newloc)
+			T.on_new(src)
 		seed.prepare_result(src)
 		transform *= TRANSFORM_USING_VARIABLE(seed.potency, 100) + 0.5 //Makes the resulting produce's sprite larger or smaller based on potency!
 		add_juice()
@@ -86,11 +86,13 @@
 			for(var/i = 1 to (slices_num - slices_lost))
 				var/obj/slice = new slice_path (loc)
 				reagents.trans_to(slice, reagents_per_slice)
+				slice.pixel_x = rand(-7, 7)
+				slice.pixel_y = rand(-7, 7)
 			qdel(src)
 			return ..()
 
-	if (istype(O, /obj/item/plant_analyzer))
-		var/msg = "<span class='info'>*---------*\n This is \a <span class='name'>[src]</span>.\n"
+	if(istype(O, /obj/item/plant_analyzer))
+		var/msg = "<span class='info'>This is \a <span class='name'>[src].</span>\n"
 		if(seed)
 			msg += seed.get_analyzer_text()
 		var/reag_txt = ""
@@ -102,7 +104,6 @@
 
 		if(reag_txt)
 			msg += reag_txt
-			msg += "<br><span class='info'>*---------*</span>"
 		to_chat(user, msg)
 	else
 		if(seed)
@@ -172,12 +173,16 @@
 	return ..()
 
 /obj/item/reagent_containers/food/snacks/grown/decompile_act(obj/item/matter_decompiler/C, mob/user)
-	C.stored_comms["wood"] += 4
-	qdel(src)
-	return TRUE
+	if(isdrone(user))
+		C.stored_comms["wood"] += 4
+		qdel(src)
+		return TRUE
+	return ..()
 
 // For item-containing growns such as eggy or gatfruit
 /obj/item/reagent_containers/food/snacks/grown/shell/attack_self(mob/user)
+	if(!do_after(user, 1.5 SECONDS, target = user))
+		return
 	user.unEquip(src)
 	if(trash)
 		var/obj/item/T = generate_trash()
@@ -206,3 +211,9 @@
 
 	add_attack_logs(user, target, "[what_done] ([reagent_str] | [genes_str])")
 
+/obj/item/reagent_containers/food/snacks/grown/extinguish_light(force = FALSE)
+	if(!force)
+		return
+	if(seed.get_gene(/datum/plant_gene/trait/glow/shadow))
+		return
+	set_light(0)

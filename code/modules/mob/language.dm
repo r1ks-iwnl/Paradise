@@ -64,7 +64,7 @@
 			capitalize = 0
 		scrambled_text += next
 		var/chance = rand(100)
-		if(join_override)
+		if(!isnull(join_override))
 			scrambled_text += join_override
 		else if(chance <= 5)
 			scrambled_text += ". "
@@ -207,6 +207,15 @@
 	"hel","ischt","far","wa","baram","iereng","tech","lach","sam","mak","lich","gen","or","ag","eck","gec","stag","onn", \
 	"bin","ket","jarl","vulf","einech","cresthz","azunein","ghzth")
 
+/datum/language/vulpkanin/get_random_name(gender)
+	var/new_name
+	if(gender == FEMALE)
+		new_name = pick(GLOB.first_names_female_vulp)
+	else
+		new_name = pick(GLOB.first_names_male_vulp)
+	new_name += " " + pick(GLOB.last_names_vulp)
+	return new_name
+
 /datum/language/skrell
 	name = "Skrellian"
 	desc = "A melodic and complex language spoken by the Skrell of Qerrbalak. Some of the notes are inaudible to humans."
@@ -265,7 +274,13 @@
 	colour = "trinary"
 	key = "5"
 	flags = RESTRICTED | WHITELISTED
-	syllables = list("02011","01222","10100","10210","21012","02011","21200","1002","2001","0002","0012","0012","000","120","121","201","220","10","11","0")
+	syllables = list("0", "1", "2")
+	space_chance = 0
+	join_override = ""
+
+/datum/language/trinary/scramble(input)
+	. = ..(copytext(input, 1, max(length(input) / 4, 2)))
+
 
 /datum/language/trinary/get_random_name()
 	var/new_name
@@ -287,11 +302,15 @@
 	syllables = list("click","clack")
 
 /datum/language/kidan/get_random_name()
-	var/new_name = "[pick(list("Vrax", "Krek", "Vriz", "Zrik", "Zarak", "Click", "Zerk", "Drax", "Zven", "Drexx"))]"
-	new_name += ", "
-	new_name += "[pick(list("Noble", "Worker", "Scout", "Builder", "Farmer", "Gatherer", "Soldier", "Guard", "Prospector"))]"
-	new_name += " of Clan "
-	new_name += "[pick(list("Tristan", "Zarlan", "Clack", "Kkraz", "Zramn", "Orlan", "Zrax"))]"	//I ran out of ideas after the first two tbh -_-
+	var/new_name = "[pick(list("Vrax", "Krek", "Krekk", "Vriz", "Zrik", "Zarak", "Click", "Zerk", "Drax", "Zven", "Drexx", "Vrik", "Vrek", "Krax", "Varak", "Zavak", "Vrexx", "Drevk", "Krik", "Karak", "Krexx", "Zrax", "Zrexx", "Zrek", "Verk", "Drek", "Drikk", "Zvik", "Vzik", "Kviz", "Vrizk", "Vrizzk", "Krix", "Krixx", "Zark", "Xark", "Xarkk", "Xerx", "Xarak", "Karax", "Varak", "Vazak", "Vazzak", "Zirk", "Krak", "Xakk", "Zakk", "Vekk"))]"
+	if(prob(67))
+		if(prob(50))
+			new_name += ", "
+			new_name += "[pick(list("Noble", "Worker", "Scout", "Carpenter", "Farmer", "Gatherer", "Soldier", "Guard", "Miner", "Priest", "Merchant", "Crafter", "Alchemist", "Historian", "Hunter", "Scholar", "Caretaker", "Artist", "Bard", "Blacksmith", "Brewer", "Mason", "Baker", "Prospector", "Laborer", "Hauler", "Servant"))]"
+			new_name += " of Clan "
+		else
+			new_name += " "
+		new_name += "[pick(list("Tristan", "Zarlan", "Clack", "Kkraz", "Zramn", "Orlan", "Zrax", "Orax", "Oriz", "Tariz", "Kvestan"))]"
 	return new_name
 
 
@@ -306,6 +325,15 @@
 	flags = RESTRICTED | WHITELISTED
 	syllables = list("blob","plop","pop","bop","boop")
 
+/datum/language/slime/get_random_name(gender)
+	var/new_name
+	if(gender == FEMALE)
+		new_name = pick(GLOB.first_names_female_slime)
+	else
+		new_name = pick(GLOB.first_names_male_slime)
+	new_name += " " + pick(GLOB.last_names_slime)
+	return new_name
+
 /datum/language/grey
 	name = "Psionic Communication"
 	desc = "The grey's psionic communication, less potent version of their distant cousin's telepathy. Talk to other greys within a limited radius."
@@ -314,12 +342,16 @@
 	exclaim_verbs = list("imparts")
 	colour = "abductor"
 	key = "^"
-	flags = RESTRICTED | HIVEMIND
+	flags = RESTRICTED | HIVEMIND | NOLIBRARIAN
+	follow = TRUE
 
 /datum/language/grey/broadcast(mob/living/speaker, message, speaker_mask)
 	..(speaker,message,speaker.real_name)
 
 /datum/language/grey/check_can_speak(mob/living/speaker)
+	if(speaker.mind?.miming) // Because its a hivemind, mimes would be able to speak otherwise
+		to_chat(speaker,"<span class='warning'>You can't communicate without breaking your vow of silence.</span>")
+		return FALSE
 	if(ishuman(speaker))
 		var/mob/living/carbon/human/S = speaker
 		var/obj/item/organ/external/rhand = S.get_organ("r_hand")
@@ -327,7 +359,7 @@
 		if((!rhand || !rhand.is_usable()) && (!lhand || !lhand.is_usable()))
 			to_chat(speaker,"<span class='warning'>You can't communicate without the ability to use your hands!</span>")
 			return FALSE
-	if(speaker.incapacitated(ignore_lying = 1))
+	if(HAS_TRAIT(speaker, TRAIT_HANDS_BLOCKED))
 		to_chat(speaker,"<span class='warning'>You can't communicate while unable to move your hands to your head!</span>")
 		return FALSE
 
@@ -368,10 +400,10 @@
 	flags = RESTRICTED | WHITELISTED
 	join_override = "-"
 	syllables = list("år", "i", "går", "sek", "mo", "ff", "ok", "gj", "ø", "gå", "la", "le",
-					 "lit", "ygg", "van", "dår", "næ", "møt", "idd", "hvo", "ja", "på", "han",
-					 "så", "ån", "det", "att", "nå", "gö", "bra", "int", "tyc", "om", "när", "två",
-					 "må", "dag", "sjä", "vii", "vuo", "eil", "tun", "käyt", "teh", "vä", "hei",
-					 "huo", "suo", "ää", "ten", "ja", "heu", "stu", "uhr", "kön", "we", "hön")
+					"lit", "ygg", "van", "dår", "næ", "møt", "idd", "hvo", "ja", "på", "han",
+					"så", "ån", "det", "att", "nå", "gö", "bra", "int", "tyc", "om", "när", "två",
+					"må", "dag", "sjä", "vii", "vuo", "eil", "tun", "käyt", "teh", "vä", "hei",
+					"huo", "suo", "ää", "ten", "ja", "heu", "stu", "uhr", "kön", "we", "hön")
 
 /datum/language/moth/get_random_name()
 	var/new_name = "[pick(list("Abbot","Archer","Arkwright","Baker","Bard","Biologist","Broker","Caller","Chamberlain","Clerk","Cooper","Culinarian","Dean","Director","Duke","Energizer","Excavator","Explorer","Fletcher","Gatekeeper","Guardian","Guide","Healer","Horner","Keeper","Knight","Laidler","Mapper","Marshall","Mechanic","Miller","Navigator","Pilot","Prior","Seeker","Seer","Smith","Stargazer","Teacher","Tech Whisperer","Tender","Thatcher","Voidcrafter","Voidhunter","Voidwalker","Ward","Watcher","Weaver","Webster","Wright"))]"
@@ -411,13 +443,13 @@
 	key = "2"
 	space_chance = 100
 	syllables = list("lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit",
-					 "sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore",
-					 "magna", "aliqua", "ut", "enim", "ad", "minim", "veniam", "quis", "nostrud",
-					 "exercitation", "ullamco", "laboris", "nisi", "ut", "aliquip", "ex", "ea", "commodo",
-					 "consequat", "duis", "aute", "irure", "dolor", "in", "reprehenderit", "in",
-					 "voluptate", "velit", "esse", "cillum", "dolore", "eu", "fugiat", "nulla",
-					 "pariatur", "excepteur", "sint", "occaecat", "cupidatat", "non", "proident", "sunt",
-					 "in", "culpa", "qui", "officia", "deserunt", "mollit", "anim", "id", "est", "laborum")
+					"sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore",
+					"magna", "aliqua", "ut", "enim", "ad", "minim", "veniam", "quis", "nostrud",
+					"exercitation", "ullamco", "laboris", "nisi", "ut", "aliquip", "ex", "ea", "commodo",
+					"consequat", "duis", "aute", "irure", "dolor", "in", "reprehenderit", "in",
+					"voluptate", "velit", "esse", "cillum", "dolore", "eu", "fugiat", "nulla",
+					"pariatur", "excepteur", "sint", "occaecat", "cupidatat", "non", "proident", "sunt",
+					"in", "culpa", "qui", "officia", "deserunt", "mollit", "anim", "id", "est", "laborum")
 
 /datum/language/gutter
 	name = "Gutter"
@@ -431,7 +463,7 @@
 
 /datum/language/clown
 	name = "Clownish"
-	desc = "The language of clown planet. Mother tongue of clowns throughout the Galaxy."
+	desc = "The language of Clown University. Mother tongue of clowns throughout the galaxy."
 	speech_verb = "honks"
 	ask_verb = "honks"
 	exclaim_verbs = list("toots", "wubs", "honks")
@@ -450,34 +482,14 @@
 	space_chance = 65
 	english_names = 1
 	syllables = list("dyen","bar","bota","vyek","tvo","slov","slav","syen","doup","vah","laz","gloz","yet",
-					 "nyet","da","sky","glav","glaz","netz","doomat","zat","moch","boz",
-					 "comy","vrad","vrade","tay","bli","ay","nov","livn","tolv","glaz","gliz",
-					 "ouy","zet","yevt","dat","botat","nev","novy","vzy","nov","sho","obsh","dasky",
-					 "key","skey","ovsky","skaya","bib","kiev","studen","var","bul","vyan",
-					 "tzion","vaya","myak","gino","volo","olam","miti","nino","menov","perov",
-					 "odasky","trov","niki","ivano","dostov","sokol","oupa","pervom","schel",
-					 "tizan","chka","tagan","dobry","okt","boda","veta","idi","cyk","blyt","hui","na",
-					 "udi","litchki","casa","linka","toly","anatov","vich","vech","vuch","toi","ka","vod")
-
-/datum/language/wryn
-	name = "Wryn Hivemind"
-	desc = "Wryn have the strange ability to commune over a psychic hivemind."
-	speech_verb = "chitters"
-	ask_verb = "chitters"
-	exclaim_verbs = list("buzzes")
-	colour = "alien"
-	key = "y"
-	flags = RESTRICTED | HIVEMIND | NOBABEL
-	follow = TRUE
-
-/datum/language/wryn/check_special_condition(mob/other)
-	var/mob/living/carbon/M = other
-	if(!istype(M))
-		return TRUE
-	if(locate(/obj/item/organ/internal/wryn/hivenode) in M.internal_organs)
-		return TRUE
-
-	return FALSE
+					"nyet","da","sky","glav","glaz","netz","doomat","zat","moch","boz",
+					"comy","vrad","vrade","tay","bli","ay","nov","livn","tolv","glaz","gliz",
+					"ouy","zet","yevt","dat","botat","nev","novy","vzy","nov","sho","obsh","dasky",
+					"key","skey","ovsky","skaya","bib","kiev","studen","var","bul","vyan",
+					"tzion","vaya","myak","gino","volo","olam","miti","nino","menov","perov",
+					"odasky","trov","niki","ivano","dostov","sokol","oupa","pervom","schel",
+					"tizan","chka","tagan","dobry","okt","boda","veta","idi","cyk","blyt","hui","na",
+					"udi","litchki","casa","linka","toly","anatov","vich","vech","vuch","toi","ka","vod")
 
 /datum/language/xenocommon
 	name = "Xenomorph"
@@ -487,7 +499,7 @@
 	ask_verb = "hisses"
 	exclaim_verbs = list("hisses")
 	key = "6"
-	flags = RESTRICTED
+	flags = RESTRICTED | NOLIBRARIAN
 	syllables = list("sss","sSs","SSS")
 
 /datum/language/xenos
@@ -500,6 +512,13 @@
 	key = "a"
 	flags = RESTRICTED | HIVEMIND | NOBABEL
 	follow = TRUE
+
+/datum/language/xenos/broadcast(mob/living/speaker, message, speaker_mask)
+	if(isalien(speaker))
+		var/mob/living/carbon/alien/humanoid/alienspeaker = speaker
+		if(alienspeaker.loudspeaker)
+			return ..(speaker, "<font size=3><b>[message]</b></font>")
+	return ..()
 
 /datum/language/terrorspider
 	name = "Spider Hivemind"
@@ -530,10 +549,9 @@
 	follow = TRUE
 
 /datum/language/ling/broadcast(mob/living/speaker, message, speaker_mask)
-	if(speaker.mind && speaker.mind.changeling)
-		..(speaker, message, speaker.mind.changeling.changelingID)
-	else if(speaker.mind && speaker.mind.linglink)
-		..()
+	var/datum/antagonist/changeling/cling = speaker.mind?.has_antag_datum(/datum/antagonist/changeling)
+	if(cling)
+		..(speaker, message, cling.changelingID)
 	else
 		..(speaker,message)
 
@@ -567,30 +585,6 @@
 /datum/language/abductor/golem/check_special_condition(mob/living/carbon/human/other, mob/living/carbon/human/speaker)
 	return TRUE
 
-/datum/language/corticalborer
-	name = "Cortical Link"
-	desc = "Cortical borers possess a strange link between their tiny minds."
-	speech_verb = "sings"
-	ask_verb = "sings"
-	exclaim_verbs = list("sings")
-	colour = "alien"
-	key = "bo"
-	flags = RESTRICTED | HIVEMIND | NOBABEL
-	follow = TRUE
-
-/datum/language/corticalborer/broadcast(mob/living/speaker, message, speaker_mask)
-	var/mob/living/simple_animal/borer/B
-
-	if(iscarbon(speaker))
-		var/mob/living/carbon/M = speaker
-		B = M.has_brain_worms()
-	else if(istype(speaker,/mob/living/simple_animal/borer))
-		B = speaker
-
-	if(B)
-		speaker_mask = B.truename
-	..(speaker,message,speaker_mask)
-
 /datum/language/binary
 	name = "Robot Talk"
 	desc = "Most human stations support free-use communications protocols and routing hubs for synthetic use."
@@ -614,23 +608,31 @@
 	log_say(log_message, speaker)
 	speaker.create_log(SAY_LOG, log_message)
 
-	var/message_start = "<i><span class='game say'>[name], <span class='name'>[speaker.name]</span>"
-	var/message_body = "<span class='message'>[speaker.say_quote(message)],</i><span class='robot'>\"[message]\"</span></span></span>"
+	var/list/message_start = list("<i><span class='game say'>[name], <span class='name'>[speaker.name]</span>") //Strings as lists lets you add blocks of text much easier
+	var/list/message_body = list("<span class='message'>[speaker.say_quote(message)],</i><span class='robot'>\"[message]\"</span></span></span>")
 
 	for(var/mob/M in GLOB.dead_mob_list)
 		if(!isnewplayer(M) && !isbrain(M))
-			var/message_start_dead = "<i><span class='game say'>[name], <span class='name'>[speaker.name] ([ghost_follow_link(speaker, ghost=M)])</span>"
-			M.show_message("[message_start_dead] [message_body]", 2)
+			var/list/message_start_dead = list("<i><span class='game say'>[name], <span class='name'>[speaker.name] ([ghost_follow_link(speaker, ghost=M)])</span>")
+			var/list/dead_message = message_start_dead + message_body
+			M.show_message(dead_message.Join(" "), 2)
 
 	for(var/mob/living/S in GLOB.alive_mob_list)
-		if(drone_only && !istype(S,/mob/living/silicon/robot/drone))
+		if(!S.binarycheck())
+			continue
+		else if(drone_only && !isdrone(S))
 			continue
 		else if(isAI(S))
-			message_start = "<i><span class='game say'>[name], <a href='byond://?src=[S.UID()];track=\ref[speaker]'><span class='name'>[speaker.name]</span></a>"
-		else if(!S.binarycheck())
-			continue
-
-		S.show_message("[message_start] [message_body]", 2)
+			message_start = list("<i><span class='game say'>[name], <a href='byond://?src=[S.UID()];track=\ref[speaker]'><span class='name'>[speaker.name]</span></a>")
+		else if(isrobot(S))
+			var/mob/living/silicon/robot/borg = S
+			if(borg.connected_ai?.name == speaker.name)
+				var/list/big_font_prefix = list("<font size=4>")
+				var/list/big_font_suffix = list("</font>")
+				message_start = big_font_prefix + message_start
+				message_body = message_body + big_font_suffix
+		var/list/final_message = message_start + message_body
+		S.show_message(final_message.Join(" "), 2)
 
 	var/list/listening = hearers(1, src)
 	listening -= src
@@ -659,20 +661,9 @@
 	ask_verb = "queries"
 	exclaim_verbs = list("declares")
 	key = "]"
-	flags = RESTRICTED
+	flags = RESTRICTED | NOLIBRARIAN
 	follow = TRUE
 	syllables = list ("beep", "boop")
-
-/datum/language/swarmer
-	name = "Swarmer"
-	desc = "A heavily encoded alien binary pattern."
-	speech_verb = "tones"
-	ask_verb = "tones"
-	exclaim_verbs = list("tones")
-	colour = "say_quote"
-	key = "z"//Zwarmer...Or Zerg!
-	flags = RESTRICTED | HIVEMIND | NOBABEL
-	follow = TRUE
 
 // Language handling.
 /mob/proc/add_language(language)

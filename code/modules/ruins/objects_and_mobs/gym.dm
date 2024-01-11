@@ -8,15 +8,14 @@
 	var/list/hit_sounds = list('sound/weapons/genhit1.ogg', 'sound/weapons/genhit2.ogg', 'sound/weapons/genhit3.ogg',\
 	'sound/weapons/punch1.ogg', 'sound/weapons/punch2.ogg', 'sound/weapons/punch3.ogg', 'sound/weapons/punch4.ogg')
 
-/obj/structure/punching_bag/attack_hand(mob/user as mob)
+/obj/structure/punching_bag/attack_hand(mob/user)
+	user.changeNext_move(CLICK_CD_MELEE)
 	. = ..()
 	if(.)
 		return
 	flick("[icon_state]2", src)
 	playsound(loc, pick(hit_sounds), 25, 1, -1)
-	if(isliving(user))
-		var/mob/living/L = user
-		L.apply_status_effect(STATUS_EFFECT_EXERCISED)
+
 
 /obj/structure/weightmachine
 	name = "weight machine"
@@ -51,7 +50,6 @@
 		var/finishmessage = pick("You feel stronger!","You feel like you can take on the world!","You feel robust!","You feel indestructible!")
 		icon_state = initial(icon_state)
 		to_chat(user, finishmessage)
-		user.apply_status_effect(STATUS_EFFECT_EXERCISED)
 
 /obj/structure/weightmachine/stacklifter
 	icon = 'icons/goonstation/objects/fitness.dmi'
@@ -60,8 +58,8 @@
 
 /obj/structure/weightmachine/stacklifter/AnimateMachine(mob/living/user)
 	var/lifts = 0
-	while (lifts++ < 6)
-		if (user.loc != src.loc)
+	while(lifts++ < 6)
+		if(user.loc != src.loc)
 			break
 		sleep(3)
 		animate(user, pixel_y = -2, time = 3)
@@ -80,10 +78,10 @@
 	add_overlay(swole_overlay)
 	var/reps = 0
 	user.pixel_y = 5
-	while (reps++ < 6)
-		if (user.loc != src.loc)
+	while(reps++ < 6)
+		if(user.loc != src.loc)
 			break
-		for (var/innerReps = max(reps, 1), innerReps > 0, innerReps--)
+		for(var/innerReps = max(reps, 1), innerReps > 0, innerReps--)
 			sleep(3)
 			animate(user, pixel_y = (user.pixel_y == 3) ? 5 : 3, time = 3)
 		playsound(user, 'sound/goonstation/effects/spring.ogg', 60, 1)

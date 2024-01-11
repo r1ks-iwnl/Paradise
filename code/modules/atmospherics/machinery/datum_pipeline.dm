@@ -28,8 +28,6 @@
 		reconcile_air()
 	return
 
-GLOBAL_VAR_INIT(pipenetwarnings, 10)
-
 /datum/pipeline/proc/build_pipeline(obj/machinery/atmospherics/base)
 	var/volume = 0
 	if(istype(base, /obj/machinery/atmospherics/pipe))
@@ -57,7 +55,7 @@ GLOBAL_VAR_INIT(pipenetwarnings, 10)
 						if(!members.Find(item))
 
 							if(item.parent)
-								log_runtime(EXCEPTION("[item.type] \[\ref[item]] added to a pipenet while still having one ([item.parent]) (pipes leading to the same spot stacking in one turf). Nearby: [item.x], [item.y], [item.z]."))
+								stack_trace("[item.type] \[\ref[item]] added to a pipenet while still having one ([item.parent]) (pipes leading to the same spot stacking in one turf). Nearby: [item.x], [item.y], [item.z].")
 							members += item
 							possible_expansions += item
 
@@ -140,7 +138,7 @@ GLOBAL_VAR_INIT(pipenetwarnings, 10)
 	var/total_heat_capacity = air.heat_capacity()
 	var/partial_heat_capacity = total_heat_capacity*(share_volume/air.volume)
 
-	if(istype(target, /turf/simulated))
+	if(issimulatedturf(target))
 		var/turf/simulated/modeled_location = target
 
 		if(modeled_location.blocks_air)

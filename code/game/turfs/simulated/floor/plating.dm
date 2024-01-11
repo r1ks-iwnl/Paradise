@@ -12,6 +12,7 @@
 	clawfootstep = FOOTSTEP_HARD_CLAW
 	heavyfootstep = FOOTSTEP_GENERIC_HEAVY
 	smoothing_groups = list(SMOOTH_GROUP_TURF)
+	real_layer = PLATING_LAYER
 
 /turf/simulated/floor/plating/Initialize(mapload)
 	. = ..()
@@ -26,9 +27,17 @@
 	. = ..()
 	burn_tile()
 
-/turf/simulated/floor/plating/update_icon()
-	if(!..())
-		return
+/turf/simulated/floor/plating/damaged/airless
+	oxygen = 0
+	nitrogen = 0
+	temperature = TCMB
+
+/turf/simulated/floor/plating/burnt/airless
+	oxygen = 0
+	nitrogen = 0
+	temperature = TCMB
+
+/turf/simulated/floor/plating/update_icon_state()
 	if(!broken && !burnt)
 		icon_state = icon_plating //Because asteroids are 'platings' too.
 
@@ -100,12 +109,20 @@
 				new /obj/item/stack/sheet/metal(src, 2)
 			return TRUE
 
+	else if(istype(C, /obj/item/storage/backpack/satchel_flat)) //if you click plating with a smuggler satchel, place it on the plating please
+		if(user.drop_item())
+			C.forceMove(src)
+
+		return TRUE
+
 /turf/simulated/floor/plating/screwdriver_act(mob/user, obj/item/I)
-	. = TRUE
 	if(!I.tool_use_check(user, 0))
 		return
-	to_chat(user, "<span class='notice'>You start [unfastened ? "fastening" : "unfastening"] [src].</span>")
 	. = TRUE
+	if(locate(/obj/structure/cable) in src)
+		to_chat(user, "<span class='notice'>There is a cable still attached to [src]. Remove it first!</span>")
+		return
+	to_chat(user, "<span class='notice'>You start [unfastened ? "fastening" : "unfastening"] [src].</span>")
 	if(!I.use_tool(src, user, 20, volume = I.tool_volume))
 		return
 	to_chat(user, "<span class='notice'>You [unfastened ? "fasten" : "unfasten"] [src].</span>")
@@ -116,6 +133,8 @@
 		return
 	. = TRUE
 	if(!I.tool_use_check(user, 0))
+		return
+	if(user.a_intent == INTENT_HARM) // no repairing on harm intent, so you can use the welder in a fight near damaged paneling without welding your eyes out
 		return
 	if(unfastened)
 		to_chat(user, "<span class='warning'>You start removing [src], exposing space after you're done!</span>")
@@ -136,7 +155,7 @@
 	if(baseturf == /turf/space)
 		ReplaceWithLattice()
 	else
-		TerraformTurf(baseturf)
+		TerraformTurf(baseturf, keep_icon = FALSE)
 
 /turf/simulated/floor/plating/airless
 	icon_state = "plating"
@@ -148,6 +167,11 @@
 /turf/simulated/floor/plating/airless/Initialize(mapload)
 	. = ..()
 	name = "plating"
+
+/turf/simulated/floor/plating/lavaland_air
+	temperature = 300
+	oxygen = 14
+	nitrogen = 23
 
 /turf/simulated/floor/engine
 	name = "reinforced floor"
@@ -217,11 +241,16 @@
 /turf/simulated/floor/engine/cult/narsie_act()
 	return
 
+/turf/simulated/floor/engine/cult/lavaland_air
+	nitrogen = 23
+	oxygen = 14
+	temperature = 300
+
 //air filled floors; used in atmos pressure chambers
 
 /turf/simulated/floor/engine/n20
 	name = "\improper N2O floor"
-	sleeping_agent = 6000
+	sleeping_agent = 60000
 	oxygen = 0
 	nitrogen = 0
 
@@ -252,6 +281,15 @@
 	oxygen = 2644
 	nitrogen = 10580
 
+/turf/simulated/floor/engine/xenobio
+	oxygen = 0
+	temperature = 80
+	nitrogen = 100
+
+/turf/simulated/floor/engine/airless
+	oxygen = 0
+	nitrogen = 0
+	temperature = TCMB
 
 /turf/simulated/floor/engine/singularity_pull(S, current_size)
 	..()
@@ -321,7 +359,7 @@
 	icon_state = "ironfoam"
 	metal = MFOAM_IRON
 
-/turf/simulated/floor/plating/metalfoam/update_icon()
+/turf/simulated/floor/plating/metalfoam/update_icon_state()
 	switch(metal)
 		if(MFOAM_ALUMINUM)
 			icon_state = "metalfoam"

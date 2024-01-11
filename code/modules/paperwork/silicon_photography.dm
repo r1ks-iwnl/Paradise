@@ -47,7 +47,7 @@
 		return
 	for(var/datum/picture/t in cam.aipictures)
 		nametemp += t.fields["name"]
-	find = input("Select image (numbered in order taken)") in nametemp
+	find = tgui_input_list(usr, "Select image (numbered in order taken)", "Pick Image", nametemp)
 
 	for(var/datum/picture/q in cam.aipictures)
 		if(q.fields["name"] == find)
@@ -151,10 +151,10 @@
 	deletepicture(src)
 
 /obj/item/camera/siliconcam/proc/getsource()
-	if(istype(src.loc, /mob/living/silicon/ai))
+	if(isAI(loc))
 		return src
 
-	var/mob/living/silicon/robot/C = src.loc
+	var/mob/living/silicon/robot/C = loc
 	var/obj/item/camera/siliconcam/Cinfo
 	if(C.connected_ai)
 		Cinfo = C.connected_ai.aiCamera

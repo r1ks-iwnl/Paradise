@@ -1,20 +1,20 @@
 /obj/item/projectile/guardian
 	name = "crystal spray"
 	icon_state = "guardian"
-	damage = 25
+	damage = 20
 	damage_type = BRUTE
-	armour_penetration = 100
+	armour_penetration_percentage = 100
 
 /mob/living/simple_animal/hostile/guardian/ranged
 	friendly = "quietly assesses"
 	melee_damage_lower = 10
 	melee_damage_upper = 10
-	damage_transfer = 0.9
+	damage_transfer = 1
 	can_strip = TRUE
 	projectiletype = /obj/item/projectile/guardian
 	ranged_cooldown_time = 5 //fast!
 	projectilesound = 'sound/effects/hit_on_shattered_glass.ogg'
-	ranged = 1
+	ranged = TRUE
 	range = 13
 	lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE
 	see_in_dark = 8
@@ -25,10 +25,14 @@
 	var/list/snares = list()
 	var/toggle = FALSE
 
+/mob/living/simple_animal/hostile/guardian/ranged/Initialize(mapload, mob/living/host)
+	. = ..()
+	AddSpell(new /obj/effect/proc_holder/spell/surveillance_snare(null))
+
 /mob/living/simple_animal/hostile/guardian/ranged/ToggleMode()
 	if(loc == summoner)
 		if(toggle)
-			ranged = 1
+			ranged = TRUE
 			melee_damage_lower = 10
 			melee_damage_upper = 10
 			obj_damage = initial(obj_damage)
@@ -40,7 +44,7 @@
 			to_chat(src, "<span class='danger'>You switch to combat mode.</span>")
 			toggle = FALSE
 		else
-			ranged = 0
+			ranged = FALSE
 			melee_damage_lower = 0
 			melee_damage_upper = 0
 			obj_damage = 0
@@ -57,13 +61,13 @@
 /mob/living/simple_animal/hostile/guardian/ranged/ToggleLight()
 	var/msg
 	switch(lighting_alpha)
-		if (LIGHTING_PLANE_ALPHA_VISIBLE)
+		if(LIGHTING_PLANE_ALPHA_VISIBLE)
 			lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_VISIBLE
 			msg = "You activate your night vision."
-		if (LIGHTING_PLANE_ALPHA_MOSTLY_VISIBLE)
+		if(LIGHTING_PLANE_ALPHA_MOSTLY_VISIBLE)
 			lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE
 			msg = "You increase your night vision."
-		if (LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE)
+		if(LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE)
 			lighting_alpha = LIGHTING_PLANE_ALPHA_INVISIBLE
 			msg = "You maximize your night vision."
 		else
@@ -74,35 +78,11 @@
 
 	to_chat(src, "<span class='notice'>[msg]</span>")
 
-/mob/living/simple_animal/hostile/guardian/ranged/verb/Snare()
-	set name = "Set Surveillance Trap"
-	set category = "Guardian"
-	set desc = "Set an invisible trap that will alert you when living creatures walk over it. Max of 5"
-	if(snares.len <6)
-		var/turf/snare_loc = get_turf(loc)
-		var/obj/item/effect/snare/S = new /obj/item/effect/snare(snare_loc)
-		S.spawner = src
-		S.name = "[get_area(snare_loc)] trap ([rand(1, 1000)])"
-		snares |= S
-		to_chat(src, "<span class='danger'>Surveillance trap deployed!</span>")
-	else
-		to_chat(src, "<span class='danger'>You have too many traps deployed. Delete some first.</span>")
-
-/mob/living/simple_animal/hostile/guardian/ranged/verb/DisarmSnare()
-	set name = "Remove Surveillance Trap"
-	set category = "Guardian"
-	set desc = "Disarm unwanted surveillance traps."
-	var/picked_snare = input(src, "Pick which trap to disarm", "Disarm Trap") as null|anything in snares
-	if(picked_snare)
-		snares -= picked_snare
-		qdel(picked_snare)
-		to_chat(src, "<span class='danger'>Snare disarmed.</span>")
-
 /obj/item/effect/snare
 	name = "snare"
 	desc = "You shouldn't be seeing this!"
 	var/mob/living/spawner
-	invisibility = 1
+	invisibility = 101
 
 /obj/effect/snare/singularity_act()
 	return
@@ -115,7 +95,7 @@
 		var/turf/snare_loc = get_turf(loc)
 		if(spawner)
 			to_chat(spawner, "<span class='danger'>[AM] has crossed your surveillance trap at [get_area(snare_loc)].</span>")
-			if(istype(spawner, /mob/living/simple_animal/hostile/guardian))
+			if(isguardian(spawner))
 				var/mob/living/simple_animal/hostile/guardian/G = spawner
 				if(G.summoner)
 					to_chat(G.summoner, "<span class='danger'>[AM] has crossed your surveillance trap at [get_area(snare_loc)].</span>")

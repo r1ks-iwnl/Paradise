@@ -35,11 +35,14 @@
 	var/list/data = list()
 
 	var/list/alive = list()
+	var/list/highlights = list()
+	var/list/response_teams = list()
 	var/list/antagonists = list()
 	var/list/dead = list()
 	var/list/ghosts = list()
 	var/list/misc = list()
 	var/list/npcs = list()
+	var/length_of_ghosts = length(get_observers())
 
 	var/list/pois = getpois(mobs_only = FALSE, skip_mindless = FALSE)
 	for(var/name in pois)
@@ -72,9 +75,14 @@
 			else if(M.stat == DEAD)
 				dead += list(serialized)
 			else
+				if(length(orbiters) >= 0.2 * length_of_ghosts) // They're important if 20% of observers are watching them
+					highlights += list(serialized)
 				alive += list(serialized)
 
 				var/datum/mind/mind = M.mind
+				if(mind.special_role in list(SPECIAL_ROLE_ERT, SPECIAL_ROLE_DEATHSQUAD, SPECIAL_ROLE_SYNDICATE_DEATHSQUAD))
+					response_teams += list(serialized)
+
 				if(user.antagHUD)
 					/*
 					If a mind is many antags at once, we'll display all of them, each
@@ -85,6 +93,8 @@
 					- traitor
 					- mindslaves/vampire thralls
 					- vampire
+					- changelings
+					- revolutionaries/headrevs
 					*/
 					for(var/_A in mind.antag_datums)
 						var/datum/antagonist/A = _A
@@ -94,9 +104,7 @@
 
 					// Not-very-datumized antags follow
 					// Associative list of antag name => whether this mind is this antag
-					var/other_antags = list(
-						"Changeling" = (mind.changeling != null)
-					)
+					var/list/other_antags = list()
 					if(SSticker && SSticker.mode)
 						other_antags += list(
 							"Blob" = (mind.special_role == SPECIAL_ROLE_BLOB),
@@ -104,9 +112,7 @@
 							"Wizard" = (mind in SSticker.mode.wizards),
 							"Wizard's Apprentice" = (mind in SSticker.mode.apprentices),
 							"Nuclear Operative" = (mind in SSticker.mode.syndicates),
-							"Abductor" = (mind in SSticker.mode.abductors),
-							"Revolutionary" = (mind in SSticker.mode.revolutionaries),
-							"Head Revolutionary" = (mind in SSticker.mode.head_revolutionaries)
+							"Abductor" = (mind in SSticker.mode.abductors)
 						)
 
 					for(var/antag_name in other_antags)
@@ -131,11 +137,23 @@
 					var/list/antag_serialized = serialized.Copy()
 					antag_serialized["antag"] = "Xenomorph"
 					antagonists += list(antag_serialized)
+				else if(isdemon(M))
+					var/list/antag_serialized = serialized.Copy()
+					antag_serialized["antag"] = "Demon"
+					antagonists += list(antag_serialized)
+				else if(ismorph(M))
+					var/list/antag_serialized = serialized.Copy()
+					antag_serialized["antag"] = "Morph"
+					antagonists += list(antag_serialized)
 		else
+			if(length(orbiters) >= 0.2 * length_of_ghosts) // If a bunch of people are orbiting an object, like the nuke disk.
+				highlights += list(serialized)
 			misc += list(serialized)
 
-	data["alive"] = alive
 	data["antagonists"] = antagonists
+	data["highlights"] = highlights
+	data["response_teams"] = response_teams
+	data["alive"] = alive
 	data["dead"] = dead
 	data["ghosts"] = ghosts
 	data["misc"] = misc

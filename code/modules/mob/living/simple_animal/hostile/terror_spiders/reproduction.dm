@@ -7,7 +7,7 @@
 	name = "spiderling"
 	desc = "A fast-moving tiny spider, prone to making aggressive hissing sounds. Hope it doesn't grow up."
 	icon_state = "spiderling"
-	anchored = 0
+	anchored = FALSE
 	layer = 2.75
 	max_integrity = 3
 	var/stillborn = FALSE
@@ -67,14 +67,14 @@
 		if(A == src)
 			if(score > 0)
 				new /obj/effect/temp_visual/heart(T) // heart symbol, I am safe here, protected by a friendly spider
-			else if (score == 0)
+			else if(score == 0)
 				new /obj/effect/temp_visual/heal(T) // white "+" symbol, I am neutral here
 			else
 				new /obj/effect/temp_visual/at_shield(T) // octagon symbol, I am unsafe here, I need to flee
 		else
 			if(score > 0)
 				new /obj/effect/temp_visual/telekinesis(T) // blue sparks, this is a safe area, I want to go here
-			else if (score == 0)
+			else if(score == 0)
 				new /obj/effect/temp_visual/revenant(T) // purple sparks, this is a neutral area, an acceptable choice
 			else
 				new /obj/effect/temp_visual/cult/sparks(T) // red sparks, this is an unsafe area, I won't go here unless fleeing something worse
@@ -101,7 +101,7 @@
 		return
 	if(travelling_in_vent)
 		if(isturf(loc))
-			travelling_in_vent = 0
+			travelling_in_vent = FALSE
 			entry_vent = null
 	else if(entry_vent)
 		if(get_dist(src, entry_vent) <= 1)
@@ -179,7 +179,7 @@
 // --------------------------------------------------------------------------------
 
 /mob/living/simple_animal/hostile/poison/terror_spider/proc/DoLayTerrorEggs(lay_type, lay_number)
-	stop_automated_movement = 1
+	stop_automated_movement = TRUE
 	var/obj/structure/spider/eggcluster/terror_eggcluster/C = new /obj/structure/spider/eggcluster/terror_eggcluster(get_turf(src), lay_type)
 	C.spiderling_number = lay_number
 	C.spider_myqueen = spider_myqueen
@@ -189,7 +189,7 @@
 		C.amount_grown = 250
 		C.spider_growinstantly = TRUE
 	spawn(10)
-		stop_automated_movement = 0
+		stop_automated_movement = FALSE
 
 /obj/structure/spider/eggcluster/terror_eggcluster
 	name = "terror egg cluster"

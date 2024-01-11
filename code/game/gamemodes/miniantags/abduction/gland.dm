@@ -11,15 +11,15 @@
 	var/cooldown_high = 300
 	var/next_activation = 0
 	var/uses // -1 For inifinite
-	var/human_only = 0
-	var/active = 0
+	var/human_only = FALSE
+	var/active = FALSE
 	tough = TRUE //not easily broken by combat damage
 
 	var/mind_control_uses = 1
 	var/mind_control_duration = 1800
 	var/active_mind_control = FALSE
 
-/obj/item/organ/internal/heart/gland/update_icon()
+/obj/item/organ/internal/heart/gland/update_icon_state()
 	return
 
 /obj/item/organ/internal/heart/gland/proc/ownerCheck()
@@ -30,7 +30,7 @@
 	return FALSE
 
 /obj/item/organ/internal/heart/gland/proc/Start()
-	active = 1
+	active = TRUE
 	next_activation = world.time + rand(cooldown_low,cooldown_high)
 
 /obj/item/organ/internal/heart/gland/proc/update_gland_hud()
@@ -57,7 +57,7 @@
 	owner.create_log(CONVERSION_LOG, "received an abductor mind control message: '[command]'", user)
 	update_gland_hud()
 
-	addtimer(CALLBACK(src, .proc/clear_mind_control), mind_control_duration)
+	addtimer(CALLBACK(src, PROC_REF(clear_mind_control)), mind_control_duration)
 
 /obj/item/organ/internal/heart/gland/proc/clear_mind_control()
 	if(!ownerCheck() || !active_mind_control)
@@ -67,7 +67,7 @@
 	update_gland_hud()
 
 /obj/item/organ/internal/heart/gland/remove(mob/living/carbon/M, special = 0)
-	active = 0
+	active = FALSE
 	if(initial(uses) == 1)
 		uses = initial(uses)
 	var/datum/atom_hud/abductor/hud = GLOB.huds[DATA_HUD_ABDUCTOR]
@@ -90,14 +90,14 @@
 	if(!active)
 		return
 	if(!ownerCheck())
-		active = 0
+		active = FALSE
 		return
 	if(next_activation <= world.time)
 		activate()
 		uses--
 		next_activation  = world.time + rand(cooldown_low,cooldown_high)
 	if(!uses)
-		active = 0
+		active = FALSE
 
 /obj/item/organ/internal/heart/gland/proc/activate()
 	return
@@ -136,9 +136,7 @@
 	to_chat(owner, "<span class='warning'>You feel nauseous!</span>")
 	owner.vomit(20)
 
-	var/mob/living/simple_animal/slime/Slime = new(get_turf(owner), "grey")
-	Slime.Friends = list(owner)
-	Slime.Leader = owner
+	new /mob/living/simple_animal/slime(get_turf(owner), "grey")
 
 /obj/item/organ/internal/heart/gland/mindshock
 	origin_tech = "materials=4;biotech=4;magnets=6;abductor=3"
@@ -179,7 +177,7 @@
 /obj/item/organ/internal/heart/gland/pop/activate()
 	to_chat(owner, "<span class='notice'>You feel unlike yourself.</span>")
 	var/species = pick(/datum/species/unathi, /datum/species/skrell, /datum/species/diona, /datum/species/tajaran, /datum/species/vulpkanin, /datum/species/kidan, /datum/species/grey)
-	owner.set_species(species)
+	owner.set_species(species, keep_missing_bodyparts = TRUE)
 
 /obj/item/organ/internal/heart/gland/ventcrawling
 	origin_tech = "materials=4;biotech=5;bluespace=4;abductor=3"
@@ -192,7 +190,7 @@
 
 /obj/item/organ/internal/heart/gland/ventcrawling/activate()
 	to_chat(owner, "<span class='notice'>You feel very stretchy.</span>")
-	owner.ventcrawler = 2
+	owner.ventcrawler = VENTCRAWLER_ALWAYS
 
 
 /obj/item/organ/internal/heart/gland/viral
@@ -294,7 +292,7 @@
 	owner.visible_message("<span class='danger'>[owner]'s skin starts emitting electric arcs!</span>",\
 	"<span class='warning'>You feel electric energy building up inside you!</span>")
 	playsound(get_turf(owner), "sparks", 100, TRUE, SHORT_RANGE_SOUND_EXTRARANGE)
-	addtimer(CALLBACK(src, .proc/zap), rand(30, 100))
+	addtimer(CALLBACK(src, PROC_REF(zap)), rand(30, 100))
 
 /obj/item/organ/internal/heart/gland/electric/proc/zap()
 	tesla_zap(owner, 4, 8000, ZAP_MOB_DAMAGE | ZAP_OBJ_DAMAGE | ZAP_MOB_STUN)

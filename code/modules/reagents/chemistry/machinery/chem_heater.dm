@@ -4,19 +4,19 @@
 	anchored = TRUE
 	icon = 'icons/obj/chemical.dmi'
 	icon_state = "mixer0b"
-	use_power = IDLE_POWER_USE
-	idle_power_usage = 40
+	idle_power_consumption = 40
 	resistance_flags = FIRE_PROOF|ACID_PROOF
+
 	var/obj/item/reagent_containers/beaker = null
 	var/desired_temp = T0C
 	var/on = FALSE
 	/// Whether this should auto-eject the beaker once done heating/cooling.
 	var/auto_eject = FALSE
 	/// The higher this number, the faster reagents will heat/cool.
-	var/speed_increase = 0
+	var/speed_increase = 40
 
-/obj/machinery/chem_heater/New()
-	..()
+/obj/machinery/chem_heater/Initialize(mapload)
+	. = ..()
 	component_parts = list()
 	component_parts += new /obj/item/circuitboard/chem_heater(null)
 	component_parts += new /obj/item/stock_parts/micro_laser(null)
@@ -26,7 +26,7 @@
 /obj/machinery/chem_heater/RefreshParts()
 	speed_increase = initial(speed_increase)
 	for(var/obj/item/stock_parts/micro_laser/M in component_parts)
-		speed_increase += 5 * (M.rating - 1)
+		speed_increase += 20 * (M.rating - 1)
 
 /obj/machinery/chem_heater/process()
 	..()
@@ -37,7 +37,8 @@
 			if(!beaker.reagents.total_volume)
 				on = FALSE
 				return
-			beaker.reagents.temperature_reagents(desired_temp, max(1, 35 - speed_increase))
+			var/sign = SIGN(desired_temp - beaker.reagents.chem_temp)
+			beaker.reagents.adjust_reagent_temp(speed_increase * sign, desired_temp)
 			if(round(beaker.reagents.chem_temp) == round(desired_temp))
 				playsound(loc, 'sound/machines/ding.ogg', 50, 1)
 				on = FALSE
@@ -55,7 +56,7 @@
 		SStgui.update_uis(src)
 
 /obj/machinery/chem_heater/power_change()
-	if(powered())
+	if(has_power())
 		stat &= ~NOPOWER
 	else
 		stat |= NOPOWER
@@ -64,7 +65,7 @@
 	if(isrobot(user))
 		return
 
-	if(istype(I, /obj/item/reagent_containers/glass))
+	if(istype(I, /obj/item/reagent_containers/glass) && user.a_intent != INTENT_HARM)
 		if(beaker)
 			to_chat(user, "<span class='notice'>A beaker is already loaded into the machine.</span>")
 			return
@@ -88,7 +89,7 @@
 
 /obj/machinery/chem_heater/screwdriver_act(mob/user, obj/item/I)
 	. = TRUE
-	default_deconstruction_screwdriver(user, "mixer0b", "mixer0b", I)
+	default_deconstruction_screwdriver(user, "mixer0b", "mixer[beaker ? "1" : "0"]b", I)
 
 /obj/machinery/chem_heater/crowbar_act(mob/user, obj/item/I)
 	if(!panel_open)

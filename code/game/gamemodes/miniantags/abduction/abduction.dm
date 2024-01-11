@@ -14,7 +14,7 @@
 	var/list/datum/mind/agents = list()
 	var/list/datum/objective/team_objectives = list()
 	var/list/team_names = list()
-	var/finished = 0
+	var/finished = FALSE
 	var/list/datum/mind/possible_abductors = list()
 
 /datum/game_mode/abduction/announce()
@@ -47,10 +47,10 @@
 
 /datum/game_mode/abduction/proc/make_abductor_team(team_number,preset_agent=null,preset_scientist=null)
 	//Team Name
-	team_names[team_number] = "Mothership [pick(GLOB.possible_changeling_IDs)]" //TODO Ensure unique and actual alieny names
+	team_names[team_number] = "Mothership [pick(GLOB.greek_letters)]" //TODO Ensure unique and actual alieny names
 	//Team Objective
 	var/datum/objective/experiment/team_objective = new
-	team_objective.team = team_number
+	team_objective.abductor_team_number = team_number
 	team_objectives[team_number] = team_objective
 	//Team Members
 
@@ -149,31 +149,37 @@
 	greet_scientist(scientist,team_number)
 	update_abductor_icons_added(scientist)
 
-/datum/game_mode/abduction/proc/greet_agent(datum/mind/abductor,team_number)
+/datum/game_mode/abduction/proc/greet_agent(datum/mind/abductor, team_number)
 	var/datum/objective/stay_hidden/O = new
-	abductor.objectives += O
-	abductor.objectives += team_objectives[team_number]
+	abductor.add_mind_objective(O)
+	abductor.objective_holder.add_objective(team_objectives[team_number]) // this needs to be changed when abductor teams are changed to actual antag teams
 	var/team_name = team_names[team_number]
 
-	to_chat(abductor.current, "<span class='notice'>You are an agent of [team_name]!</span>")
-	to_chat(abductor.current, "<span class='notice'>With the help of your teammate, kidnap and experiment on station crew members!</span>")
-	to_chat(abductor.current, "<span class='notice'>Use your stealth technology and equipment to incapacitate humans for your scientist to retrieve.</span>")
-	to_chat(abductor.current, "<span class='motd'>For more information, check the wiki page: ([GLOB.configuration.url.wiki_url]/index.php/Abductor)</span>")
+	SEND_SOUND(abductor.current, sound('sound/ambience/antag/abductors.ogg'))
+	var/list/messages = list()
+	messages.Add("<span class='notice'>You are an agent of [team_name]!</span>")
+	messages.Add("<span class='notice'>With the help of your teammate, kidnap and experiment on station crew members!</span>")
+	messages.Add("<span class='notice'>Use your stealth technology and equipment to incapacitate humans for your scientist to retrieve.</span>")
+	messages.Add("<span class='motd'>For more information, check the wiki page: ([GLOB.configuration.url.wiki_url]/index.php/Abductor)</span>")
+	messages.Add(abductor.prepare_announce_objectives())
+	to_chat(abductor.current, chat_box_red(messages.Join("<br>")))
+	abductor.current.create_log(MISC_LOG, "[abductor.current] was made into an abductor agent")
 
-	abductor.announce_objectives()
-
-/datum/game_mode/abduction/proc/greet_scientist(datum/mind/abductor,team_number)
+/datum/game_mode/abduction/proc/greet_scientist(datum/mind/abductor, team_number)
 	var/datum/objective/stay_hidden/O = new
-	abductor.objectives += O
-	abductor.objectives += team_objectives[team_number]
+	abductor.add_mind_objective(O)
+	abductor.objective_holder.add_objective(team_objectives[team_number]) // this needs to be changed when abductor teams are changed to actual antag teams
 	var/team_name = team_names[team_number]
 
-	to_chat(abductor.current, "<span class='notice'>You are a scientist of [team_name]!</span>")
-	to_chat(abductor.current, "<span class='notice'>With the help of your teammate, kidnap and experiment on station crew members!</span>")
-	to_chat(abductor.current, "<span class='notice'>Use your tool and ship consoles to support the agent and retrieve human specimens.</span>")
-	to_chat(abductor.current, "<span class='motd'>For more information, check the wiki page: ([GLOB.configuration.url.wiki_url]/index.php/Abductor)</span>")
-
-	abductor.announce_objectives()
+	SEND_SOUND(abductor.current, sound('sound/ambience/antag/abductors.ogg'))
+	var/list/messages = list()
+	messages.Add("<span class='notice'>You are a scientist of [team_name]!</span>")
+	messages.Add("<span class='notice'>With the help of your teammate, kidnap and experiment on station crew members!</span>")
+	messages.Add("<span class='notice'>Use your tool and ship consoles to support the agent and retrieve human specimens.</span>")
+	messages.Add("<span class='motd'>For more information, check the wiki page: ([GLOB.configuration.url.wiki_url]/index.php/Abductor)</span>")
+	messages.Add(abductor.prepare_announce_objectives())
+	to_chat(abductor.current, chat_box_red(messages.Join("<br>")))
+	abductor.current.create_log(MISC_LOG, "[abductor.current] was made into an abductor scientist")
 
 /datum/game_mode/abduction/proc/get_team_console(team_number)
 	for(var/obj/machinery/abductor/console/C in GLOB.machines)
@@ -188,7 +194,7 @@
 			if(con.experiment.points >= objective.target_amount)
 				SSshuttle.emergency.request(null, 0.5, reason = "Large amount of abnormal thought patterns detected. All crew are recalled for mandatory evaluation and reconditioning.")
 				SSshuttle.emergency.canRecall = FALSE
-				finished = 1
+				finished = TRUE
 				return ..()
 	return ..()
 
@@ -205,22 +211,22 @@
 	return 1
 
 /datum/game_mode/proc/auto_declare_completion_abduction()
-	var/text = ""
-	if(abductors.len)
+	var/list/text = list()
+	if(length(abductors))
 		text += "<br><span class='big'><b>The abductors were:</b></span><br>"
 		for(var/datum/mind/abductor_mind in abductors)
 			text += printplayer(abductor_mind)
 			text += "<br>"
 			text += printobjectives(abductor_mind)
 			text += "<br>"
-		if(abductees.len)
+		if(length(abductees))
 			text += "<br><span class='big'><b>The abductees were:</b></span><br>"
 			for(var/datum/mind/abductee_mind in abductees)
 				text += printplayer(abductee_mind)
 				text += "<br>"
 				text += printobjectives(abductee_mind)
 				text += "<br>"
-	to_chat(world, text)
+		return text.Join("")
 
 //Landmarks
 // TODO: Split into seperate landmarks for prettier ships
@@ -234,28 +240,30 @@
 
 
 // OBJECTIVES
-/datum/objective/experiment
-	target_amount = 6
-	var/team
-
+//No check completion, it defaults to being completed unless an admin sets it to failed.
 /datum/objective/stay_hidden
-
-/datum/objective/stay_hidden/New()
 	explanation_text = "Limit contact with your targets outside of conducting your experiments and abduction."
 	completed = TRUE
-//No check completion, it defaults to being completed unless an admin sets it to failed.
+	needs_target = FALSE
+
+/datum/objective/experiment
+	explanation_text = "Experiment on some humans."
+	target_amount = 6
+	needs_target = FALSE
+	/// Which abductor team number does this belong to.
+	var/abductor_team_number
 
 /datum/objective/experiment/New()
+	..()
 	explanation_text = "Experiment on [target_amount] humans."
 
 /datum/objective/experiment/check_completion()
-	var/ab_team = team
-	if(owner)
-		if(!owner.current || !ishuman(owner.current))
+	var/ab_team = abductor_team_number
+	var/list/owners = get_owners()
+	for(var/datum/mind/M in owners)
+		if(!M.current || !ishuman(M.current) || !isabductor(M.current))
 			return FALSE
-		var/mob/living/carbon/human/H = owner.current
-		if(!isabductor(H))
-			return FALSE
+		var/mob/living/carbon/human/H = M.current
 		var/datum/species/abductor/S = H.dna.species
 		ab_team = S.team
 	for(var/obj/machinery/abductor/experiment/E in GLOB.machines)

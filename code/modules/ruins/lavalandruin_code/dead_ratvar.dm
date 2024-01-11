@@ -25,6 +25,8 @@
 /obj/effect/clockwork/overlay/examine(mob/user)
 	if(linked)
 		return linked.examine(user)
+	else
+		. = ..()
 
 /obj/effect/clockwork/overlay/ex_act()
 	return FALSE
@@ -252,7 +254,7 @@
 	item_state = "ratvarian_spear"
 	force = 15 //Extra damage is dealt to targets in attack()
 	throwforce = 25
-	armour_penetration = 10
+	armour_penetration_percentage = 15
 	sharp = TRUE
 	attack_verb = list("stabbed", "poked", "slashed")
 	hitsound = 'sound/weapons/bladeslice.ogg'

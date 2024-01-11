@@ -5,13 +5,13 @@
 	icon_state = "headset"
 	item_state = "headset"
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/clothing/species/vox/ears.dmi',
-		"Vox Armalis" = 'icons/mob/clothing/species/armalis/ears.dmi'
-		) //We read you loud and skree-er.
-	materials = list(MAT_METAL=75)
+		"Vox" = 'icons/mob/clothing/species/vox/ears.dmi', //We read you loud and skree-er.
+		"Kidan" = 'icons/mob/clothing/species/kidan/ears.dmi'
+		)
+	materials = list(MAT_METAL = 200)
 	canhear_range = 0 // can't hear headsets from very far away
 
-	slot_flags = SLOT_EARS
+	slot_flags = SLOT_FLAG_EARS
 	var/translate_binary = FALSE
 	var/translate_hive = FALSE
 	var/obj/item/encryptionkey/keyslot1 = null
@@ -43,6 +43,7 @@
 /obj/item/radio/headset/Destroy()
 	QDEL_NULL(keyslot1)
 	QDEL_NULL(keyslot2)
+	QDEL_NULL(syndiekey)
 	return ..()
 
 /obj/item/radio/headset/examine(mob/user)
@@ -82,6 +83,17 @@
 	icon_state = "com_headset_alt"
 	item_state = "com_headset_alt"
 
+/obj/item/radio/headset/alt/deathsquad
+	name = "Deathsquad headset"
+	desc = "Special Operations only. Protects ears from flashbangs."
+	requires_tcomms = FALSE
+	instant = TRUE
+	freqlock = TRUE
+
+/obj/item/radio/headset/alt/deathsquad/Initialize()
+	. = ..()
+	set_frequency(DTH_FREQ)
+
 /obj/item/radio/headset/syndicate
 	origin_tech = "syndicate=3"
 	ks1type = /obj/item/encryptionkey/syndicate/nukeops
@@ -109,6 +121,16 @@
 /obj/item/radio/headset/syndicate/alt/nocommon/New()
 	. = ..()
 	set_frequency(SYND_FREQ)
+
+/obj/item/radio/headset/soviet
+	name = "soviet bowman headset"
+	desc = "Used by U.S.S.P forces. Protects ears from flashbangs."
+	flags = EARBANGPROTECT
+	origin_tech = "syndicate=3"
+	icon_state = "soviet_headset"
+	item_state = "soviet_headset"
+	ks1type = /obj/item/encryptionkey/soviet
+	requires_tcomms = FALSE
 
 /obj/item/radio/headset/binary
 	origin_tech = "syndicate=3"
@@ -162,6 +184,13 @@
 	icon_state = "med_headset"
 	item_state = "headset"
 	ks2type = /obj/item/encryptionkey/headset_med
+
+/obj/item/radio/headset/headset_med/para
+	name = "paramedic radio headset"
+	desc = "A headset for the trusty paramedic, Nanotrasen search and rescue."
+	icon_state = "para_headset"
+	item_state = "headset"
+	ks2type = /obj/item/encryptionkey/headset_med/para
 
 /obj/item/radio/headset/headset_sci
 	name = "science radio headset"
@@ -239,6 +268,13 @@
 	icon_state = "com_headset"
 	item_state = "headset"
 	ks2type = /obj/item/encryptionkey/heads/hop
+
+/obj/item/radio/headset/heads/qm
+	name = "quartermaster's headset"
+	desc = "Smelling of tobacco and gunpowder, this headset has likely seen many backroom deals."
+	icon_state = "com_headset"
+	item_state = "headset"
+	ks2type = /obj/item/encryptionkey/heads/qm
 
 /obj/item/radio/headset/headset_cargo
 	name = "supply radio headset"
@@ -339,7 +375,7 @@
 	item_state = "headset"
 	ks2type = /obj/item/encryptionkey/heads/ai_integrated
 	var/myAi = null    // Atlantis: Reference back to the AI which has this radio.
-	var/disabledAi = 0 // Atlantis: Used to manually disable AI's integrated radio via intellicard menu.
+	var/disabledAi = FALSE // Atlantis: Used to manually disable AI's integrated radio via intellicard menu.
 
 /obj/item/radio/headset/heads/ai_integrated/is_listening()
 	if(disabledAi)
@@ -348,7 +384,7 @@
 
 /obj/item/radio/headset/attackby(obj/item/W as obj, mob/user as mob)
 	if(istype(W, /obj/item/encryptionkey/))
-		user.set_machine(src)
+
 		if(keyslot1 && keyslot2)
 			to_chat(user, "The headset can't hold another key!")
 			return
@@ -361,15 +397,17 @@
 			user.drop_item()
 			W.loc = src
 			keyslot2 = W
+
 		recalculateChannels()
-	else
-		return ..()
+		return
+
+	return ..()
 
 /obj/item/radio/headset/screwdriver_act(mob/user, obj/item/I)
 	. = TRUE
 	if(!I.use_tool(src, user, 0, volume = 0))
 		return
-	user.set_machine(src)
+
 	if(keyslot1 || keyslot2)
 
 		for(var/ch_name in channels)

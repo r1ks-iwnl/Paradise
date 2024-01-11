@@ -1,11 +1,10 @@
 /obj/effect/mine
 	name = "dummy mine"
 	desc = "I Better stay away from that thing."
-	density = 0
-	anchored = 1
+	density = FALSE
 	icon = 'icons/obj/items.dmi'
 	icon_state = "uglyminearmed"
-	var/triggered = 0
+	var/triggered = FALSE
 	var/faction = "syndicate"
 
 /obj/effect/mine/proc/mineEffect(mob/living/victim)
@@ -27,7 +26,7 @@
 	visible_message("<span class='danger'>[victim] sets off [bicon(src)] [src]!</span>")
 	do_sparks(3, 1, src)
 	mineEffect(victim)
-	triggered = 1
+	triggered = TRUE
 	qdel(src)
 
 /obj/effect/mine/ex_act(severity)
@@ -105,7 +104,7 @@
 	desc = "pick me up"
 	icon = 'icons/effects/effects.dmi'
 	icon_state = "electricity2"
-	density = 0
+	density = FALSE
 	var/duration = 0
 
 /obj/effect/mine/pickup/New()
@@ -115,7 +114,7 @@
 /obj/effect/mine/pickup/triggermine(mob/living/victim)
 	if(triggered)
 		return
-	triggered = 1
+	triggered = TRUE
 	invisibility = 101
 	mineEffect(victim)
 	qdel(src)
@@ -135,13 +134,12 @@
 
 	new /obj/effect/hallucination/delusion(get_turf(victim), victim, 'icons/mob/mob.dmi', "daemon")
 
-	var/obj/item/twohanded/required/chainsaw/doomslayer/chainsaw = new(victim.loc)
+	var/obj/item/chainsaw/doomslayer/chainsaw = new(victim.loc)
 	chainsaw.flags |= NODROP | DROPDEL
 	victim.drop_l_hand()
 	victim.drop_r_hand()
 	victim.put_in_hands(chainsaw)
 	chainsaw.attack_self(victim)
-	chainsaw.wield(victim)
 	victim.reagents.add_reagent("adminordrazine", 25)
 
 	victim.flash_screen_color(red_splash, 10)

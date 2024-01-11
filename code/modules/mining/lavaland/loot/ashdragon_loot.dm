@@ -31,12 +31,13 @@
 	icon_state = "spectral"
 	item_state = "spectral"
 	flags = CONDUCT
-	sharp = 1
+	sharp = TRUE
 	w_class = WEIGHT_CLASS_BULKY
 	force = 1
 	throwforce = 1
 	hitsound = 'sound/effects/ghost2.ogg'
 	attack_verb = list("attacked", "slashed", "stabbed", "sliced", "torn", "ripped", "diced", "rended")
+	flags_2 = RANDOM_BLOCKER_2
 	var/summon_cooldown = 0
 	var/list/mob/dead/observer/spirits
 
@@ -44,7 +45,7 @@
 	..()
 	spirits = list()
 	register_signals(src)
-	RegisterSignal(src, COMSIG_MOVABLE_MOVED, .proc/on_move)
+	RegisterSignal(src, COMSIG_MOVABLE_MOVED, PROC_REF(on_move))
 	GLOB.poi_list |= src
 
 /obj/item/melee/ghost_sword/Destroy()
@@ -113,8 +114,8 @@
 	UnregisterSignal(A, COMSIG_ATOM_ORBIT_BEGIN)
 
 /obj/item/melee/ghost_sword/proc/register_signals(atom/A)
-	RegisterSignal(A, COMSIG_ATOM_ORBIT_BEGIN, .proc/add_ghost, override = TRUE)
-	RegisterSignal(A, COMSIG_ATOM_ORBIT_STOP, .proc/remove_ghost, override = TRUE)
+	RegisterSignal(A, COMSIG_ATOM_ORBIT_BEGIN, PROC_REF(add_ghost), override = TRUE)
+	RegisterSignal(A, COMSIG_ATOM_ORBIT_STOP, PROC_REF(remove_ghost), override = TRUE)
 
 /**
  *  When moving into something's contents
@@ -200,18 +201,19 @@
 /obj/item/lava_staff
 	name = "staff of lava"
 	desc = "The power of fire and rocks in your hands!"
-	icon_state = "staffofstorms"
-	item_state = "staffofstorms"
 	icon = 'icons/obj/guns/magic.dmi'
-	slot_flags = SLOT_BACK
-	item_state = "staffofstorms"
+	icon_state = "lavastaff"
+	lefthand_file = 'icons/mob/inhands/staves_lefthand.dmi'
+	righthand_file = 'icons/mob/inhands/staves_righthand.dmi'
+	item_state = "lavastaff"
+	slot_flags = SLOT_FLAG_BACK
 	w_class = WEIGHT_CLASS_BULKY
 	force = 25
 	damtype = BURN
 	hitsound = 'sound/weapons/sear.ogg'
 	resistance_flags = LAVA_PROOF | FIRE_PROOF | ACID_PROOF
 	needs_permit = TRUE
-	var/turf_type = /turf/simulated/floor/plating/lava/smooth
+	var/turf_type = /turf/simulated/floor/lava
 	var/transform_string = "lava"
 	var/reset_turf_type = /turf/simulated/floor/plating/asteroid/basalt
 	var/reset_string = "basalt"
@@ -233,13 +235,13 @@
 	if(is_type_in_typecache(target, banned_turfs))
 		return
 
-	if(!is_mining_level(user.z)) //Will only spawn a few sparks if not on mining z level
+	if(!is_mining_level(user.z) && !iswizard(user)) //Will only spawn a few sparks if not on mining z level, unless a wizard uses it.
 		timer = world.time + create_delay + 1
 		user.visible_message("<span class='danger'>[user]'s [src] malfunctions!</span>")
 		do_sparks(5, FALSE, user)
 		return
 
-	if(target in view(user.client.view, get_turf(user)))
+	if(target in view(user.client.maxview(), get_turf(user)))
 
 		var/turf/simulated/T = get_turf(target)
 		if(!istype(T))

@@ -95,6 +95,13 @@
 		if(client.prefs.toggles & PREFTOGGLE_CHAT_GHOSTEARS && (speaker in view(src)))
 			message = "<b>[message]</b>"
 
+	// Ensure only the speaker is forced to emote, and that the spoken language is inname
+	if(speaker == src)
+		for(var/datum/multilingual_say_piece/SP in message_pieces)
+			if(SP.speaking && SP.speaking.flags & INNATE)
+				custom_emote(EMOTE_AUDIBLE, message_clean, TRUE)
+				return
+
 	if(!can_hear())
 		// INNATE is the flag for audible-emote-language, so we don't want to show an "x talks but you cannot hear them" message if it's set
 		// if(!language || !(language.flags & INNATE))
@@ -114,7 +121,7 @@
 			playsound_local(source, speech_sound, sound_vol, 1, sound_frequency)
 
 
-/mob/proc/hear_radio(list/message_pieces, verb = "says", part_a, part_b, mob/speaker = null, hard_to_hear = 0, vname = "", atom/follow_target, radio_freq)
+/mob/proc/hear_radio(list/message_pieces, verb = "says", part_a, part_b, mob/speaker = null, hard_to_hear = 0, vname = "", atom/follow_target, check_name_against)
 	if(!client)
 		return
 
@@ -130,7 +137,7 @@
 	if(!follow_target)
 		follow_target = speaker
 
-	var/speaker_name = handle_speaker_name(speaker, vname, hard_to_hear)
+	var/speaker_name = handle_speaker_name(speaker, vname, hard_to_hear, check_name_against)
 	track = handle_track(message, verb, speaker, speaker_name, follow_target, hard_to_hear)
 
 	if(!can_hear())

@@ -1,26 +1,33 @@
+/obj/item/restraints
+	name = "bugged restraints" //This item existed before this pr, but had no name or such. Better warn people if it exists
+	desc = "Should not exist. Report me to a(n) coder/admin!"
+	icon = 'icons/obj/restraints.dmi'
+	var/cuffed_state = "handcuff"
+
 /obj/item/restraints/handcuffs
 	name = "handcuffs"
 	desc = "Use this to keep prisoners in line."
 	gender = PLURAL
-	icon = 'icons/obj/items.dmi'
 	icon_state = "handcuff"
 	belt_icon = "handcuffs"
 	flags = CONDUCT
-	slot_flags = SLOT_BELT
+	slot_flags = SLOT_FLAG_BELT
 	throwforce = 5
 	w_class = WEIGHT_CLASS_SMALL
 	throw_speed = 2
 	throw_range = 5
 	materials = list(MAT_METAL=500)
 	origin_tech = "engineering=3;combat=3"
-	breakouttime = 600 //Deciseconds = 60s = 1 minutes
-	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 0, RAD = 0, FIRE = 50, ACID = 50)
+	breakouttime = 1 MINUTES
+	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, RAD = 0, FIRE = 50, ACID = 50)
 	var/cuffsound = 'sound/weapons/handcuffs.ogg'
+	// Icon state for cuffed overlay on a mob
 	var/trashtype = null //For disposable cuffs
 	var/ignoresClumsy = FALSE
 
 /obj/item/restraints/handcuffs/attack(mob/living/carbon/C, mob/user)
 	if(!user.IsAdvancedToolUser())
+		to_chat(user, "<span class='warning'>You don't have the dexterity to do this!</span>")
 		return
 
 	if(!istype(C))
@@ -45,21 +52,24 @@
 		var/mob/living/carbon/human/H = C
 		if(!(H.has_left_hand() || H.has_right_hand()))
 			to_chat(user, "<span class='warning'>How do you suggest handcuffing someone with no hands?</span>")
-			return
+			return FALSE
 
 	if(!C.handcuffed)
 		C.visible_message("<span class='danger'>[user] is trying to put [src.name] on [C]!</span>", \
 							"<span class='userdanger'>[user] is trying to put [src.name] on [C]!</span>")
 
-		playsound(loc, cuffsound, 30, 1, -2)
+		playsound(loc, cuffsound, 15, 1, -10)
 		if(do_mob(user, C, 30))
 			apply_cuffs(C, user, remove_src)
 			to_chat(user, "<span class='notice'>You handcuff [C].</span>")
 			SSblackbox.record_feedback("tally", "handcuffs", 1, type)
-
-			add_attack_logs(user, C, "Handcuffed ([src])")
+			if(breakouttime != 0)
+				add_attack_logs(user, C, "Handcuffed ([src])")
+			else
+				add_attack_logs(user, C, "Handcuffed (Fake/Breakable!) ([src])")
 		else
 			to_chat(user, "<span class='warning'>You fail to handcuff [C].</span>")
+			return FALSE
 
 /obj/item/restraints/handcuffs/proc/apply_cuffs(mob/living/carbon/target, mob/user, remove_src = TRUE)
 	if(!target.handcuffed)
@@ -85,17 +95,19 @@
 	icon_state = "sinewcuff"
 	item_state = "sinewcuff"
 	belt_icon = null
-	breakouttime = 300 //Deciseconds = 30s
+	breakouttime = 30 SECONDS
 	cuffsound = 'sound/weapons/cablecuff.ogg'
 
 /obj/item/restraints/handcuffs/cable
 	name = "cable restraints"
 	desc = "Looks like some cables tied together. Could be used to tie something up."
-	icon_state = "cuff_white"
-	belt_icon = null
+	icon_state = "cablecuff"
+	item_state = "cablecuff"
+	cuffed_state = "cablecuff"
+	belt_icon = "cablecuff"
 	origin_tech = "engineering=2"
 	materials = list(MAT_METAL=150, MAT_GLASS=75)
-	breakouttime = 300 //Deciseconds = 30s
+	breakouttime = 30 SECONDS
 	cuffsound = 'sound/weapons/cablecuff.ogg'
 
 /obj/item/restraints/handcuffs/cable/red
@@ -123,7 +135,7 @@
 	color = COLOR_WHITE
 
 /obj/item/restraints/handcuffs/cable/random/New()
-	color = pick(COLOR_RED, COLOR_BLUE, COLOR_GREEN, COLOR_WHITE, COLOR_PINK, COLOR_YELLOW, COLOR_CYAN)
+	color = pick(COLOR_RED, COLOR_BLUE, COLOR_GREEN, COLOR_WHITE, COLOR_PINK, COLOR_YELLOW, COLOR_CYAN, COLOR_ORANGE)
 	..()
 
 /obj/item/restraints/handcuffs/cable/proc/cable_color(colorC)
@@ -145,8 +157,9 @@
 
 /obj/item/restraints/handcuffs/pinkcuffs
 	name = "fluffy pink handcuffs"
-	desc = "Use this to keep prisoners in line. Or you know, your significant other."
+	desc = "Use this to keep prisoners in line, they are really itchy."
 	icon_state = "pinkcuffs"
+	cuffed_state = "pinkcuff"
 
 /obj/item/restraints/handcuffs/cable/attackby(obj/item/I, mob/user as mob, params)
 	..()
@@ -182,8 +195,8 @@
 /obj/item/restraints/handcuffs/cable/zipties
 	name = "zipties"
 	desc = "Plastic, disposable zipties that can be used to restrain temporarily but are destroyed after use."
-	icon_state = "cuff_white"
-	breakouttime = 450 //Deciseconds = 45s
+	icon_state = "cablecuff"
+	breakouttime = 45 SECONDS
 	materials = list()
 	trashtype = /obj/item/restraints/handcuffs/cable/zipties/used
 
@@ -193,12 +206,26 @@
 
 /obj/item/restraints/handcuffs/cable/zipties/used
 	desc = "A pair of broken zipties."
-	icon_state = "cuff_white_used"
+	icon_state = "cablecuff_used"
 
 /obj/item/restraints/handcuffs/cable/zipties/used/decompile_act(obj/item/matter_decompiler/C, mob/user)
-	C.stored_comms["glass"] += 1
-	qdel(src)
-	return TRUE
+	if(isdrone(user))
+		C.stored_comms["glass"] += 1
+		qdel(src)
+		return TRUE
+	return ..()
 
 /obj/item/restraints/handcuffs/cable/zipties/used/attack()
 	return
+
+/obj/item/restraints/handcuffs/twimsts
+	name = "twimsts cuffs"
+	desc = "Liquorice twist candy made into cable cuffs, tasty but it can't actually hold anyone."
+	icon_state = "cablecuff"
+	item_state = "cablecuff"
+	cuffed_state = "cablecuff"
+	belt_icon = "cablecuff"
+	color = "#E31818"
+	throwforce = 0
+	breakouttime = 0
+	cuffsound = 'sound/weapons/cablecuff.ogg'

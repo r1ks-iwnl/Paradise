@@ -13,10 +13,20 @@
 	category = list ("Engineering Machinery")
 
 /datum/design/recharger
-	name = "Machine Board(Weapon Recharger)"
+	name = "Machine Board (Weapon Recharger)"
 	desc = "The circuit board for a weapon recharger"
 	id = "recharger"
 	build_path = /obj/item/circuitboard/recharger
+	materials = list(MAT_GLASS = 1000)
+	build_type = IMPRINTER
+	req_tech = list("powerstorage" = 3, "materials" = 3)
+	category = list("Misc. Machinery")
+
+/datum/design/cell_charger
+	name = "Machine Board (Cell Charger)"
+	desc = "The circuit board for a cell charger"
+	id = "cell_charger"
+	build_path = /obj/item/circuitboard/cell_charger
 	materials = list(MAT_GLASS = 1000)
 	build_type = IMPRINTER
 	req_tech = list("powerstorage" = 3, "materials" = 3)
@@ -71,6 +81,26 @@
 	materials = list(MAT_GLASS = 1000)
 	build_path = /obj/item/circuitboard/power_turbine
 	category = list ("Engineering Machinery")
+
+/datum/design/suit_storage_unit
+	name = "Machine Design (Suit Storage Unit)"
+	desc = "The circuit board for a Suit Storage Unit."
+	id = "ssu"
+	req_tech = list("engineering" = 3, "materials" = 3)
+	build_type = IMPRINTER
+	materials = list(MAT_GLASS = 1000)
+	build_path = /obj/item/circuitboard/suit_storage_unit
+	category = list("Engineering Machinery")
+
+/datum/design/suit_storage_unit/industrial
+	name = "Machine Design (Industrial Suit Storage Unit)"
+	desc = "The circuit board for an Industrial Suit Storage Unit."
+	id = "issu"
+	req_tech = list("engineering" = 5, "materials" = 4)
+	build_type = IMPRINTER
+	materials = list(MAT_GLASS = 1000)
+	build_path = /obj/item/circuitboard/suit_storage_unit/industrial
+	category = list("Engineering Machinery")
 
 /datum/design/quantumpad
 	name = "Machine Board (Quantum Pad Board)"
@@ -332,6 +362,16 @@
 	build_path = /obj/item/circuitboard/smartfridge
 	category = list ("Misc. Machinery")
 
+/datum/design/dish_drive
+	name = "Machine Design (Dish Drive Board)"
+	desc = "The circuit board for a dish drive."
+	id = "dishdrive"
+	req_tech = list("programming" = 1)
+	build_type = IMPRINTER
+	materials = list(MAT_GLASS = 1000)
+	build_path = /obj/item/circuitboard/dish_drive
+	category = list("Misc. Machinery")
+
 /datum/design/monkey_recycler
 	name = "Machine Design (Monkey Recycler Board)"
 	desc = "The circuit board for a monkey recycler."
@@ -452,6 +492,16 @@
 	build_path = /obj/item/circuitboard/arcade/orion_trail
 	category = list("Misc. Machinery")
 
+/datum/design/nt_recruiter
+	name = "Machine Board (NT Recruiter Simulator Arcade Machine)"
+	desc = "Allows for the construction of circuit boards used to build a new NT Recruiter Simulator machine."
+	id = "arcademachinerecruiter"
+	req_tech = list("programming" = 1)
+	build_type = IMPRINTER
+	materials = list(MAT_GLASS = 1000)
+	build_path = /obj/item/circuitboard/arcade/recruiter
+	category = list("Misc. Machinery")
+
 /datum/design/ore_redemption
 	name = "Machine Design (Ore Redemption Board)"
 	desc = "The circuit board for an Ore Redemption machine."
@@ -511,3 +561,23 @@
 	materials = list(MAT_GLASS=1000)
 	build_path = /obj/item/circuitboard/plantgenes
 	category = list("Hydroponics Machinery")
+
+/datum/design/slot_machine
+	name = "Machine Design (Slot Machine Board)"
+	desc = "The circuit board for a slot machine."
+	id = "slotmachine"
+	req_tech = list("programming" = 2)
+	build_type = IMPRINTER
+	materials = list(MAT_GLASS=1000)
+	build_path = /obj/item/circuitboard/slot_machine
+	category = list("Misc. Machinery")
+
+/datum/design/bottler
+	name = "Machine Design (Bottler Board)"
+	desc = "The circuit board for a bottler."
+	id = "bottlers"
+	req_tech = list("programming" = 2)
+	build_type = IMPRINTER
+	materials = list(MAT_GLASS=1000)
+	build_path = /obj/item/circuitboard/bottler
+	category = list("Misc. Machinery")

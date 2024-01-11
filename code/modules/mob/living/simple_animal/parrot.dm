@@ -26,14 +26,16 @@
 
 /mob/living/simple_animal/parrot
 	name = "parrot"
-	desc = "The parrot squaks, \"It's a parrot! BAWWK!\""
+	desc = "The parrot squawks, \"It's a parrot! BAWWK!\""
 	icon = 'icons/mob/animal.dmi'
 	icon_state = "parrot_fly"
 	icon_living = "parrot_fly"
 	icon_dead = "parrot_dead"
+	icon_resting = "parrot_sit"
 	pass_flags = PASSTABLE
 	can_collar = TRUE
 	blocks_emissive = EMISSIVE_BLOCK_UNIQUE
+	faction = list("neutral", "jungle")
 
 	var/list/clean_speak = list(
 		"Hi",
@@ -90,29 +92,22 @@
 	speech_buffer = list()
 	available_channels = list()
 	GLOB.hear_radio_list += src
-	if(!ears)
-		var/headset = pick(/obj/item/radio/headset/headset_sec, \
-						/obj/item/radio/headset/headset_eng, \
-						/obj/item/radio/headset/headset_med, \
-						/obj/item/radio/headset/headset_sci, \
-						/obj/item/radio/headset/headset_cargo)
-		ears = new headset(src)
 	update_speak()
 
 	parrot_sleep_dur = parrot_sleep_max //In case someone decides to change the max without changing the duration var
 
 	verbs.Add(/mob/living/simple_animal/parrot/proc/steal_from_ground, \
-			  /mob/living/simple_animal/parrot/proc/steal_from_mob, \
-			  /mob/living/simple_animal/parrot/verb/drop_held_item_player, \
-			  /mob/living/simple_animal/parrot/proc/perch_player)
+			/mob/living/simple_animal/parrot/proc/steal_from_mob, \
+			/mob/living/simple_animal/parrot/verb/drop_held_item_player, \
+			/mob/living/simple_animal/parrot/proc/perch_player)
 
 	desired_perches = typecacheof(list(/obj/structure/computerframe, 	/obj/structure/displaycase, \
-									   /obj/structure/filingcabinet,	/obj/machinery/teleport, \
-									   /obj/machinery/suit_storage_unit,/obj/machinery/clonepod, \
-									   /obj/machinery/dna_scannernew,	/obj/machinery/tcomms, \
-									   /obj/machinery/nuclearbomb,		/obj/machinery/particle_accelerator, \
-									   /obj/machinery/recharge_station,	/obj/machinery/smartfridge, \
-									   /obj/machinery/computer))
+									/obj/structure/filingcabinet,	/obj/machinery/teleport, \
+									/obj/machinery/suit_storage_unit,/obj/machinery/clonepod, \
+									/obj/machinery/dna_scannernew,	/obj/machinery/tcomms, \
+									/obj/machinery/nuclearbomb,		/obj/machinery/particle_accelerator, \
+									/obj/machinery/recharge_station,	/obj/machinery/smartfridge, \
+									/obj/machinery/computer))
 
 /mob/living/simple_animal/parrot/Destroy()
 	GLOB.hear_radio_list -= src
@@ -128,7 +123,8 @@
 
 /mob/living/simple_animal/parrot/Stat()
 	..()
-	stat("Held Item", held_item)
+	if(statpanel("Status"))
+		stat("Held Item", held_item)
 
 /*
  * Inventory
@@ -153,7 +149,7 @@
 
 /mob/living/simple_animal/parrot/Topic(href, href_list)
 	//Can the usr physically do this?
-	if(!usr.canmove || usr.stat || usr.restrained() || !usr.Adjacent(src))
+	if(HAS_TRAIT(usr, TRAIT_HANDS_BLOCKED) || usr.stat || usr.restrained() || !usr.Adjacent(src))
 		return
 
 	//Is the usr's mob type able to do this?
@@ -163,10 +159,11 @@
 			switch(remove_from)
 				if("ears")
 					if(ears)
-						if(available_channels.len)
-							say("[pick(available_channels)]BAWWWWWK LEAVE THE HEADSET BAWKKKKK!")
-						else
-							say("BAWWWWWK LEAVE THE HEADSET BAWKKKKK!")
+						if(stat == CONSCIOUS) //DEAD PARROTS SHOULD NOT SPEAK (i hate that this is done in topic)
+							if(length(available_channels))
+								say("[pick(available_channels)]BAWWWWWK LEAVE THE HEADSET BAWKKKKK!")
+							else
+								say("BAWWWWWK LEAVE THE HEADSET BAWKKKKK!")
 						ears.forceMove(loc)
 						ears = null
 						update_speak()
@@ -308,14 +305,14 @@
 		parrot_state = PARROT_WANDER
 		return
 
-	if(!isturf(loc) || !canmove || buckled)
-		return //If it can't move, dont let it move. (The buckled check probably isn't necessary thanks to canmove)
+	if(!isturf(loc) || !(mobility_flags & MOBILITY_MOVE) || buckled)
+		return //If it can't move, dont let it move.
 
 //-----SPEECH
 	/* Parrot speech mimickry!
-	   Phrases that the parrot hears in mob/living/say() get added to speach_buffer.
-	   Every once in a while, the parrot picks one of the lines from the buffer and replaces an element of the 'speech' list.
-	   Then it clears the buffer to make sure they dont magically remember something from hours ago. */
+	Phrases that the parrot hears in mob/living/say() get added to speach_buffer.
+	Every once in a while, the parrot picks one of the lines from the buffer and replaces an element of the 'speech' list.
+	Then it clears the buffer to make sure they dont magically remember something from hours ago. */
 	if(speech_buffer.len && prob(10))
 		if(clean_speak.len)
 			clean_speak -= pick(clean_speak)
@@ -367,7 +364,7 @@
 		if(!held_item && !parrot_perch) //If we've got nothing to do.. look for something to do.
 			var/atom/movable/AM = search_for_perch_and_item() //This handles checking through lists so we know it's either a perch or stealable item
 			if(AM)
-				if(istype(AM, /obj/item) || isliving(AM))	//If stealable item
+				if(isitem(AM) || isliving(AM))	//If stealable item
 					parrot_interest = AM
 					parrot_state = PARROT_SWOOP|PARROT_STEAL
 					face_atom(AM)
@@ -412,7 +409,7 @@
 			parrot_state = PARROT_SWOOP|PARROT_RETURN
 			return
 
-		var/list/path_to_take = get_path_to(src, get_turf(parrot_interest), /turf/proc/Distance_cardinal)
+		var/list/path_to_take = get_path_to(src, parrot_interest)
 		if(length(path_to_take) <= 1) // The target is below us
 			parrot_interest = null
 			parrot_state = PARROT_SWOOP|PARROT_RETURN
@@ -437,7 +434,7 @@
 			icon_state = "parrot_sit"
 			return
 
-		var/list/path_to_take = get_path_to(src, get_turf(parrot_perch), /turf/proc/Distance_cardinal)
+		var/list/path_to_take = get_path_to(src, parrot_perch)
 		if(length(path_to_take) <= 1) // The target is below us
 			parrot_perch = null
 			parrot_state = PARROT_WANDER
@@ -542,7 +539,7 @@
 		var/turf/T = get_turf(O)
 		if(my_turf != T)
 			var/cache_id = "[my_turf.UID()]_[T.UID()]"
-			computed_paths[cache_id] = computed_paths[cache_id] || get_path_to(src, T, /turf/proc/Distance_cardinal)
+			computed_paths[cache_id] = computed_paths[cache_id] || get_path_to(src, T)
 			if(!length(computed_paths[cache_id]))
 				continue
 
@@ -735,7 +732,7 @@
 		parrot_hear(html_decode(multilingual_to_message(message_pieces)))
 	..()
 
-/mob/living/simple_animal/parrot/hear_radio(list/message_pieces, verb = "says", part_a, part_b, mob/speaker = null, hard_to_hear = 0, atom/follow_target)
+/mob/living/simple_animal/parrot/hear_radio(list/message_pieces, verb = "says", part_a, part_b, mob/speaker = null, hard_to_hear = 0, atom/follow_target, check_name_against)
 	if(speaker != src && prob(50))
 		parrot_hear(html_decode(multilingual_to_message(message_pieces)))
 	..()
@@ -758,5 +755,5 @@
 	animate(held_item_icon, transform = m180)
 	underlays += held_item_icon
 
-/mob/living/simple_animal/parrot/CanAStarPassTo(ID, dir, obj/destination)
+/mob/living/simple_animal/parrot/CanPathfindPassTo(ID, dir, obj/destination)
 	return is_type_in_typecache(destination, desired_perches)

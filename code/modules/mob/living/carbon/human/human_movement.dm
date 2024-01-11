@@ -16,6 +16,9 @@
 	else if(istype(wear_suit, /obj/item/clothing/suit/space/hardsuit))
 		var/obj/item/clothing/suit/space/hardsuit/C = wear_suit
 		thrust = C.jetpack
+	else if(ismodcontrol(back))
+		var/obj/item/mod/control/C = back
+		thrust = locate(/obj/item/mod/module/jetpack) in C
 	if(thrust)
 		if((movement_dir || thrust.stabilizers) && thrust.allow_thrust(0.01, src))
 			return TRUE
@@ -30,12 +33,12 @@
 			. = 1
 
 /mob/living/carbon/human/mob_negates_gravity()
-	return shoes && shoes.negates_gravity()
+	return HAS_TRAIT(src, TRAIT_MAGPULSE)
 
 /mob/living/carbon/human/Move(NewLoc, direct)
 	. = ..()
 	if(.) // did we actually move?
-		if(!lying && !buckled && !throwing)
+		if(!IS_HORIZONTAL(src) && !buckled && !throwing)
 			for(var/obj/item/organ/external/splinted in splinted_limbs)
 				splinted.update_splints()
 
@@ -44,7 +47,7 @@
 
 	var/obj/item/clothing/shoes/S = shoes
 
-	if(S && !lying && loc == NewLoc)
+	if(S && !IS_HORIZONTAL(src) && loc == NewLoc)
 		SEND_SIGNAL(S, COMSIG_SHOES_STEP_ACTION)
 
 	//Bloody footprints

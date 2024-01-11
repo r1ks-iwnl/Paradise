@@ -12,8 +12,8 @@
 	inherent_factions = list("nian")
 	species_traits = list(NO_HAIR)
 	inherent_biotypes = MOB_ORGANIC | MOB_HUMANOID | MOB_BUG
-	clothing_flags = HAS_UNDERWEAR | HAS_UNDERSHIRT
-	bodyflags = HAS_HEAD_ACCESSORY | HAS_HEAD_MARKINGS | HAS_BODY_MARKINGS | HAS_WING | BALD
+	clothing_flags = HAS_UNDERWEAR | HAS_UNDERSHIRT | HAS_SOCKS
+	bodyflags = HAS_HEAD_ACCESSORY | HAS_HEAD_MARKINGS | HAS_BODY_MARKINGS | HAS_WING | BALD | SHAVED
 	reagent_tag = PROCESS_ORG
 	dietflags = DIET_HERB
 	tox_mod = 1.5
@@ -28,6 +28,10 @@
 	eyes = "moth_eyes_s"
 	butt_sprite = "nian"
 	siemens_coeff = 1.5
+	blurb = "Nians are large bipedal invertebrates that come from an unknown homeworld. \
+	Known for spendthrift behavior, the Nian civilization has been pressed to the fore of developed space in an effort to resolve material shortages in homeworld sectors.<br/><br/> \
+	Unlike most species in the galactic fold, Nian do not recognize the authority of the Trans-Solar Federation: \
+	having instead established close diplomatic relationships with their splinter faction, the USSP."
 
 	has_organ = list(
 		"heart" =    /obj/item/organ/internal/heart/nian,
@@ -40,8 +44,6 @@
 
 	optional_body_accessory = FALSE
 
-	var/datum/action/innate/cocoon/cocoon
-
 	suicide_messages = list(
 		"is attempting to nibble their antenna off!",
 		"is twisting their own abdomen!",
@@ -53,16 +55,17 @@
 
 /datum/species/moth/on_species_gain(mob/living/carbon/human/H)
 	..()
-	cocoon = new()
+	var/datum/action/innate/cocoon/cocoon = new()
 	cocoon.Grant(H)
-	RegisterSignal(H, COMSIG_LIVING_FIRE_TICK, .proc/check_burn_wings)
-	RegisterSignal(H, COMSIG_LIVING_AHEAL, .proc/on_aheal)
-	RegisterSignal(H, COMSIG_HUMAN_CHANGE_BODY_ACCESSORY, .proc/on_change_body_accessory)
-	RegisterSignal(H, COMSIG_HUMAN_CHANGE_HEAD_ACCESSORY, .proc/on_change_head_accessory)
+	RegisterSignal(H, COMSIG_LIVING_FIRE_TICK, PROC_REF(check_burn_wings))
+	RegisterSignal(H, COMSIG_LIVING_AHEAL, PROC_REF(on_aheal))
+	RegisterSignal(H, COMSIG_HUMAN_CHANGE_BODY_ACCESSORY, PROC_REF(on_change_body_accessory))
+	RegisterSignal(H, COMSIG_HUMAN_CHANGE_HEAD_ACCESSORY, PROC_REF(on_change_head_accessory))
 
 /datum/species/moth/on_species_loss(mob/living/carbon/human/H)
 	..()
-	cocoon.Remove(H)
+	for(var/datum/action/innate/cocoon/cocoon in H.actions)
+		cocoon.Remove(H)
 	UnregisterSignal(H, COMSIG_LIVING_FIRE_TICK)
 	UnregisterSignal(H, COMSIG_LIVING_AHEAL)
 	UnregisterSignal(H, COMSIG_HUMAN_CHANGE_BODY_ACCESSORY)
@@ -139,7 +142,7 @@
 		return
 	H.visible_message("<span class='notice'>[H] begins to hold still and concentrate on weaving a cocoon...</span>", "<span class='notice'>You begin to focus on weaving a cocoon... (This will take [COCOON_WEAVE_DELAY / 10] seconds, and you must hold still.)</span>")
 	if(do_after(H, COCOON_WEAVE_DELAY, FALSE, H))
-		if(H.incapacitated(ignore_lying = TRUE))
+		if(H.incapacitated())
 			to_chat(H, "<span class='warning'>You cannot weave a cocoon in your current state.</span>")
 			return
 		H.visible_message("<span class='notice'>[H] finishes weaving a cocoon!</span>", "<span class='notice'>You finish weaving your cocoon.</span>")
@@ -148,7 +151,8 @@
 		C.preparing_to_emerge = TRUE
 		H.apply_status_effect(STATUS_EFFECT_COCOONED)
 		H.KnockOut()
-		addtimer(CALLBACK(src, .proc/emerge, C), COCOON_EMERGE_DELAY, TIMER_UNIQUE)
+		H.create_log(MISC_LOG, "has woven a cocoon")
+		addtimer(CALLBACK(src, PROC_REF(emerge), C), COCOON_EMERGE_DELAY, TIMER_UNIQUE)
 	else
 		to_chat(H, "<span class='warning'>You need to hold still in order to weave a cocoon!</span>")
 
@@ -190,6 +194,7 @@
 		H.adjust_nutrition(COCOON_NUTRITION_AMOUNT)
 		H.WakeUp()
 		H.forceMove(loc)
+		H.create_log(MISC_LOG, "has emerged from their cocoon with the nutrition level of [H.nutrition][H.nutrition <= NUTRITION_LEVEL_STARVING ? ", now starving" : ""]")
 	return ..()
 
 /datum/status_effect/burnt_wings

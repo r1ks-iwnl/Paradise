@@ -9,10 +9,8 @@
 	var/trash = null
 	var/slice_path
 	var/slices_num
-	var/eatverb
-	var/wrapped = 0
 	var/dried_type = null
-	var/dry = 0
+	var/dry = FALSE
 	var/cooktype[0]
 	var/cooked_type = null  //for microwave cooking. path of the resulting item after microwaving
 	var/total_w_class = 0 //for the total weight an item of food can carry
@@ -82,10 +80,10 @@
 
 
 /obj/item/reagent_containers/food/snacks/attackby(obj/item/W, mob/user, params)
-	if(istype(W,/obj/item/pen))
+	if(is_pen(W))
 		rename_interactive(user, W, use_prefix = FALSE, prompt = "What would you like to name this dish?")
 		return
-	if(istype(W,/obj/item/storage))
+	if(isstorage(W))
 		..() // -> item/attackby(, params)
 
 	else if(istype(W,/obj/item/kitchen/utensil))
@@ -120,7 +118,7 @@
 				var/obj/item/TrashItem
 				if(ispath(trash,/obj/item))
 					TrashItem = new trash(src)
-				else if(istype(trash,/obj/item))
+				else if(isitem(trash))
 					TrashItem = trash
 				TrashItem.forceMove(loc)
 			qdel(src)
@@ -134,7 +132,7 @@
 			. = new trash(location)
 			trash = null
 			return
-		else if(istype(trash, /obj/item))
+		else if(isitem(trash))
 			var/obj/item/trash_item = trash
 			trash_item.forceMove(location)
 			. = trash
@@ -169,7 +167,7 @@
 				D.taste(reagents)
 		else if(ismouse(M))
 			var/mob/living/simple_animal/mouse/N = M
-			to_chat(N, text("<span class='notice'>You nibble away at [src].</span>"))
+			to_chat(N, "<span class='notice'>You nibble away at [src].</span>")
 			if(prob(50))
 				N.visible_message("[N] nibbles away at [src].", "")
 			N.adjustHealth(-2)
@@ -218,7 +216,7 @@
 	var/slices_lost = 0
 	if(!inaccurate)
 		user.visible_message("<span class='notice'>[user] slices [src]!</span>",
-		 "<span class='notice'>You slice [src]!</span>")
+		"<span class='notice'>You slice [src]!</span>")
 	else
 		user.visible_message("<span class='notice'>[user] crudely slices [src] with [I]!</span>",
 			"<span class='notice'>You crudely slice [src] with your [I]</span>!")
@@ -227,6 +225,8 @@
 	for(var/i=1 to (slices_num-slices_lost))
 		var/obj/slice = new slice_path (loc)
 		reagents.trans_to(slice,reagents_per_slice)
+		slice.pixel_x = rand(-7, 7)
+		slice.pixel_y = rand(-7, 7)
 	qdel(src)
 	return ..()
 ////////////////////////////////////////////////////////////////////////////////
@@ -277,11 +277,11 @@
 	filling_color = "#211F02"
 	list_reagents = list("????" = 30)
 
-/obj/item/reagent_containers/food/snacks/badrecipe/New()
-	..()
+/obj/item/reagent_containers/food/snacks/badrecipe/Initialize(mapload)
+	. = ..()
 	// it's burned! it should start off being classed as any cooktype that burns
-	cooktype["grilled"] = 1
-	cooktype["deep fried"] = 1
+	cooktype["grilled"] = TRUE
+	cooktype["deep fried"] = TRUE
 
 // MISC
 

@@ -1,7 +1,6 @@
 /obj/effect/spawner/lootdrop
 	icon = 'icons/effects/spawner_icons.dmi'
 	icon_state = "questionmark"
-	color = "#00FF00"
 	var/lootcount = 1		//how many items will be spawned
 	var/lootdoubles = TRUE		//if the same item can be spawned twice
 	var/list/loot			//a list of possible items to spawn e.g. list(/obj/item, /obj/structure, /obj/effect)
@@ -31,7 +30,6 @@
 /obj/effect/spawner/lootdrop/maintenance
 	name = "maintenance loot spawner (1 item)"
 	icon_state = "loot"
-	color = null
 
 	//How to balance this table
 	//-------------------------
@@ -73,7 +71,7 @@
 				/obj/item/clothing/head/welding = 10,
 				/obj/item/clothing/mask/gas = 10,
 				/obj/item/clothing/suit/storage/hazardvest = 10,
-				/obj/item/clothing/under/rank/vice = 10,
+				/obj/item/clothing/under/misc/vice = 10,
 				/obj/item/assembly/prox_sensor = 40,
 				/obj/item/assembly/timer = 30,
 				/obj/item/flashlight = 40,
@@ -84,15 +82,17 @@
 				/obj/item/stack/cable_coil = 40,
 				/obj/item/stack/cable_coil{amount = 5} = 60,
 				/obj/item/stack/medical/bruise_pack/advanced = 10,
+				/obj/item/stack/medical/ointment/advanced = 10,
 				/obj/item/stack/rods{amount = 10} = 80,
 				/obj/item/stack/rods{amount = 23} = 20,
 				/obj/item/stack/rods{amount = 50} = 10,
 				/obj/item/stack/sheet/cardboard = 20,
 				/obj/item/stack/sheet/metal{amount = 20} = 10,
-				/obj/item/stack/sheet/mineral/plasma{layer = 2.9} = 10,
+				/obj/item/stack/sheet/mineral/plasma = 10,
 				/obj/item/stack/sheet/rglass = 10,
-				/obj/item/book/manual/engineering_construction = 10,
-				/obj/item/book/manual/engineering_hacking = 10,
+				/obj/item/stack/sheet/cloth{amount = 3} = 40,
+				/obj/item/book/manual/wiki/engineering_construction = 10,
+				/obj/item/book/manual/wiki/hacking = 10,
 				/obj/item/clothing/head/cone = 10,
 				/obj/item/geiger_counter = 30,
 				/obj/item/coin/silver = 10,
@@ -102,11 +102,10 @@
 				/obj/item/crowbar/red = 10,
 				/obj/item/restraints/handcuffs/toy = 5,
 				/obj/item/extinguisher = 90,
-				//obj/item/gun/projectile/revolver/russian = 1, //disabled until lootdrop is a proper world proc.
 				/obj/item/hand_labeler = 10,
 				/obj/item/paper/crumpled = 10,
 				/obj/item/pen = 10,
-				 /obj/item/cultivator = 10,
+				/obj/item/cultivator = 10,
 				/obj/item/reagent_containers/spray/pestspray = 10,
 				/obj/item/stock_parts/cell = 30,
 				/obj/item/storage/belt/utility = 20,
@@ -125,15 +124,21 @@
 				/obj/item/wrench = 40,
 				/obj/item/relic = 35,
 				/obj/item/weaponcrafting/receiver = 2,
-				/obj/item/clothing/shoes/brown = 30,
+				/obj/item/clothing/shoes/black = 30,
 				/obj/item/seeds/ambrosia/deus = 10,
 				/obj/item/seeds/ambrosia = 20,
 				/obj/item/clothing/under/color/black = 30,
 				/obj/item/stack/tape_roll = 10,
 				/obj/item/storage/bag/plasticbag = 20,
+				/obj/item/storage/wallet = 20,
+				/obj/item/storage/wallet/random = 5,
+				/obj/item/scratch = 10,
 				/obj/item/caution = 10,
+				/obj/item/mod/construction/broken_core = 4,
+				/obj/effect/spawner/random_spawners/mod/maint = 10,
 				////////////////CONTRABAND STUFF//////////////////
 				/obj/item/grenade/clown_grenade = 3,
+				/obj/item/grenade/smokebomb = 3,
 				/obj/item/seeds/ambrosia/cruciatus = 3,
 				/obj/item/gun/projectile/automatic/pistol = 1,
 				/obj/item/ammo_box/magazine/m10mm = 4,
@@ -153,13 +158,23 @@
 				/obj/item/storage/belt/military/traitor = 2,
 				/obj/item/storage/box/syndie_kit/space = 2,
 				/obj/item/multitool/ai_detect = 2,
-				/obj/item/implanter/storage = 1,
-				/obj/item/toy/cards/deck/syndicate = 2,
+				/obj/item/bio_chip_implanter/storage = 1,
+				/obj/item/deck/cards/syndicate = 2,
 				/obj/item/storage/secure/briefcase/syndie = 2,
 				/obj/item/storage/fancy/cigarettes/cigpack_syndicate = 2,
 				/obj/item/storage/pill_bottle/fakedeath = 2,
-				"" = 64 // Reduce this number if you add things above. Make sure all the numbers in the list add to 100 EXACTLY
+				/obj/item/clothing/suit/jacket/syndicatebomber = 5,
+				/obj/item/clothing/suit/storage/iaa/blackjacket/armored = 2, // More armored than bomber and has pockets, so it is rarer
+				"" = 61 // This should be a decently high number for chances where no loot will spawn
 				)
+
+/obj/effect/spawner/lootdrop/maintenance/Initialize(mapload)
+	if(HAS_TRAIT(SSstation, STATION_TRAIT_EMPTY_MAINT) && prob(50))
+		return qdel(src)
+	if(HAS_TRAIT(SSstation, STATION_TRAIT_FILLED_MAINT) && prob(50))
+		lootcount = min(lootcount * 2, 12)
+	. = ..()
+
 
 /obj/effect/spawner/lootdrop/maintenance/two
 	name = "maintenance loot spawner (2 items)"
@@ -190,26 +205,24 @@
 /obj/effect/spawner/lootdrop/trade_sol/
 	name = "trader item spawner"
 	lootcount = 6
-	color = "#00FFFF"
-
 
 /obj/effect/spawner/lootdrop/trade_sol/civ
 	name = "1. civilian gear"
 	loot = list(
 				// General utility gear
-				/obj/item/storage/belt/utility/full/multitool = 150,
 				/obj/item/clothing/gloves/combat = 100,
-				/obj/item/clothing/glasses/welding = 50,
-				/obj/item/reagent_containers/spray/cleaner = 100,
-				/obj/item/clothing/shoes/magboots = 50,
+				/obj/item/reagent_containers/spray/cleaner/advanced = 100,
 				/obj/item/soap = 50,
 				/obj/item/clothing/under/syndicate/combat = 50,
 				/obj/item/soap/syndie = 50,
 				/obj/item/lighter/zippo/gonzofist = 50,
-				/obj/item/stack/nanopaste = 50,
-				/obj/item/clothing/under/psyjump = 50,
+				/obj/item/clothing/under/costume/psyjump = 50,
 				/obj/item/immortality_talisman = 50,
-				/obj/item/grenade/clusterbuster/smoke = 50
+				/obj/item/clothing/mask/holo_cigar = 100,
+				/obj/item/storage/box/syndie_kit/chameleon = 50, //costumes!
+				/obj/item/storage/backpack/satchel_flat = 50,
+				/obj/item/book_of_babel = 50,
+				/obj/item/clothing/mask/whistle = 50
 				)
 
 /obj/effect/spawner/lootdrop/trade_sol/minerals
@@ -238,6 +251,7 @@
 /obj/effect/spawner/lootdrop/trade_sol/minerals/Initialize(mapload)
 	while(lootcount)
 		var/lootspawn = pickweight(loot)
+		loot -= lootspawn //We do this as the minerals will merge, and if duplicates roll they add one to the stack, instead of doubling.
 		var/obj/item/stack/sheet/S = new lootspawn(get_turf(src))
 		S.amount = 25
 		lootcount--
@@ -262,18 +276,22 @@
 	name = "4. science gear"
 	loot = list(
 				// Robotics
-				/obj/item/mmi/robotic_brain = 50, // Low-value, but we want to encourage getting more players back in the round.
 				/obj/item/assembly/signaler/anomaly/random = 50, // anomaly core
 				/obj/item/mecha_parts/mecha_equipment/weapon/energy/xray = 25, // mecha x-ray laser
 				/obj/item/mecha_parts/mecha_equipment/teleporter/precise = 25, // upgraded mecha teleporter
 				/obj/item/autosurgeon/organ = 50,
+				/obj/item/mod/construction/plating/research = 25,
 
 				// Research / Experimentor
-				/obj/item/paper/researchnotes = 150, // papers that give random R&D levels
+				/obj/item/paper/researchnotes = 125, // papers that give random R&D levels
+				/obj/item/storage/box/telescience = 25, // Code green or blue. Probably not antags. People haven't touched it in ages. Let us see what happens.
 
 				// Xenobio
 				/obj/item/slimepotion/sentience = 50, // Low-value, but we want to encourage getting more players back in the round.
-				/obj/item/slimepotion/transference = 50
+				/obj/item/slimepotion/transference = 50,
+
+				// Might as well let AI be interested
+				/obj/item/surveillance_upgrade = 25
 				)
 
 /obj/effect/spawner/lootdrop/trade_sol/med
@@ -282,10 +300,8 @@
 				// Medchem
 				/obj/item/storage/pill_bottle/random_meds/labelled = 100, // random medical and other chems
 				/obj/item/reagent_containers/glass/bottle/reagent/omnizine = 50,
-				/obj/item/reagent_containers/glass/bottle/reagent/strange_reagent = 50,
 
 				// Surgery
-				/obj/item/scalpel/laser/manager = 100,
 				/obj/item/organ/internal/heart/gland/ventcrawling = 50,
 				/obj/item/organ/internal/heart/gland/heals = 50,
 
@@ -294,9 +310,11 @@
 				/obj/item/dnainjector/nobreath = 50,
 				/obj/item/dnainjector/telemut = 50,
 
-				// Virology
-				/obj/item/reagent_containers/glass/bottle/regeneration = 50,
-				/obj/item/reagent_containers/glass/bottle/sensory_restoration = 50
+				// Medical in general
+				/obj/item/mod/construction/plating/rescue = 25,
+				/obj/item/gun/medbeam = 25, //Antags can see this to remove it if a threat, unlikely to happen with another midround
+				/obj/item/bodyanalyzer = 25,
+				/obj/item/circuitboard/sleeper/syndicate = 25
 				)
 
 /obj/effect/spawner/lootdrop/trade_sol/sec
@@ -310,30 +328,32 @@
 				/obj/item/storage/belt/military/assault = 50,
 				/obj/item/clothing/mask/gas/sechailer/swat = 50,
 				/obj/item/clothing/glasses/thermal = 50, // see heat-source mobs through walls. Less powerful than already-available xray.
+				/obj/item/mod/construction/plating/safeguard = 25,
+				/obj/item/mod/module/power_kick = 50,
+				/obj/item/storage/box/syndie_kit/camera_bug = 25, //Camera viewing on the go, planting cameras with detective work? Could be interesting!
 
 				// Ranged weapons
-				/obj/item/storage/box/enforcer_rubber = 50,
-				/obj/item/storage/box/enforcer_lethal = 50,
-				/obj/item/gun/projectile/shotgun/automatic/combat = 50, // combat shotgun, between riot and bulldog in robustness. Not illegal, can be obtained from cargo.
-				/obj/item/gun/projectile/shotgun/automatic/dual_tube = 50, // cycler shotgun, not normally available to crew
+				/obj/item/storage/box/enforcer_rubber = 50, //Lethal ammo can be printed at an autolathe, so no need for the lethal subtype
+				/obj/item/gun/projectile/shotgun/automatic/dual_tube = 100, // cycler shotgun, not normally available to crew
+				/obj/item/weaponcrafting/gunkit/universal_gun_kit/sol_gov = 50, //Weapon crafting, lets officers experiment however lets not have it be C class
 
-				// Cluster grenades
-				/obj/item/grenade/clusterbuster = 50, // cluster flashbang
-				/obj/item/grenade/clusterbuster/teargas = 50
 				)
 
 /obj/effect/spawner/lootdrop/trade_sol/eng
 	name = "7. eng gear"
+	lootcount = 8 //increased due to this pool being a bit more... niche?
 	loot = list(
 				/obj/item/storage/belt/utility/chief/full = 25,
 				/obj/item/rcd/combat = 25,
 				/obj/item/rpd/bluespace = 25,
 				/obj/item/tank/internals/emergency_oxygen/double = 25,
-				/obj/item/slimepotion/speed = 25,
 				/obj/item/storage/backpack/holding = 25,
 				/obj/item/clothing/glasses/meson/night = 25, // NV mesons
 				/obj/item/clothing/glasses/material = 25, // shows objects, but not mobs, through walls
-				/obj/item/grenade/clusterbuster/metalfoam = 25 // cluster metal foam grenade
+				/obj/item/mod/construction/plating/advanced = 25,
+				/obj/item/mod/module/jetpack/advanced = 25,
+				/obj/item/slimepotion/oil_slick = 25, //Suggested by discord, moderately common but not as common as most rnd things
+				/obj/item/holosign_creator/atmos = 25
 				)
 
 /obj/effect/spawner/lootdrop/trade_sol/largeitem
@@ -341,7 +361,10 @@
 	lootcount = 1
 	loot = list(
 				/obj/machinery/disco = 20,
-				/obj/mecha/combat/durand/old = 20
+				/obj/structure/spirit_board = 20,
+				/obj/mecha/combat/durand/old = 20,
+				/obj/machinery/snow_machine = 20,
+				/obj/machinery/cooker/cerealmaker = 20
 				)
 
 /obj/effect/spawner/lootdrop/trade_sol/vehicle
@@ -367,24 +390,28 @@
 	name = "10. service gear"
 	loot = list(
 				// Mining
-				/obj/item/mining_voucher = 100,
 				/obj/item/pickaxe/drill/jackhammer = 100,
 				/obj/item/gun/energy/kinetic_accelerator/experimental = 100,
 				/obj/item/borg/upgrade/modkit/aoe/turfs/andmobs = 100,
 
 				// Botanist
-				/obj/item/seeds/random/labelled = 100,
+				/obj/item/storage/box/botany_labelled_seeds = 100,
 
 				// Clown
 				/obj/item/grenade/clusterbuster/honk = 100,
 				/obj/item/bikehorn/golden = 100,
+				/obj/item/gun/throw/piecannon = 100,
 
 				// Bartender
 				/obj/item/storage/box/bartender_rare_ingredients_kit = 100,
 
 				// Chef
-				/obj/item/storage/box/chef_rare_ingredients_kit = 100
+				/obj/item/storage/box/chef_rare_ingredients_kit = 100,
+				/obj/item/mod/module/dispenser = 50, // Prints burgers. When you want to be space mcdonalds.
 				// It would be nice to also have items for other service jobs: Mime, Librarian, Chaplain, etc
+
+				// Chaplain
+				/obj/structure/constructshell = 50 //Fuck it we ball what could go wrong
 				)
 
 
@@ -400,14 +427,14 @@
 			/obj/item/reagent_containers/food/snacks/soup/nettlesoup,
 			/obj/item/reagent_containers/food/snacks/soup/meatballsoup)
 	var/salads = list(
-			/obj/item/reagent_containers/food/snacks/herbsalad,
-			/obj/item/reagent_containers/food/snacks/validsalad,
-			/obj/item/reagent_containers/food/snacks/aesirsalad)
+			/obj/item/reagent_containers/food/snacks/salad/herb,
+			/obj/item/reagent_containers/food/snacks/salad/valid,
+			/obj/item/reagent_containers/food/snacks/salad/aesir)
 	var/mains = list(
 			/obj/item/reagent_containers/food/snacks/enchiladas,
 			/obj/item/reagent_containers/food/snacks/stewedsoymeat,
-			/obj/item/reagent_containers/food/snacks/bigbiteburger,
-			/obj/item/reagent_containers/food/snacks/superbiteburger)
+			/obj/item/reagent_containers/food/snacks/burger/bigbite,
+			/obj/item/reagent_containers/food/snacks/burger/superbite)
 
 /obj/effect/spawner/lootdrop/three_course_meal/Initialize(mapload)
 	loot = list(pick(soups) = 1,pick(salads) = 1,pick(mains) = 1)

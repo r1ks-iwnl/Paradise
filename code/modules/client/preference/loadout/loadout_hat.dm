@@ -13,7 +13,7 @@
 
 /datum/gear/hat
 	main_typepath = /datum/gear/hat
-	slot = slot_head
+	slot = SLOT_HUD_HEAD
 	sort_category = "Headwear"
 
 /datum/gear/hat/hhat_yellow
@@ -76,6 +76,11 @@
 	display_name = "Security cap"
 	path = /obj/item/clothing/head/soft/sec
 	allowed_roles = list("Head of Security", "Warden", "Security Officer")
+
+/datum/gear/hat/deliverysoft
+	display_name = "Cap, delivery boy"
+	path = /obj/item/clothing/head/soft/deliverysoft
+	allowed_roles = list("Quartermaster", "Cargo Technician")
 
 /datum/gear/hat/capred
 	display_name = "Cap, red"
@@ -141,6 +146,10 @@
 	display_name = "Beret, black"
 	path = /obj/item/clothing/head/beret/black
 
+/datum/gear/hat/beret_white
+	display_name = "Beret, white"
+	path = /obj/item/clothing/head/beret/white
+
 /datum/gear/hat/beret_blue
 	display_name = "Beret, blue"
 	path = /obj/item/clothing/head/beret/blue
@@ -153,15 +162,40 @@
 	main_typepath = /datum/gear/hat/beret_job
 	subtype_selection_cost = FALSE
 
+/datum/gear/hat/beret_job/captain
+	display_name = "Beret, captain's"
+	path = /obj/item/clothing/head/caphat/beret
+	allowed_roles = list("Captain")
+
+/datum/gear/hat/beret_job/captain_white
+	display_name = "Beret, captain's white"
+	path = /obj/item/clothing/head/caphat/beret/white
+	allowed_roles = list("Captain")
+
 /datum/gear/hat/beret_job/sec
 	display_name = "Beret, security"
 	path = /obj/item/clothing/head/beret/sec
 	allowed_roles = list("Head of Security", "Warden", "Security Officer")
 
+/datum/gear/hat/beret_job/hop
+	display_name = "Beret, head of personnel"
+	path = /obj/item/clothing/head/hop/beret
+	allowed_roles = list("Head of Personnel")
+
 /datum/gear/hat/beret_job/sci
 	display_name = "Beret, science"
 	path = /obj/item/clothing/head/beret/sci
 	allowed_roles = list("Research Director", "Scientist")
+
+/datum/gear/hat/beret_job/robowhite
+	display_name = "Beret, robotics"
+	path = /obj/item/clothing/head/beret/robowhite
+	allowed_roles = list("Research Director", "Roboticist")
+
+/datum/gear/hat/beret_job/roboblack
+	display_name = "Beret, bioengineer"
+	path = /obj/item/clothing/head/beret/roboblack
+	allowed_roles = list("Research Director", "Roboticist")
 
 /datum/gear/hat/beret_job/med
 	display_name = "Beret, medical"

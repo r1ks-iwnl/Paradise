@@ -15,7 +15,6 @@
 	var/menu = MENU_MAIN //Which menu screen to display
 	var/list/records = null
 	var/datum/dna2/record/active_record = null
-	var/obj/item/disk/data/diskette = null //Mostly so the geneticist can steal everything.
 	var/loading = 0 // Nice loading text
 	var/autoprocess = 0
 	var/obj/machinery/clonepod/selected_pod
@@ -86,15 +85,7 @@
 			P.name = "[initial(P.name)] #[num++]"
 
 /obj/machinery/computer/cloning/attackby(obj/item/W as obj, mob/user as mob, params)
-	if(istype(W, /obj/item/disk/data)) //INSERT SOME DISKETTES
-		if(!src.diskette)
-			user.drop_item()
-			W.loc = src
-			src.diskette = W
-			to_chat(user, "You insert [W].")
-			SStgui.update_uis(src)
-			return
-	else if(istype(W, /obj/item/multitool))
+	if(istype(W, /obj/item/multitool))
 		var/obj/item/multitool/M = W
 		if(M.buffer && istype(M.buffer, /obj/machinery/clonepod))
 			var/obj/machinery/clonepod/P = M.buffer
@@ -111,7 +102,6 @@
 	return attack_hand(user)
 
 /obj/machinery/computer/cloning/attack_hand(mob/user as mob)
-	user.set_machine(src)
 	add_fingerprint(user)
 
 	if(stat & (BROKEN|NOPOWER))
@@ -174,7 +164,6 @@
 		data["locked"] = src.scanner.locked
 	data["temp"] = temp
 	data["scantemp"] = scantemp
-	data["disk"] = src.diskette
 	data["selected_pod"] = "\ref[selected_pod]"
 	var/list/temprecords[0]
 	for(var/datum/dna2/record/R in records)
@@ -200,18 +189,15 @@
 	. = TRUE
 	switch(ui_modal_act(src, action, params))
 		if(UI_MODAL_ANSWER)
-			if(params["id"] == "del_rec" && active_record)
-				var/obj/item/card/id/C = usr.get_active_hand()
-				if(!istype(C) && !istype(C, /obj/item/pda))
-					set_temp("ID not in hand.", "danger")
-					return
-				if(check_access(C))
-					records.Remove(active_record)
-					qdel(active_record)
-					set_temp("Record deleted.", "success")
-					menu = MENU_RECORDS
-				else
+			if(params["id"] == "del_rec" && text2num(params["answer"]) && active_record)
+				if(!allowed(usr))
 					set_temp("Access denied.", "danger")
+					return
+
+				records.Remove(active_record)
+				qdel(active_record)
+				set_temp("Record deleted.", "success")
+				menu = MENU_RECORDS
 			return
 
 	switch(action)
@@ -244,7 +230,7 @@
 					qdel(active_record)
 					set_temp("Error: Record corrupt.", "danger")
 				else
-					var/obj/item/implant/health/H = null
+					var/obj/item/bio_chip/health/H = null
 					if(active_record.implant)
 						H = locate(active_record.implant)
 					var/list/payload = list(
@@ -261,47 +247,7 @@
 		if("del_rec")
 			if(!active_record)
 				return
-			ui_modal_boolean(src, action, "Please confirm that you want to delete the record by holding your ID and pressing Delete:", yes_text = "Delete", no_text = "Cancel")
-		if("disk") // Disk management.
-			if(!length(params["option"]))
-				return
-			switch(params["option"])
-				if("load")
-					if(isnull(diskette) || isnull(diskette.buf))
-						set_temp("Error: The disk's data could not be read.", "danger")
-						return
-					else if(isnull(active_record))
-						set_temp("Error: No active record was found.", "danger")
-						menu = MENU_MAIN
-						return
-
-					active_record = diskette.buf.copy()
-					set_temp("Successfully loaded from disk.", "success")
-				if("save")
-					if(isnull(diskette) || diskette.read_only || isnull(active_record))
-						set_temp("Error: The data could not be saved.", "danger")
-						return
-
-					// DNA2 makes things a little simpler.
-					var/types
-					switch(params["savetype"]) // Save as Ui/Ui+Ue/Se
-						if("ui")
-							types = DNA2_BUF_UI
-						if("ue")
-							types = DNA2_BUF_UI|DNA2_BUF_UE
-						if("se")
-							types = DNA2_BUF_SE
-						else
-							set_temp("Error: Invalid save format.", "danger")
-							return
-					diskette.buf = active_record.copy()
-					diskette.buf.types = types
-					diskette.name = "data disk - '[active_record.dna.real_name]'"
-					set_temp("Successfully saved to disk.", "success")
-				if("eject")
-					if(!isnull(diskette))
-						diskette.loc = loc
-						diskette = null
+			ui_modal_boolean(src, action, "Please confirm that you want to delete the record:", yes_text = "Delete", no_text = "Cancel")
 		if("refresh")
 			SStgui.update_uis(src)
 		if("selectpod")
@@ -376,19 +322,27 @@
 		return
 	if(isnull(subject) || (!(ishuman(subject))) || (!subject.dna))
 		if(isalien(subject))
-			set_scan_temp("Xenomorphs are not scannable.", "bad")
+			set_scan_temp("Safety interlocks engaged. Nanotrasen Directive 7b forbids the cloning of biohazardous alien species.", "bad")
 			SStgui.update_uis(src)
 			return
 		// can add more conditions for specific non-human messages here
 		else
-			set_scan_temp("Subject species is not scannable.", "bad")
+			set_scan_temp("Subject species is not clonable.", "bad")
 			SStgui.update_uis(src)
 			return
+	if(NO_CLONESCAN in subject.dna.species.species_traits)
+		set_scan_temp("[subject.dna.species.name_plural] are not clonable. Alternative revival methods recommended.", "bad")
+		SStgui.update_uis(src)
+		return
 	if(subject.get_int_organ(/obj/item/organ/internal/brain))
 		var/obj/item/organ/internal/brain/Brn = subject.get_int_organ(/obj/item/organ/internal/brain)
 		if(istype(Brn))
+			if(Brn.dna.species.name == "Machine")
+				set_scan_temp("No organic tissue detected within subject. Alternative revival methods recommended.", "bad")
+				SStgui.update_uis(src)
+				return
 			if(NO_CLONESCAN in Brn.dna.species.species_traits)
-				set_scan_temp("[Brn.dna.species.name_plural] are not scannable.", "bad")
+				set_scan_temp("[Brn.dna.species.name_plural] are not clonable. Alternative revival methods recommended.", "bad")
 				SStgui.update_uis(src)
 				return
 	if(!subject.get_int_organ(/obj/item/organ/internal/brain))
@@ -396,19 +350,27 @@
 		SStgui.update_uis(src)
 		return
 	if(subject.suiciding)
-		set_scan_temp("Subject has committed suicide and is not scannable.", "bad")
+		set_scan_temp("Subject has committed suicide and is not clonable.", "bad")
+		SStgui.update_uis(src)
+		return
+	if(HAS_TRAIT(subject, TRAIT_BADDNA) && src.scanner.scan_level < 2)
+		set_scan_temp("Insufficient level of biofluids detected within subject. Scanner upgrades may be required to improve scan capabilities.", "bad")
+		SStgui.update_uis(src)
+		return
+	if(HAS_TRAIT(subject, TRAIT_HUSK) && src.scanner.scan_level < 2)
+		set_scan_temp("Subject is husked. Treat condition or upgrade scanning module to proceed with scan.", "bad")
 		SStgui.update_uis(src)
 		return
 	if((!subject.ckey) || (!subject.client))
 		set_scan_temp("Subject's brain is not responding. Further attempts after a short delay may succeed.", "bad")
 		SStgui.update_uis(src)
 		return
-	if(HAS_TRAIT(subject, TRAIT_BADDNA) && src.scanner.scan_level < 2)
-		set_scan_temp("Subject has incompatible genetic mutations.", "bad")
-		SStgui.update_uis(src)
-		return
 	if(!isnull(find_record(subject.ckey)))
 		set_scan_temp("Subject already in database.")
+		SStgui.update_uis(src)
+		return
+	if(subject.stat != DEAD)
+		set_scan_temp("Subject is not dead.", "bad")
 		SStgui.update_uis(src)
 		return
 
@@ -440,9 +402,9 @@
 	R.types=DNA2_BUF_UI|DNA2_BUF_UE|DNA2_BUF_SE
 	R.languages=subject.languages
 	//Add an implant if needed
-	var/obj/item/implant/health/imp = locate(/obj/item/implant/health, subject)
+	var/obj/item/bio_chip/health/imp = locate(/obj/item/bio_chip/health, subject)
 	if(!imp)
-		imp = new /obj/item/implant/health(subject)
+		imp = new /obj/item/bio_chip/health(subject)
 		imp.implant(subject)
 	R.implant = "\ref[imp]"
 

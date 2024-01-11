@@ -9,15 +9,11 @@
 	volume = 50
 	lefthand_file = 'icons/goonstation/mob/inhands/items_lefthand.dmi'
 	righthand_file = 'icons/goonstation/mob/inhands/items_righthand.dmi'
-	materials = list(MAT_GLASS=500)
+	materials = list(MAT_GLASS = 100)
 	max_integrity = 20
 	resistance_flags = ACID_PROOF
 	drop_sound = 'sound/items/handling/drinkglass_drop.ogg'
 	pickup_sound =  'sound/items/handling/drinkglass_pickup.ogg'
-
-/obj/item/reagent_containers/food/drinks/set_APTFT()
-	set hidden = FALSE
-	..()
 
 /obj/item/reagent_containers/food/drinks/drinkingglass/attackby(obj/item/I, mob/user, params)
 	if(istype(I, /obj/item/reagent_containers/food/snacks/egg)) //breaking eggs
@@ -59,7 +55,7 @@
 		name = "glass"
 		desc = "Your standard drinking glass."
 
-// for /obj/machinery/vending/sovietsoda
+// for /obj/machinery/economy/vending/sovietsoda
 /obj/item/reagent_containers/food/drinks/drinkingglass/soda
 	list_reagents = list("sodawater" = 50)
 

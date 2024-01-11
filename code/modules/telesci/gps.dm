@@ -13,7 +13,7 @@ GLOBAL_LIST_EMPTY(GPS_list)
 	icon = 'icons/obj/telescience.dmi'
 	icon_state = "gps-c"
 	w_class = WEIGHT_CLASS_SMALL
-	slot_flags = SLOT_BELT
+	slot_flags = SLOT_FLAG_BELT
 	origin_tech = "materials=2;magnets=1;bluespace=2"
 	/// Whether the GPS is on.
 	var/tracking = TRUE
@@ -34,24 +34,32 @@ GLOBAL_LIST_EMPTY(GPS_list)
 	GLOB.poi_list.Add(src)
 	if(name == initial(name))
 		name = "global positioning system ([gpstag])"
-	update_icon()
+	update_icon(UPDATE_OVERLAYS)
 
 /obj/item/gps/Destroy()
 	GLOB.GPS_list.Remove(src)
 	GLOB.poi_list.Remove(src)
 	return ..()
 
-/obj/item/gps/update_icon()
-	cut_overlays()
+/obj/item/gps/update_overlays()
+	. = ..()
 	if(emped)
-		add_overlay("emp")
+		. += "emp"
 	else if(tracking)
-		add_overlay("working")
+		. += "working"
+
+/obj/item/gps/pickup(mob/user)
+	..()
+	ADD_TRAIT(user, TRAIT_HAS_GPS, "GPS[UID()]")
+
+/obj/item/gps/dropped(mob/user, silent)
+	REMOVE_TRAIT(user, TRAIT_HAS_GPS, "GPS[UID()]")
+	return ..()
 
 /obj/item/gps/emp_act(severity)
 	emped = TRUE
-	update_icon()
-	addtimer(CALLBACK(src, .proc/reboot), EMP_DISABLE_TIME)
+	update_icon(UPDATE_OVERLAYS)
+	addtimer(CALLBACK(src, PROC_REF(reboot)), EMP_DISABLE_TIME)
 
 /obj/item/gps/AltClick(mob/user)
 	if(ui_status(user, GLOB.inventory_state) != STATUS_INTERACTIVE)
@@ -61,7 +69,7 @@ GLOBAL_LIST_EMPTY(GPS_list)
 		return
 
 	tracking = !tracking
-	update_icon()
+	update_icon(UPDATE_OVERLAYS)
 	if(tracking)
 		to_chat(user, "[src] is now tracking, and visible to other GPS devices.")
 	else
@@ -144,7 +152,13 @@ GLOBAL_LIST_EMPTY(GPS_list)
   */
 /obj/item/gps/proc/reboot()
 	emped = FALSE
-	update_icon()
+	update_icon(UPDATE_OVERLAYS)
+
+/obj/item/gps/security
+	icon_state = "gps-sec"
+	gpstag = "SEC0"
+	desc = "A positioning system helpful for monitoring prisoners that are implanted with a tracking implant."
+	local = TRUE
 
 /obj/item/gps/science
 	icon_state = "gps-s"
@@ -158,6 +172,12 @@ GLOBAL_LIST_EMPTY(GPS_list)
 	icon_state = "gps-m"
 	gpstag = "MINE0"
 	desc = "A positioning system helpful for rescuing trapped or injured miners, keeping one on you at all times while mining might just save your life."
+
+/obj/item/gps/mod
+	icon_state = "gps-m"
+	gpstag = "MOD0"
+	desc = "A positioning system helpful for rescuing trapped or injured miners, after you have become lost from rolling around at the speed of sound."
+	flags = NODROP
 
 /obj/item/gps/cyborg
 	icon_state = "gps-b"

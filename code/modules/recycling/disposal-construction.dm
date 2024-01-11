@@ -7,8 +7,8 @@
 	desc = "A huge pipe segment used for constructing disposal systems."
 	icon = 'icons/obj/pipes/disposal.dmi'
 	icon_state = "conpipe-s"
-	anchored = 0
-	density = 0
+	anchored = FALSE
+	density = FALSE
 	pressure_resistance = 5*ONE_ATMOSPHERE
 	level = 2
 	max_integrity = 200
@@ -23,6 +23,10 @@
 	if(dir)
 		dir = direction
 	update()
+
+/obj/structure/disposalconstruct/examine(mob/user)
+	. = ..()
+	. += "<span class='info'><b>Alt-Click</b> to rotate it, <b>Alt-Shift-Click to flip it.</b></span>"
 
 	// update iconstate and dpdir due to dir and type
 /obj/structure/disposalconstruct/proc/update()
@@ -49,7 +53,7 @@
 			dpdir = dir | right | flip
 		if(PIPE_DISPOSALS_SORT_LEFT)
 			dpdir = dir | left | flip
-		 // disposal bin has only one dir, thus we don't need to care about setting it
+		// disposal bin has only one dir, thus we don't need to care about setting it
 		if(PIPE_DISPOSALS_BIN)
 			if(!anchored)
 				icon_state = "[base_state]-unanchored"
@@ -72,40 +76,27 @@
 	invisibility = (intact && level == 1) ? INVISIBILITY_MAXIMUM : 0	// hide if floor is intact
 	update()
 
-
-// flip and rotate verbs
-/obj/structure/disposalconstruct/verb/rotate()
-	set name = "Rotate Pipe"
-	set category = "Object"
-	set src in view(1)
-
-	if(usr.stat)
+/obj/structure/disposalconstruct/AltClick(mob/user)
+	if(user.stat || HAS_TRAIT(user, TRAIT_HANDS_BLOCKED) || !Adjacent(user))
 		return
+	rotate(user)
 
+/obj/structure/disposalconstruct/proc/rotate(mob/user)
 	if(anchored)
-		to_chat(usr, "You must unfasten the pipe before rotating it.")
+		to_chat(user, "<span class='notice'>You must unfasten the pipe before rotating it.</span>")
 		return
 
 	dir = turn(dir, -90)
 	update()
 
-/obj/structure/disposalconstruct/AltClick(mob/user)
-	if(user.incapacitated())
-		to_chat(user, "<span class='warning'>You can't do that right now!</span>")
+/obj/structure/disposalconstruct/AltShiftClick(mob/user)
+	if(user.stat || HAS_TRAIT(user, TRAIT_HANDS_BLOCKED) || !Adjacent(user))
 		return
-	if(!Adjacent(user))
-		return
-	rotate()
+	flip(user)
 
-/obj/structure/disposalconstruct/verb/flip()
-	set name = "Flip Pipe"
-	set category = "Object"
-	set src in view(1)
-	if(usr.stat)
-		return
-
+/obj/structure/disposalconstruct/proc/flip(mob/user)
 	if(anchored)
-		to_chat(usr, "You must unfasten the pipe before flipping it.")
+		to_chat(user, "<span class='notice'>You must unfasten the pipe before flipping it.</span>")
 		return
 
 	dir = turn(dir, 180)
@@ -171,20 +162,20 @@
 
 	if(istype(I, /obj/item/wrench))
 		if(anchored)
-			anchored = 0
+			anchored = FALSE
 			if(ispipe)
 				level = 2
-				density = 0
+				density = FALSE
 			else
-				density = 1
+				density = TRUE
 			to_chat(user, "You detach the [nicetype] from the underfloor.")
 		else
-			anchored = 1
+			anchored = TRUE
 			if(ispipe)
 				level = 1 // We don't want disposal bins to disappear under the floors
-				density = 0
+				density = FALSE
 			else
-				density = 1 // We don't want disposal bins or outlets to go density 0
+				density = TRUE // We don't want disposal bins or outlets to go density 0
 			to_chat(user, "You attach the [nicetype] to the underfloor.")
 		playsound(src.loc, I.usesound, 100, 1)
 		update()
@@ -222,7 +213,7 @@
 						P.base_icon_state = base_state
 						P.dir = dir
 						P.dpdir = dpdir
-						P.update_icon()
+						P.update_icon(UPDATE_ICON_STATE)
 
 						//Needs some special treatment ;)
 						if(ptype == PIPE_DISPOSALS_SORT_RIGHT || ptype == PIPE_DISPOSALS_SORT_LEFT)
@@ -258,9 +249,9 @@
 /obj/structure/disposalconstruct/rpd_act(mob/user, obj/item/rpd/our_rpd)
 	. = TRUE
 	if(our_rpd.mode == RPD_ROTATE_MODE)
-		rotate()
+		rotate(user)
 	else if(our_rpd.mode == RPD_FLIP_MODE)
-		flip()
+		flip(user)
 	else if(our_rpd.mode == RPD_DELETE_MODE)
 		our_rpd.delete_single_pipe(user, src)
 	else

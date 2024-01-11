@@ -261,7 +261,7 @@ GLOBAL_LIST_EMPTY(asset_datums)
 
 /datum/asset/rpd/register()
 	for(var/state in icon_states('icons/obj/pipe-item.dmi'))
-		if(!(state in list("cap", "connector", "dtvalve", "dual-port vent", "dvalve", "filter", "he", "heunary", "injector", "junction", "manifold", "mixer", "tvalve", "mvalve", "passive vent", "passivegate", "pump", "scrubber", "simple", "universal", "uvent", "volumepump"))) //Basically all the pipes we want sprites for
+		if(!(state in list("cap", "connector", "dtvalve", "dvalve", "filter", "he", "heunary", "injector", "junction", "manifold", "mixer", "tvalve", "mvalve", "passive vent", "passivegate", "pump", "scrubber", "simple", "universal", "uvent", "volumepump"))) //Basically all the pipes we want sprites for
 			continue
 		if(state in list("he", "simple"))
 			for(var/D in GLOB.alldirs)
@@ -316,6 +316,7 @@ GLOBAL_LIST_EMPTY(asset_datums)
 		"Cyberiad_nanomap_z1.png"		= 'icons/_nanomaps/Cyberiad_nanomap_z1.png',
 		"Delta_nanomap_z1.png"			= 'icons/_nanomaps/Delta_nanomap_z1.png',
 		"MetaStation_nanomap_z1.png"	= 'icons/_nanomaps/MetaStation_nanomap_z1.png',
+		"CereStation_nanomap_z1.png"	= 'icons/_nanomaps/CereStation_nanomap_z1.png',
 	)
 
 /datum/asset/simple/safe
@@ -329,7 +330,8 @@ GLOBAL_LIST_EMPTY(asset_datums)
 	verify = FALSE
 
 /datum/asset/simple/materials/register()
-	for(var/n in list("metal", "glass", "silver", "gold", "diamond", "uranium", "plasma", "clown", "mime", "titanium", "plastic"))
-		assets["sheet-[n].png"] = icon('icons/obj/items.dmi', "sheet-[n]")
-	assets["sheet-bluespace.png"] = icon('icons/obj/telescience.dmi', "polycrystal")
+	for(var/n in list("metal", "glass", "silver", "gold", "diamond", "uranium", "plasma", "bananium", "tranquillite", "titanium", "plastic",
+						"rglass", "plasteel", "plastitanium", "plasmaglass", "titaniumglass", "plastitaniumglass"))
+		assets["sheet-[n].png"] = icon('icons/obj/stacks/minerals.dmi', "sheet-[n]")
+	assets["sheet-bluespace.png"] = icon('icons/obj/stacks/minerals.dmi', "bluespace_crystal")
 	..()

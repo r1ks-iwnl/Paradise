@@ -14,7 +14,6 @@ GLOBAL_REAL(GLOB, /datum/controller/global_vars)
 
 	var/datum/controller/exclude_these = new
 	gvars_datum_in_built_vars = exclude_these.vars + list("gvars_datum_protected_varlist", "gvars_datum_in_built_vars", "gvars_datum_init_order")
-	QDEL_IN(exclude_these, 0)	//signal logging isn't ready
 
 	Initialize()
 
@@ -38,6 +37,11 @@ GLOBAL_REAL(GLOB, /datum/controller/global_vars)
 	stat("Globals:", statclick.update("Edit"))
 
 /datum/controller/global_vars/can_vv_get(var_name)
+	var/static/list/protected_vars = list(
+		"asays", "admin_log", "logging", "open_logging_views"
+	)
+	if(!check_rights(R_ADMIN, FALSE, usr) && (var_name in protected_vars))
+		return FALSE
 	if(gvars_datum_protected_varlist[var_name])
 		return FALSE
 	return ..()

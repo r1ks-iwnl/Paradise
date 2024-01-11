@@ -3,15 +3,13 @@
 	desc = "A beacon used by a teleporter."
 	icon_state = "beacon"
 	item_state = "signaler"
-	var/code = "Beacon"
 	origin_tech = "bluespace=1"
-	var/syndicate = 0
+	var/syndicate = FALSE
 	var/area_bypass = FALSE
 	var/cc_beacon = FALSE //set if allowed to teleport to even if on zlevel2
 
 /obj/item/radio/beacon/New()
 	..()
-	code = "[code] ([GLOB.beacons.len + 1])"
 	GLOB.beacons += src
 
 /obj/item/radio/beacon/Destroy()
@@ -20,8 +18,8 @@
 
 /obj/item/radio/beacon/emag_act(user as mob)
 	if(!emagged)
-		emagged = 1
-		syndicate = 1
+		emagged = TRUE
+		syndicate = TRUE
 		to_chat(user, "<span class='notice'>The This beacon now only be locked on to by emagged teleporters!</span>")
 
 /obj/item/radio/beacon/hear_talk()
@@ -30,20 +28,6 @@
 
 /obj/item/radio/beacon/send_hear()
 	return null
-
-/obj/item/radio/beacon/verb/alter_signal(t as text)
-	set name = "Alter Beacon's Signal"
-	set category = "Object"
-	set src in usr
-
-	if(usr.stat || usr.restrained())
-		return
-
-	code = t
-	if(isnull(code))
-		code = initial(code)
-	src.add_fingerprint(usr)
-	return
 
 /obj/item/radio/beacon/bacon //Probably a better way of doing this, I'm lazy.
 
@@ -75,6 +59,48 @@
 		user.drop_item()
 		qdel(src)
 
+/obj/item/radio/beacon/syndicate/bundle/
+	name = "suspicious beacon"
+	desc = "A label on it reads: <i>Activate to select a bundle</i>."
+	var/list/static/bundles = list(
+		"Spy" = /obj/item/storage/box/syndie_kit/bundle/spy,
+		"Agent 13" = /obj/item/storage/box/syndie_kit/bundle/agent13,
+		"Thief" = /obj/item/storage/box/syndie_kit/bundle/thief,
+		"Agent 007" = /obj/item/storage/box/syndie_kit/bundle/bond,
+		"Infiltrator" = /obj/item/storage/box/syndie_kit/bundle/infiltrator,
+		"Bank Robber" = /obj/item/storage/box/syndie_kit/bundle/payday,
+		"Implanter" = /obj/item/storage/box/syndie_kit/bundle/implant,
+		"Hacker" = /obj/item/storage/box/syndie_kit/bundle/hacker,
+		"Dark Lord" = /obj/item/storage/box/syndie_kit/bundle/darklord,
+		"Sniper" = /obj/item/storage/box/syndie_kit/bundle/professional,
+		"Grenadier" = /obj/item/storage/box/syndie_kit/bundle/grenadier,
+		"Augmented" = /obj/item/storage/box/syndie_kit/bundle/metroid)
+	var/list/selected = list()
+	var/list/unselected = list()
+
+/obj/item/radio/beacon/syndicate/bundle/attack_self(mob/user)
+	if(!user)
+		return
+
+	if(!length(selected))
+		unselected = bundles.Copy()
+		for(var/i in 1 to 3)
+			selected += pick_n_take(unselected)
+		selected += "Random"
+
+	var/bundle_name = tgui_input_list(user, "Available Bundles", "Bundle Selection", selected)
+	if(!bundle_name || QDELETED(src))
+		return
+
+	if(bundle_name == "Random")
+		bundle_name = pick(unselected)
+	var/bundle = bundles[bundle_name]
+	bundle = new bundle(user.loc)
+	to_chat(user, "<span class='notice'>Welcome to [station_name()], [bundle_name]!</span>")
+	user.drop_item()
+	qdel(src)
+	user.put_in_hands(bundle)
+
 /obj/item/radio/beacon/syndicate/power_sink
 	name = "suspicious beacon"
 	desc = "A label on it reads: <i>Warning: Activating this device will send a power sink to your location</i>."
@@ -105,9 +131,14 @@
 	desc = "A label on it reads: <i>Warning: Activating this device will send a high-ordinance EMP explosive to your location</i>."
 	bomb = /obj/machinery/syndicatebomb/emp
 
+/obj/item/radio/beacon/syndicate/bomb/grey_autocloner
+	desc = "A label on it reads: <i>Warning: Activating this device will send an expensive cloner to your location</i>."
+	origin_tech = "bluespace=2;syndicate=2"
+	bomb = /obj/machinery/grey_autocloner
+
 /obj/item/radio/beacon/engine
 	desc = "A label on it reads: <i>Warning: This device is used for transportation of high-density objects used for high-yield power generation. Stay away!</i>."
-	anchored = 1		//Let's not move these around. Some folk might get the idea to use these for assassinations
+	anchored = TRUE		//Let's not move these around. Some folk might get the idea to use these for assassinations
 	var/list/enginetype = list()
 
 /obj/item/radio/beacon/engine/Initialize(mapload)

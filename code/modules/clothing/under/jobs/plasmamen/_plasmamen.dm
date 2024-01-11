@@ -1,7 +1,7 @@
 /obj/item/clothing/under/plasmaman
 	name = "plasma envirosuit"
 	desc = "A special containment suit that allows plasma-based lifeforms to exist safely in an oxygenated environment, and automatically extinguishes them in a crisis. Despite being airtight, it's not spaceworthy."
-	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 100, RAD = 0, FIRE = 95, ACID = 95)
+	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, RAD = 0, FIRE = INFINITY, ACID = INFINITY)
 	body_parts_covered = UPPER_TORSO|LOWER_TORSO|LEGS|FEET|ARMS|HANDS
 	strip_delay = 80
 	var/next_extinguish = 0
@@ -37,8 +37,8 @@
 	return FALSE
 
 /obj/item/clothing/under/plasmaman/attackby(obj/item/E, mob/user, params)
-	if (istype(E, /obj/item/extinguisher_refill))
-		if (extinguishes_left == 5)
+	if(istype(E, /obj/item/extinguisher_refill))
+		if(extinguishes_left == 5)
 			to_chat(user, "<span class='notice'>The inbuilt extinguisher is full.</span>")
 			return
 		else

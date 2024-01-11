@@ -89,7 +89,17 @@ const OrbitedButton = (props, context) => {
 
 export const Orbit = (props, context) => {
   const { act, data } = useBackend(context);
-  const { alive, antagonists, auto_observe, dead, ghosts, misc, npcs } = data;
+  const {
+    alive,
+    antagonists,
+    highlights,
+    response_teams,
+    auto_observe,
+    dead,
+    ghosts,
+    misc,
+    npcs,
+  } = data;
 
   const [searchText, setSearchText] = useLocalState(context, 'searchText', '');
 
@@ -109,6 +119,7 @@ export const Orbit = (props, context) => {
   const orbitMostRelevant = (searchText) => {
     for (const source of [
       sortedAntagonists.map(([_, antags]) => antags),
+      highlights,
       alive,
       ghosts,
       dead,
@@ -161,7 +172,11 @@ export const Orbit = (props, context) => {
         {antagonists.length > 0 && (
           <Section title="Antagonists">
             {sortedAntagonists.map(([name, antags]) => (
-              <Section key={name} title={name} level={2}>
+              <Section
+                key={name}
+                title={`${name} - (${antags.length})`}
+                level={2}
+              >
                 {antags
                   .filter(searchFor(searchText))
                   .sort(compareNumberedText)
@@ -172,6 +187,21 @@ export const Orbit = (props, context) => {
             ))}
           </Section>
         )}
+        {highlights.length > 0 && (
+          <BasicSection
+            title="Highlights"
+            source={highlights}
+            searchText={searchText}
+            color={'teal'}
+          />
+        )}
+
+        <BasicSection
+          title="Response Teams"
+          source={response_teams}
+          searchText={searchText}
+          color={'purple'}
+        />
 
         <BasicSection
           title="Alive"

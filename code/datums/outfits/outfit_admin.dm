@@ -7,6 +7,17 @@
 		H.mind.assigned_role = name
 		H.job = name
 
+/datum/outfit/admin/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
+	. = ..()
+
+	if(visualsOnly)
+		return
+
+	if(H.mind)
+		H.mind.offstation_role = TRUE
+	else
+		H.RegisterSignal(H, COMSIG_HUMAN_LOGIN, TYPE_PROC_REF(/mob/living/carbon/human, apply_offstation_roles))
+
 
 /proc/apply_to_card(obj/item/card/id/I, mob/living/carbon/human/H, list/access = list(), rank, special_icon)
 	if(!istype(I) || !istype(H))
@@ -44,7 +55,7 @@
 
 	var/id_icon = "syndie"
 	var/id_access = "Syndicate Operative"
-	var/uplink_uses = 20
+	var/uplink_uses = 100
 
 /datum/outfit/admin/syndicate/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
 	. = ..()
@@ -69,9 +80,9 @@
 	name = "Syndicate Infiltrator"
 
 /datum/outfit/admin/syndicate_infiltrator/equip(mob/living/carbon/human/H, visualsOnly = FALSE)
-	. = H.equip_syndicate_infiltrator(0, 20, FALSE)
+	. = H.equip_syndicate_infiltrator(0, 100, FALSE)
 	H.sec_hud_set_ID()
-
+	H.faction |= "syndicate"
 
 /datum/outfit/admin/syndicate/operative
 	name = "Syndicate Nuclear Operative"
@@ -102,7 +113,7 @@
 	if(visualsOnly)
 		return
 
-	var/obj/item/implant/explosive/E = new(H)
+	var/obj/item/bio_chip/explosive/E = new(H)
 	E.implant(H)
 
 
@@ -115,25 +126,25 @@
 	name = "Syndicate Strike Team"
 
 /datum/outfit/admin/syndicate_strike_team/equip(mob/living/carbon/human/H, visualsOnly = FALSE)
-	return H.equip_syndicate_commando(FALSE, TRUE)
-
+	. = H.equip_syndicate_commando(FALSE, TRUE)
+	H.faction |= "syndicate"
 
 /datum/outfit/admin/syndicate/spy
 	name = "Syndicate Spy"
-	uniform = /obj/item/clothing/under/suit_jacket/really_black
+	uniform = /obj/item/clothing/under/suit/really_black
 	shoes = /obj/item/clothing/shoes/chameleon/noslip
-	uplink_uses = 40
+	uplink_uses = 200
 	id_access = "Syndicate Agent"
 
-	implants = list(
-		/obj/item/implant/dust
+	bio_chips = list(
+		/obj/item/bio_chip/dust
 	)
 
 
 /datum/outfit/admin/nt_vip
 	name = "VIP Guest"
 
-	uniform = /obj/item/clothing/under/suit_jacket/really_black
+	uniform = /obj/item/clothing/under/suit/really_black
 	back = /obj/item/storage/backpack/satchel
 	gloves = /obj/item/clothing/gloves/color/black
 	shoes = /obj/item/clothing/shoes/black
@@ -170,11 +181,11 @@
 	pda = /obj/item/pda/centcom
 	backpack_contents = list(
 		/obj/item/storage/box/centcomofficer = 1,
-		/obj/item/implanter/death_alarm = 1
+		/obj/item/bio_chip_implanter/death_alarm = 1
 	)
-	implants = list(
-		/obj/item/implant/mindshield,
-		/obj/item/implant/dust
+	bio_chips = list(
+		/obj/item/bio_chip/mindshield,
+		/obj/item/bio_chip/dust
 	)
 
 /datum/outfit/admin/nt_navy_captain/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
@@ -201,11 +212,11 @@
 	pda = /obj/item/pda/centcom
 	backpack_contents = list(
 		/obj/item/storage/box/survival = 1,
-		/obj/item/implanter/death_alarm = 1,
+		/obj/item/bio_chip_implanter/death_alarm = 1,
 	)
-	implants = list(
-		/obj/item/implant/mindshield,
-		/obj/item/implant/dust
+	bio_chips = list(
+		/obj/item/bio_chip/mindshield,
+		/obj/item/bio_chip/dust
 	)
 
 /datum/outfit/admin/nt_diplomat/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
@@ -235,13 +246,13 @@
 		/obj/item/flashlight = 1,
 		/obj/item/pinpointer/crew = 1
 	)
-	implants = list(
-		/obj/item/implant/dust
+	bio_chips = list(
+		/obj/item/bio_chip/dust
 	)
 	cybernetic_implants = list(
 		/obj/item/organ/internal/cyberimp/eyes/hud/security,
 		/obj/item/organ/internal/eyes/cybernetic/xray,
-		/obj/item/organ/internal/cyberimp/brain/anti_stun/hardened,
+		/obj/item/organ/internal/cyberimp/brain/anti_stam/hardened,
 		/obj/item/organ/internal/cyberimp/chest/nutriment/plus/hardened,
 		/obj/item/organ/internal/cyberimp/arm/combat/centcom
 	)
@@ -261,16 +272,65 @@
 		R.name = "radio headset"
 		R.icon_state = "headset"
 
-/datum/outfit/admin/death_commando
-	name = "NT Death Commando"
+/datum/outfit/admin/deathsquad_commando
+	name = "NT Deathsquad"
 
-/datum/outfit/admin/death_commando/equip(mob/living/carbon/human/H, visualsOnly = FALSE)
-	return H.equip_death_commando()
+	pda = /obj/item/pinpointer
+	box = /obj/item/storage/box/deathsquad
+	back = /obj/item/mod/control/pre_equipped/apocryphal
+	belt = /obj/item/gun/projectile/revolver/mateba
+	gloves = /obj/item/clothing/gloves/combat
+	uniform = /obj/item/clothing/under/rank/centcom/deathsquad
+	shoes = /obj/item/clothing/shoes/magboots/elite
+	glasses = /obj/item/clothing/glasses/thermal
+	mask = /obj/item/clothing/mask/gas/sechailer/swat
+	l_pocket = /obj/item/tank/internals/emergency_oxygen/double
+	r_pocket = /obj/item/reagent_containers/hypospray/combat/nanites
+	l_ear = /obj/item/radio/headset/alt/deathsquad
+	id = /obj/item/card/id/ert/deathsquad
+	suit_store = /obj/item/gun/energy/pulse
+
+	backpack_contents = list(
+		/obj/item/storage/box/flashbangs,
+		/obj/item/ammo_box/a357,
+		/obj/item/flashlight/seclite,
+		/obj/item/grenade/plastic/c4/x4,
+		/obj/item/melee/energy/sword/saber,
+		/obj/item/shield/energy,
+	)
+
+	bio_chips = list(
+		/obj/item/bio_chip/mindshield, // No death alarm, Deathsquad are silent
+		/obj/item/bio_chip/dust
+	)
+
+/datum/outfit/admin/deathsquad_commando/leader
+	name = "NT Deathsquad Leader"
+	back = /obj/item/mod/control/pre_equipped/apocryphal/officer
+
+	backpack_contents = list(
+		/obj/item/storage/box/flashbangs,
+		/obj/item/ammo_box/a357,
+		/obj/item/flashlight/seclite,
+		/obj/item/melee/energy/sword/saber,
+		/obj/item/shield/energy,
+		/obj/item/disk/nuclear/unrestricted
+	)
+
+/datum/outfit/admin/deathsquad_commando/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
+	. = ..()
+	if(visualsOnly)
+		return
+
+	var/obj/item/card/id/I = H.wear_id
+	if(istype(I))
+		apply_to_card(I, H, get_centcom_access("Deathsquad Commando"), "Deathsquad")
+	H.sec_hud_set_ID()
 
 /datum/outfit/admin/pirate
 	name = "Space Pirate"
 
-	uniform = /obj/item/clothing/under/pirate
+	uniform = /obj/item/clothing/under/costume/pirate
 	back = /obj/item/storage/backpack/satchel
 	belt = /obj/item/storage/belt/utility/full/multitool
 	gloves = /obj/item/clothing/gloves/combat
@@ -304,40 +364,10 @@
 	suit = /obj/item/clothing/suit/pirate_black
 	head = /obj/item/clothing/head/pirate
 
-/datum/outfit/admin/vox
-	name = "Vox Raider"
-	uniform = /obj/item/clothing/under/vox/vox_robes
-	suit = /obj/item/clothing/suit/space/vox/carapace
-	back = /obj/item/storage/backpack
-	gloves = /obj/item/clothing/gloves/color/yellow/vox
-	shoes = /obj/item/clothing/shoes/magboots/vox
-	head = /obj/item/clothing/head/helmet/space/vox/carapace
-	mask = /obj/item/clothing/mask/gas/syndicate
-	l_ear = /obj/item/radio/headset/syndicate
-	glasses = /obj/item/clothing/glasses/thermal/monocle
-	id = /obj/item/card/id/syndicate/vox
-	l_pocket = /obj/item/melee/classic_baton/telescopic
-	r_pocket = /obj/item/tank/internals/emergency_oxygen/double/vox
-	backpack_contents = list(
-		/obj/item/flashlight = 1,
-		/obj/item/restraints/handcuffs/cable/zipties = 1,
-		/obj/item/flash = 1,
-		/obj/item/gun/energy/noisecannon = 1
-	)
-
-/datum/outfit/admin/vox/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
-	. = ..()
-	if(visualsOnly)
-		return
-
-	var/obj/item/card/id/I = H.wear_id
-	if(istype(I))
-		apply_to_card(I, H, get_all_accesses(), "Vox Armalis", "syndie")
-
 /datum/outfit/admin/tunnel_clown
 	name = "Tunnel Clown"
 
-	uniform = /obj/item/clothing/under/rank/clown
+	uniform = /obj/item/clothing/under/rank/civilian/clown
 	suit = /obj/item/clothing/suit/hooded/chaplain_hoodie
 	back = /obj/item/storage/backpack
 	belt = /obj/item/storage/belt/utility/full/multitool
@@ -349,7 +379,7 @@
 	id = /obj/item/card/id
 	l_pocket = /obj/item/reagent_containers/food/snacks/grown/banana
 	r_pocket = /obj/item/bikehorn
-	r_hand = /obj/item/twohanded/fireaxe
+	r_hand = /obj/item/fireaxe
 	backpack_contents = list(
 		/obj/item/storage/box/survival = 1,
 		/obj/item/flashlight = 1,
@@ -372,7 +402,7 @@
 /datum/outfit/admin/mime_assassin
 	name = "Mime Assassin"
 
-	uniform = /obj/item/clothing/under/mime
+	uniform = /obj/item/clothing/under/rank/civilian/mime
 	suit = /obj/item/clothing/suit/suspenders
 	back = /obj/item/storage/backpack/mime
 	belt = /obj/item/storage/belt/utility/full/multitool
@@ -400,7 +430,7 @@
 /datum/outfit/admin/mime_assassin/pre_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
 	. = ..()
 	if(H.gender == FEMALE)
-		uniform = /obj/item/clothing/under/sexymime
+		uniform = /obj/item/clothing/under/rank/civilian/mime/sexy
 		suit = /obj/item/clothing/mask/gas/sexymime
 
 /datum/outfit/admin/mime_assassin/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
@@ -498,7 +528,7 @@
 /datum/outfit/admin/musician
 	name = "Musician"
 
-	uniform = /obj/item/clothing/under/singerb
+	uniform = /obj/item/clothing/under/costume/singerb
 	back = /obj/item/storage/backpack
 	shoes = /obj/item/clothing/shoes/singerb
 	gloves = /obj/item/clothing/gloves/color/white
@@ -532,72 +562,127 @@
 	if(istype(P))
 		P.attack_self(H) // activate them, display musical notes effect
 
+// Soviet Military
+
 /datum/outfit/admin/soviet
-	name = "Soviet Generic"
-	gloves = /obj/item/clothing/gloves/combat
-	uniform = /obj/item/clothing/under/soviet
+	name = "Soviet Tourist"
+	uniform = /obj/item/clothing/under/new_soviet
 	back = /obj/item/storage/backpack/satchel
-	head = /obj/item/clothing/head/ushanka
-	id = /obj/item/card/id
+	head = /obj/item/clothing/head/sovietsidecap
+	id = /obj/item/card/id/data
+	shoes = /obj/item/clothing/shoes/combat
+	l_ear = /obj/item/radio/headset/soviet
+	backpack_contents = list(
+		/obj/item/storage/box/survival = 1
+	)
 
 /datum/outfit/admin/soviet/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
 	. = ..()
 	if(visualsOnly)
 		return
-
+	H.real_name = "[capitalize(pick(GLOB.first_names_soviet))] [capitalize(pick(GLOB.last_names_soviet))]"
+	H.name = H.real_name
+	H.add_language("Neo-Russkiya")
+	H.set_default_language(GLOB.all_languages["Neo-Russkiya"])
 	var/obj/item/card/id/I = H.wear_id
 	if(istype(I))
 		apply_to_card(I, H, list(ACCESS_MAINT_TUNNELS), name)
+	H.sec_hud_set_ID()
 
-/datum/outfit/admin/soviet/tourist
-	name = "Soviet Tourist"
+/datum/outfit/admin/soviet/conscript
+	name = "Soviet Conscript"
 
-	gloves = /obj/item/clothing/gloves/color/black
-	shoes = /obj/item/clothing/shoes/black
-	l_ear = /obj/item/radio/headset
+	r_pocket = /obj/item/flashlight/seclite
+	r_hand = /obj/item/gun/projectile/shotgun/boltaction
+	belt = /obj/item/gun/projectile/revolver/nagant
+
 	backpack_contents = list(
-		/obj/item/storage/box/survival = 1
+		/obj/item/storage/box/soviet = 1,
+		/obj/item/ammo_box/a762 = 4
 	)
 
 /datum/outfit/admin/soviet/soldier
 	name = "Soviet Soldier"
 
 	gloves = /obj/item/clothing/gloves/combat
-	shoes = /obj/item/clothing/shoes/combat
-	l_ear = /obj/item/radio/headset/syndicate
+	suit = /obj/item/clothing/suit/sovietcoat
 	glasses = /obj/item/clothing/glasses/sunglasses
+	r_pocket = /obj/item/flashlight/seclite
+	belt = /obj/item/gun/projectile/automatic/pistol/APS
 
 	backpack_contents = list(
-		/obj/item/storage/box/engineer = 1,
-		/obj/item/card/emag = 1,
-		/obj/item/flashlight = 1,
-		/obj/item/grenade/plastic/c4 = 2,
+		/obj/item/storage/box/soviet = 1,
+		/obj/item/lighter = 1,
+		/obj/item/storage/fancy/cigarettes/cigpack_robust = 1,
+		/obj/item/ammo_box/magazine/apsm10mm = 2
+	)
+
+/datum/outfit/admin/soviet/officer
+	name = "Soviet Officer"
+
+	gloves = /obj/item/clothing/gloves/combat
+	suit = /obj/item/clothing/suit/sovietcoat/officer
+	uniform = /obj/item/clothing/under/new_soviet/sovietofficer
+	head = /obj/item/clothing/head/sovietofficerhat
+	glasses = /obj/item/clothing/glasses/sunglasses
+	belt = /obj/item/gun/projectile/revolver/mateba
+	l_pocket = /obj/item/melee/classic_baton/telescopic
+	r_pocket = /obj/item/flashlight/seclite
+
+	backpack_contents = list(
+		/obj/item/storage/box/soviet = 1,
+		/obj/item/lighter/zippo = 1,
+		/obj/item/storage/fancy/cigarettes/cigpack_syndicate = 1,
+		/obj/item/ammo_box/a357 = 2
+	)
+
+/datum/outfit/admin/soviet/marine
+	name = "Soviet Marine"
+
+	gloves = /obj/item/clothing/gloves/combat
+	suit = /obj/item/clothing/suit/space/hardsuit/soviet
+	head = null
+	mask = /obj/item/clothing/mask/gas
+	glasses = /obj/item/clothing/glasses/night
+	belt = /obj/item/storage/belt/military/assault/soviet/full
+	r_pocket = /obj/item/melee/classic_baton/telescopic
+	l_hand = /obj/item/gun/projectile/automatic/ak814
+	suit_store = /obj/item/tank/internals/emergency_oxygen/double
+
+	backpack_contents = list(
+		/obj/item/storage/box/soviet = 1,
+		/obj/item/gun/projectile/automatic/pistol/APS = 1,
+		/obj/item/ammo_box/magazine/apsm10mm = 2,
+		/obj/item/storage/fancy/cigarettes/cigpack_syndicate = 1,
+		/obj/item/lighter/zippo/engraved = 1
+	)
+
+/datum/outfit/admin/soviet/marine/captain
+	name = "Soviet Marine Captain"
+
+	uniform = /obj/item/clothing/under/new_soviet/sovietofficer
+	suit = /obj/item/clothing/suit/space/hardsuit/soviet/commander
+
+	backpack_contents = list(
+		/obj/item/storage/box/soviet = 1,
 		/obj/item/gun/projectile/revolver/mateba = 1,
-		/obj/item/ammo_box/a357 = 3
+		/obj/item/ammo_box/a357 = 2,
+		/obj/item/storage/fancy/cigarettes/cigpack_syndicate = 1,
+		/obj/item/lighter/zippo/engraved = 1
 	)
 
 /datum/outfit/admin/soviet/admiral
 	name = "Soviet Admiral"
 
-	suit = /obj/item/clothing/suit/hgpirate
-	belt = null
 	gloves = /obj/item/clothing/gloves/combat
-	shoes = /obj/item/clothing/shoes/combat
-	head = /obj/item/clothing/head/hgpiratecap
-	mask = null
-	l_ear = /obj/item/radio/headset/syndicate
-	r_ear = null
+	uniform = /obj/item/clothing/under/new_soviet/sovietadmiral
+	head = /obj/item/clothing/head/sovietadmiralhat
+	belt = /obj/item/gun/projectile/revolver/mateba
 	glasses = /obj/item/clothing/glasses/thermal/eyepatch
-	l_pocket = null
-	r_pocket = null
-	suit_store = null
-	l_hand = null
-	r_hand = null
-	pda = null
+	l_pocket = /obj/item/melee/classic_baton/telescopic
 
 	backpack_contents = list(
-		/obj/item/storage/box/engineer = 1,
-		/obj/item/gun/projectile/revolver/mateba = 1,
+		/obj/item/storage/box/soviet = 1,
 		/obj/item/ammo_box/a357 = 3
 	)
 
@@ -616,12 +701,12 @@
 	pda = /obj/item/pda
 	backpack_contents = list(
 		/obj/item/storage/box/responseteam = 1,
-		/obj/item/implanter/dust = 1,
-		/obj/item/implanter/death_alarm = 1,
+		/obj/item/bio_chip_implanter/dust = 1,
+		/obj/item/bio_chip_implanter/death_alarm = 1,
 	)
 
-	implants = list(/obj/item/implant/mindshield,
-		/obj/item/implant/death_alarm
+	bio_chips = list(/obj/item/bio_chip/mindshield,
+		/obj/item/bio_chip/death_alarm
 	)
 
 /datum/outfit/admin/solgov_rep/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
@@ -664,8 +749,8 @@
 		/obj/item/organ/internal/cyberimp/chest/nutriment/hardened,
 		/obj/item/organ/internal/cyberimp/eyes/hud/security
 	)
-	implants = list(/obj/item/implant/mindshield,
-		/obj/item/implant/death_alarm
+	bio_chips = list(/obj/item/bio_chip/mindshield,
+		/obj/item/bio_chip/death_alarm
 	)
 
 	var/is_solgov_lieutenant = FALSE
@@ -695,6 +780,7 @@
 	head = /obj/item/clothing/head/beret/solgov/command
 	glasses = /obj/item/clothing/glasses/night
 	back = /obj/item/storage/backpack/satchel
+	shoes = /obj/item/clothing/shoes/magboots/elite
 	l_ear = /obj/item/radio/headset/ert/alt/commander/solgov
 	l_hand = null
 	belt = /obj/item/melee/baton/loaded
@@ -702,7 +788,6 @@
 	l_pocket = /obj/item/pinpointer/advpinpointer
 	backpack_contents = list(
 		/obj/item/storage/box/handcuffs = 1,
-		/obj/item/clothing/shoes/magboots/advance = 1,
 		/obj/item/reagent_containers/hypospray/autoinjector/survival = 1,
 		/obj/item/clothing/mask/gas/explorer/marines = 1,
 		/obj/item/ammo_box/magazine/m50 = 3
@@ -716,16 +801,16 @@
 	head = null
 	mask = /obj/item/clothing/mask/gas/explorer/marines
 	belt = /obj/item/storage/belt/military/assault/marines/elite/full
+	shoes = /obj/item/clothing/shoes/magboots/elite
 	l_hand = /obj/item/gun/projectile/automatic/ar
 	backpack_contents = list(
-		/obj/item/clothing/shoes/magboots/advance = 1,
 		/obj/item/whetstone = 1,
 		/obj/item/reagent_containers/hypospray/autoinjector/survival = 1
 	)
 	cybernetic_implants = list(
 		/obj/item/organ/internal/cyberimp/eyes/hud/security,
 		/obj/item/organ/internal/cyberimp/chest/nutriment/hardened,
-		/obj/item/organ/internal/cyberimp/brain/anti_stun/hardened,
+		/obj/item/organ/internal/cyberimp/brain/anti_stam/hardened,
 		/obj/item/organ/internal/cyberimp/arm/flash,
 		/obj/item/organ/internal/eyes/cybernetic/shield
 	)
@@ -744,7 +829,6 @@
 	l_ear = /obj/item/radio/headset/ert/alt/commander/solgov
 	backpack_contents = list(
 		/obj/item/storage/box/handcuffs = 1,
-		/obj/item/clothing/shoes/magboots/advance = 1,
 		/obj/item/reagent_containers/hypospray/autoinjector/survival = 1,
 		/obj/item/ammo_box/magazine/m50 = 3
 	)
@@ -753,7 +837,7 @@
 /datum/outfit/admin/sol_trader
 	name = "Sol Trader"
 
-	uniform = /obj/item/clothing/under/rank/cargotech
+	uniform = /obj/item/clothing/under/rank/cargo/tech
 	back = /obj/item/storage/backpack/industrial
 	belt = /obj/item/melee/classic_baton
 	head = /obj/item/clothing/head/soft
@@ -827,58 +911,57 @@
 	if(istype(I))
 		apply_to_card(I, H, get_all_accesses(), "Space Explorer")
 
-/datum/outfit/admin/hardsuit
-	name = "Hardsuit - Generic"
-	back = /obj/item/tank/jetpack/oxygen
+/datum/outfit/admin/modsuit
+	name = "MODsuit - Generic"
+	back = /obj/item/mod/control/pre_equipped/standard
+	suit_store = /obj/item/tank/internals/oxygen
 	mask = /obj/item/clothing/mask/breath
 	shoes = /obj/item/clothing/shoes/magboots
 	id = /obj/item/card/id
 
-/datum/outfit/admin/hardsuit/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
+/datum/outfit/admin/modsuit/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
 	. = ..()
 	if(visualsOnly)
 		return
 
-	if(istype(H.back, /obj/item/tank/jetpack))
-		var/obj/item/tank/jetpack/J = H.back
-		J.turn_on()
+	if(istype(H.back, /obj/item/tank/internals/oxygen))
+		var/obj/item/tank/internals/oxygen/J = H.back
 		J.toggle_internals(H)
 
 	var/obj/item/card/id/I = H.wear_id
 	if(istype(I))
-		apply_to_card(I, H, get_all_accesses(), "Hardsuit Tester")
+		apply_to_card(I, H, get_all_accesses(), "MODsuit Tester")
 
-/datum/outfit/admin/hardsuit/engineer
-	name = "Hardsuit - Engineer"
-	suit = /obj/item/clothing/suit/space/hardsuit/engine
+/datum/outfit/admin/modsuit/engineer
+	name = "MODsuit - Engineer"
+	back = /obj/item/mod/control/pre_equipped/engineering
 
-/datum/outfit/admin/hardsuit/ce
-	name = "Hardsuit - CE"
-	suit = /obj/item/clothing/suit/space/hardsuit/engine/elite
+/datum/outfit/admin/modsuit/ce
+	name = "MODsuit - CE"
+	back = /obj/item/mod/control/pre_equipped/advanced
 	shoes = /obj/item/clothing/shoes/magboots/advance
 
-/datum/outfit/admin/hardsuit/mining
-	name = "Hardsuit - Mining"
-	suit = /obj/item/clothing/suit/space/hardsuit/mining
+/datum/outfit/admin/modsuit/mining
+	name = "MODsuit - Mining"
+	back = /obj/item/mod/control/pre_equipped/mining/asteroid
 
-/datum/outfit/admin/hardsuit/syndi
-	name = "Hardsuit - Syndi"
-	suit = /obj/item/clothing/suit/space/hardsuit/syndi
+/datum/outfit/admin/modsuit/syndi
+	name = "MODsuit - Syndi"
+	back = /obj/item/mod/control/pre_equipped/traitor
 	shoes = /obj/item/clothing/shoes/magboots/syndie
 
-/datum/outfit/admin/hardsuit/wizard
+/datum/outfit/admin/modsuit/wizard // Technically not a MODsuit, we'll bundle it up in here for the future when it does become one
 	name = "Hardsuit - Wizard"
 	suit = /obj/item/clothing/suit/space/hardsuit/shielded/wizard
-	shoes = /obj/item/clothing/shoes/magboots
+	shoes = /obj/item/clothing/shoes/magboots/wizard
 
-/datum/outfit/admin/hardsuit/medical
-	name = "Hardsuit - Medical"
-	suit = /obj/item/clothing/suit/space/hardsuit/medical
+/datum/outfit/admin/modsuit/medical
+	name = "MODsuit - Medical"
+	back = /obj/item/mod/control/pre_equipped/medical
 
-/datum/outfit/admin/hardsuit/atmos
-	name = "Hardsuit - Atmos"
-	suit = /obj/item/clothing/suit/space/hardsuit/engine/atmos
-
+/datum/outfit/admin/modsuit/atmos
+	name = "MODsuit - Atmos"
+	back = /obj/item/mod/control/pre_equipped/atmospheric
 
 /datum/outfit/admin/tournament
 	name = "Tournament Generic"
@@ -897,10 +980,10 @@
 	name = "Tournament Standard Green"
 	uniform = /obj/item/clothing/under/color/green
 
-/datum/outfit/admin/tournament_gangster //gangster are supposed to fight each other. --rastaf0
+/datum/outfit/admin/tournament/tournament_gangster //gangster are supposed to fight each other. --rastaf0
 	name = "Tournament Gangster"
 
-	uniform = /obj/item/clothing/under/det
+	uniform = /obj/item/clothing/under/rank/security/detective
 	suit = /obj/item/clothing/suit/storage/det_suit
 	shoes = /obj/item/clothing/shoes/black
 	head = /obj/item/clothing/head/det_hat
@@ -908,10 +991,10 @@
 	l_pocket = /obj/item/ammo_box/a357
 	r_hand = /obj/item/gun/projectile/automatic/proto
 
-/datum/outfit/admin/tournament_chef //Steven Seagal FTW
+/datum/outfit/admin/tournament/tournament_chef //Steven Seagal FTW
 	name = "Tournament Chef"
 
-	uniform = /obj/item/clothing/under/rank/chef
+	uniform = /obj/item/clothing/under/rank/civilian/chef
 	suit = /obj/item/clothing/suit/chef
 	shoes = /obj/item/clothing/shoes/black
 	head = /obj/item/clothing/head/chefhat
@@ -920,10 +1003,10 @@
 	l_hand = /obj/item/kitchen/knife
 	r_hand = /obj/item/kitchen/rollingpin
 
-/datum/outfit/admin/tournament_janitor
+/datum/outfit/admin/tournament/tournament_janitor
 	name = "Tournament Janitor"
 
-	uniform = /obj/item/clothing/under/rank/janitor
+	uniform = /obj/item/clothing/under/rank/civilian/janitor
 	back = /obj/item/storage/backpack
 	shoes = /obj/item/clothing/shoes/black
 	l_hand = /obj/item/reagent_containers/glass/bucket
@@ -932,7 +1015,7 @@
 		/obj/item/stack/tile/plasteel = 7
 	)
 
-/datum/outfit/admin/tournament_janitor/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
+/datum/outfit/admin/tournament/tournament_janitor/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
 	. = ..()
 	if(visualsOnly)
 		return
@@ -944,7 +1027,7 @@
 /datum/outfit/admin/survivor
 	name = "Survivor"
 
-	uniform = /obj/item/clothing/under/overalls
+	uniform = /obj/item/clothing/under/misc/overalls
 	back = /obj/item/storage/backpack
 	gloves = /obj/item/clothing/gloves/color/latex
 	shoes = /obj/item/clothing/shoes/white
@@ -958,7 +1041,7 @@
 	. = ..()
 
 	for(var/obj/item/I in H.contents)
-		if(!istype(I, /obj/item/implant))
+		if(!istype(I, /obj/item/bio_chip))
 			I.add_mob_blood(H)
 
 	if(visualsOnly)
@@ -971,7 +1054,7 @@
 /datum/outfit/admin/masked_killer
 	name = "Masked Killer"
 
-	uniform = /obj/item/clothing/under/overalls
+	uniform = /obj/item/clothing/under/misc/overalls
 	suit = /obj/item/clothing/suit/apron
 	back = /obj/item/storage/backpack
 	gloves = /obj/item/clothing/gloves/color/latex
@@ -983,7 +1066,7 @@
 	id = /obj/item/card/id/syndicate
 	l_pocket = /obj/item/kitchen/knife
 	r_pocket = /obj/item/scalpel
-	r_hand = /obj/item/twohanded/fireaxe
+	r_hand = /obj/item/fireaxe
 	backpack_contents = list(
 		/obj/item/storage/box/survival = 1,
 		/obj/item/flashlight = 1
@@ -993,7 +1076,7 @@
 	. = ..()
 
 	for(var/obj/item/I in H.contents)
-		if(!istype(I, /obj/item/implant))
+		if(!istype(I, /obj/item/bio_chip))
 			I.add_mob_blood(H)
 
 	if(visualsOnly)
@@ -1009,7 +1092,7 @@
 	uniform = /obj/item/clothing/under/syndicate/combat
 	suit = /obj/item/clothing/suit/space/hardsuit/singuloth
 	back = /obj/item/storage/backpack/satchel
-	l_hand = /obj/item/twohanded/knighthammer
+	l_hand = /obj/item/knighthammer
 	belt = /obj/item/claymore/ceremonial
 	gloves = /obj/item/clothing/gloves/combat
 	shoes = /obj/item/clothing/shoes/magboots
@@ -1042,7 +1125,7 @@
 	shoes = /obj/item/clothing/shoes/chameleon/noslip
 	l_ear = /obj/item/radio/headset/syndicate
 	id = /obj/item/card/id/syndicate
-	l_hand = /obj/item/twohanded/dualsaber/red
+	l_hand = /obj/item/dualsaber/red
 	backpack_contents = list(
 		/obj/item/storage/box/survival = 1,
 		/obj/item/flashlight = 1,
@@ -1066,7 +1149,7 @@
 /datum/outfit/admin/ancient_vampire
 	name = "Ancient Vampire"
 
-	uniform = /obj/item/clothing/under/victsuit/red
+	uniform = /obj/item/clothing/under/suit/victsuit/red
 	suit = /obj/item/clothing/suit/draculacoat
 	back = /obj/item/storage/backpack
 	gloves = /obj/item/clothing/gloves/combat
@@ -1088,7 +1171,7 @@
 	if(istype(C))
 		C.name = "ancient robes"
 		C.hood.name = "ancient hood"
-		H.equip_to_slot_or_del(C, slot_in_backpack)
+		H.equip_to_slot_or_del(C, SLOT_HUD_IN_BACKPACK)
 
 	var/obj/item/card/id/I = H.wear_id
 	if(istype(I))
@@ -1100,7 +1183,6 @@
 		var/datum/antagonist/vampire/V = H.mind.has_antag_datum(/datum/antagonist/vampire)
 		V.bloodusable = 9999
 		V.bloodtotal = 9999
-		H.mind.offstation_role = TRUE
 		V.add_subclass(SUBCLASS_ANCIENT, FALSE)
 		H.dna.SetSEState(GLOB.jumpblock, TRUE)
 		singlemutcheck(H, GLOB.jumpblock, MUTCHK_FORCED)
@@ -1117,7 +1199,7 @@
 	l_ear = /obj/item/radio/headset
 	id = /obj/item/card/id
 	r_pocket = /obj/item/teleportation_scroll
-	l_hand = /obj/item/twohanded/staff
+	l_hand = /obj/item/staff
 	r_hand = /obj/item/spellbook
 	backpack_contents = list(
 		/obj/item/storage/box/engineer = 1
@@ -1191,8 +1273,8 @@
 		/obj/item/storage/box/survival = 1,
 		/obj/item/flashlight = 1,
 	)
-	implants = list(
-		/obj/item/implant/dust
+	bio_chips = list(
+		/obj/item/bio_chip/dust
 	)
 
 /datum/outfit/admin/dark_priest/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
@@ -1214,7 +1296,7 @@
 /datum/outfit/admin/honksquad
 	name = "Honksquad"
 
-	uniform = /obj/item/clothing/under/rank/clown
+	uniform = /obj/item/clothing/under/rank/civilian/clown
 	mask = /obj/item/clothing/mask/gas/clown_hat
 	back = /obj/item/storage/backpack/clown
 	id = /obj/item/card/id/clown
@@ -1232,12 +1314,12 @@
 	suit = /obj/item/clothing/suit/storage/det_suit
 	pda = /obj/item/pda/clown
 	l_ear = /obj/item/radio/headset
-	r_pocket = /obj/item/reagent_containers/food/pill/patch/jestosterone
+	r_pocket = /obj/item/reagent_containers/patch/jestosterone
 
 /datum/outfit/admin/honksquad/pre_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
 	. = ..()
 	if(H.gender == FEMALE)
-		uniform = /obj/item/clothing/under/rank/clown/sexy
+		uniform = /obj/item/clothing/under/rank/civilian/clown/sexy
 		mask = /obj/item/clothing/mask/gas/clown_hat/sexy
 
 	if(prob(50))
@@ -1249,13 +1331,18 @@
 		backpack_contents.Add(/obj/item/gun/throw/piecannon)
 		backpack_contents[/obj/item/gun/throw/piecannon] = 1
 
+	var/clown_rank = pick("Trickster First Class", "Master Clown", "Major Prankster")
+	var/clown_name = pick(GLOB.clown_names)
+	H.real_name = "[clown_rank] [clown_name]"
+
 /datum/outfit/admin/honksquad/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
 	. = ..()
 	if(visualsOnly)
 		return
 
-	// Setup their clumsy gene
+	// Setup their clumsy and comic sans gene
 	H.dna.SetSEState(GLOB.clumsyblock, TRUE)
+	H.dna.SetSEState(GLOB.comicblock, TRUE)
 	H.check_mutations = TRUE
 
 	// Setup their headset
@@ -1267,11 +1354,77 @@
 	var/obj/item/pda/P = H.wear_pda
 	if(istype(P))
 		P.owner = H.real_name
-		P.ownjob = "Clown"
+		P.ownjob = "Emergency Response Clown"
 		P.name = "PDA-[H.real_name] ([P.ownjob])"
 
 	// And their ID
 	var/obj/item/card/id/I = H.wear_id
 	if(istype(I))
-		apply_to_card(I, H, list(ACCESS_CLOWN), "Clown")
+		apply_to_card(I, H, list(ACCESS_CLOWN), "Emergency Response Clown")
 	H.sec_hud_set_ID()
+
+/datum/outfit/admin/observer
+	name = "Observer"
+
+	uniform = /obj/item/clothing/under/costume/tourist_suit
+	back = /obj/item/storage/backpack/satchel
+	shoes = /obj/item/clothing/shoes/black
+	box = /obj/item/storage/box/survival
+	backpack_contents = list(
+		/obj/item/bio_chip_implanter/dust = 1
+		)
+
+/datum/outfit/admin/observer/plasmaman
+	name = "Observer (Plasma)"
+
+	uniform = /obj/item/clothing/under/plasmaman/assistant
+	head = /obj/item/clothing/head/helmet/space/plasmaman/assistant
+	mask = /obj/item/clothing/mask/breath
+	belt = /obj/item/tank/internals/plasmaman/belt/full
+	box = /obj/item/storage/box/survival_plasmaman
+
+/datum/outfit/admin/observer/vox
+	name = "Observer (Vox)"
+
+	mask = /obj/item/clothing/mask/breath/vox
+	belt = /obj/item/tank/internals/emergency_oxygen/double/vox
+	box = /obj/item/storage/box/survival_vox
+
+/datum/outfit/admin/enforcer
+	name = "Oblivion Enforcer"
+
+	uniform = /obj/item/clothing/under/color/white/enforcer
+	shoes = /obj/item/clothing/shoes/white/enforcer
+	back = /obj/item/storage/backpack/satchel
+	id = /obj/item/card/id/data
+	//The hood on this gets enabled on the after-equip proc.
+	suit = /obj/item/clothing/suit/hooded/oblivion
+	gloves = /obj/item/clothing/gloves/color/white/supermatter_immune
+	mask = /obj/item/clothing/mask/gas/voice_modulator/oblivion
+	l_ear = /obj/item/radio/headset
+	suit_store = /obj/item/supermatter_halberd
+	r_pocket = /obj/item/tank/internals/emergency_oxygen/double
+	box = /obj/item/storage/box/wizard
+
+	//The spells that the enforcer has.
+	var/list/spell_paths = list(/obj/effect/proc_holder/spell/aoe/conjure/summon_supermatter,
+										/obj/effect/proc_holder/spell/charge_up/bounce/lightning, /obj/effect/proc_holder/spell/summonitem)
+
+/datum/outfit/admin/enforcer/post_equip(mob/living/carbon/human/H)
+	. = ..()
+
+	ADD_TRAIT(H, SM_HALLUCINATION_IMMUNE, MAGIC_TRAIT)
+
+	H.real_name = "Unknown" //Enforcers sacrifice their name to Oblivion for their power
+
+	for(var/spell_path in spell_paths)
+		var/S = new spell_path
+		H.mind.AddSpell(S)
+
+	var/obj/item/clothing/suit/hooded/oblivion/robes = H.wear_suit
+	if(istype(robes))
+		robes.ToggleHood()
+
+	var/obj/item/card/id/I = H.wear_id
+	if(istype(I))
+		apply_to_card(I, H, get_all_accesses(), "Oblivion Enforcer")

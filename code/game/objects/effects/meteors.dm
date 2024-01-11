@@ -3,17 +3,15 @@
 
 //Meteors probability of spawning during a given wave
 GLOBAL_LIST_INIT(meteors_normal, list(/obj/effect/meteor/dust = 3, /obj/effect/meteor/medium = 8, /obj/effect/meteor/big = 3,
-						  /obj/effect/meteor/flaming = 1, /obj/effect/meteor/irradiated = 3)) //for normal meteor event
+						/obj/effect/meteor/flaming = 1, /obj/effect/meteor/irradiated = 3)) //for normal meteor event
 
 GLOBAL_LIST_INIT(meteors_threatening, list(/obj/effect/meteor/medium = 4, /obj/effect/meteor/big = 8,
-						  /obj/effect/meteor/flaming = 3, /obj/effect/meteor/irradiated = 3)) //for threatening meteor event
+						/obj/effect/meteor/flaming = 3, /obj/effect/meteor/irradiated = 3, /obj/effect/meteor/bananium = 1)) //for threatening meteor event
 
-GLOBAL_LIST_INIT(meteors_catastrophic, list(/obj/effect/meteor/medium = 5, /obj/effect/meteor/big = 75,
-						  /obj/effect/meteor/flaming = 10, /obj/effect/meteor/irradiated = 10, /obj/effect/meteor/tunguska = 1)) //for catastrophic meteor event
+GLOBAL_LIST_INIT(meteors_catastrophic, list(/obj/effect/meteor/medium = 3, /obj/effect/meteor/big = 10,
+						/obj/effect/meteor/flaming = 10, /obj/effect/meteor/irradiated = 10, /obj/effect/meteor/bananium = 2, /obj/effect/meteor/meaty = 2, /obj/effect/meteor/meaty/xeno = 2, /obj/effect/meteor/tunguska = 1)) //for catastrophic meteor event
 
 GLOBAL_LIST_INIT(meteors_gore, list(/obj/effect/meteor/meaty = 5, /obj/effect/meteor/meaty/xeno = 1)) //for meaty ore event
-
-GLOBAL_LIST_INIT(meteors_dust, list(/obj/effect/meteor/dust)) //for space dust event
 
 GLOBAL_LIST_INIT(meteors_ops, list(/obj/effect/meteor/goreops)) //Meaty Ops
 
@@ -88,7 +86,6 @@ GLOBAL_LIST_INIT(meteors_ops, list(/obj/effect/meteor/goreops)) //Meaty Ops
 	icon = 'icons/obj/meteor.dmi'
 	icon_state = "small"
 	density = TRUE
-	anchored = TRUE
 	var/hits = 4
 	var/hitpwr = EXPLODE_HEAVY //Level of ex_act to be called on hit.
 	var/dest
@@ -112,7 +109,7 @@ GLOBAL_LIST_INIT(meteors_ops, list(/obj/effect/meteor/goreops)) //Meaty Ops
 		var/turf/T = get_turf(loc)
 		ram_turf(T)
 
-		if(prob(10) && !isspaceturf(T))//randomly takes a 'hit' from ramming
+		if(prob(10) && !ispassmeteorturf(T))//randomly takes a 'hit' from ramming
 			get_hit()
 
 /obj/effect/meteor/Destroy()
@@ -134,7 +131,8 @@ GLOBAL_LIST_INIT(meteors_ops, list(/obj/effect/meteor/goreops)) //Meaty Ops
 	if(A)
 		ram_turf(get_turf(A))
 		playsound(loc, meteorsound, 40, TRUE)
-		get_hit()
+		if(!istype(A, /obj/structure/railing))
+			get_hit()
 
 /obj/effect/meteor/proc/ram_turf(turf/T)
 	//first bust whatever is in the turf
@@ -254,7 +252,24 @@ GLOBAL_LIST_INIT(meteors_ops, list(/obj/effect/meteor/goreops)) //Meaty Ops
 	..()
 	explosion(loc, 0, 0, 4, 3, 0)
 	new /obj/effect/decal/cleanable/greenglow(get_turf(src))
-	radiation_pulse(src, 500)
+	radiation_pulse(src, 5000, 7)
+	//Hot take on this one. This often hits walls. It really has to breach into somewhere important to matter. This at leats makes the area slightly dangerous for a bit
+
+/obj/effect/meteor/bananium
+	name = "bananium meteor"
+	desc = "Well this would be just an awful way to die."
+	icon_state = "clownish"
+	heavy = TRUE
+	meteordrop = list(/obj/item/stack/ore/bananium)
+
+/obj/effect/meteor/bananium/meteor_effect()
+	..()
+	explosion(loc, 0, 0, 3, 2, 0)
+	var/turf/current_turf = get_turf(src)
+	new /obj/item/grown/bananapeel(current_turf)
+	for(var/obj/target in range(4, current_turf))
+		if(prob(15))
+			target.cmag_act()
 
 //Station buster Tunguska
 /obj/effect/meteor/tunguska
@@ -312,7 +327,7 @@ GLOBAL_LIST_INIT(meteors_ops, list(/obj/effect/meteor/goreops)) //Meaty Ops
 	meteorgibs = /obj/effect/gibspawner/xeno
 
 /obj/effect/meteor/meaty/xeno/Initialize(mapload, target)
-	meteordrop += subtypesof(/obj/item/organ/internal/xenos)
+	meteordrop += subtypesof(/obj/item/organ/internal/alien)
 	return ..()
 
 /obj/effect/meteor/meaty/xeno/ram_turf(turf/T)
@@ -346,8 +361,6 @@ GLOBAL_LIST_INIT(meteors_ops, list(/obj/effect/meteor/goreops)) //Meaty Ops
 //////////////////////////
 //Spookoween meteors
 /////////////////////////
-
-GLOBAL_LIST_INIT(meteorsSPOOKY, list(/obj/effect/meteor/pumpkin))
 
 /obj/effect/meteor/pumpkin
 	name = "PUMPKING"

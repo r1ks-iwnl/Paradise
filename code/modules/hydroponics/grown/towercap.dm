@@ -52,6 +52,9 @@
 
 /obj/item/grown/log/attackby(obj/item/W, mob/user, params)
 	if(is_sharp(W))
+		if(in_inventory)
+			to_chat(user, "<span class='warning'>You need to place [src] on a flat surface to make [plank_name].</span>")
+			return
 		user.show_message("<span class='notice'>You make [plank_name] out of \the [src]!</span>", 1)
 		var/seed_modifier = 0
 		if(seed)
@@ -116,6 +119,15 @@
 /obj/structure/bonfire/dense
 	density = TRUE
 
+/obj/structure/bonfire/lit //haha empty define
+
+/obj/structure/bonfire/lit/dense
+	density = TRUE
+
+/obj/structure/bonfire/lit/Initialize(mapload)
+	. = ..()
+	StartBurning()
+
 /obj/structure/bonfire/attackby(obj/item/W, mob/user, params)
 	if(istype(W, /obj/item/stack/rods) && !can_buckle)
 		var/obj/item/stack/rods/R = W
@@ -125,7 +137,7 @@
 		to_chat(user, "<span class='italics'>You add a rod to [src].")
 		var/image/U = image(icon='icons/obj/hydroponics/equipment.dmi',icon_state="bonfire_rod",pixel_y=16)
 		underlays += U
-	if(is_hot(W))
+	if(W.get_heat())
 		lighter = user.ckey
 		user.create_log(MISC_LOG, "lit a bonfire", src)
 		StartBurning()

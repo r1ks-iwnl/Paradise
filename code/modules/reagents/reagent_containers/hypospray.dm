@@ -14,11 +14,16 @@
 	possible_transfer_amounts = list(1,2,3,4,5,10,15,20,25,30)
 	resistance_flags = ACID_PROOF
 	container_type = OPENCONTAINER
-	slot_flags = SLOT_BELT
+	slot_flags = SLOT_FLAG_BELT
 	var/ignore_flags = FALSE
 	var/safety_hypo = FALSE
+	var/static/list/safe_chem_list = list("antihol", "charcoal", "epinephrine", "insulin", "teporone", "salbutamol", "omnizine",
+									"weak_omnizine", "godblood", "potass_iodide", "oculine", "mannitol", "spaceacillin", "salglu_solution",
+									"sal_acid", "cryoxadone", "sugar", "hydrocodone", "mitocholide", "rezadone", "menthol",
+									"mutadone", "sanguine_reagent", "iron", "ephedrine", "heparin", "corazone", "sodiumchloride",
+									"lavaland_extract", "synaptizine", "bicaridine", "kelotane")
 
-/obj/item/reagent_containers/hypospray/attack(mob/living/M, mob/user)
+/obj/item/reagent_containers/hypospray/proc/apply(mob/living/M, mob/user)
 	if(!reagents.total_volume)
 		to_chat(user, "<span class='warning'>[src] is empty!</span>")
 		return
@@ -46,14 +51,23 @@
 			var/contained = english_list(injected)
 
 			add_attack_logs(user, M, "Injected with [src] containing ([contained])", reagents.harmless_helper() ? ATKLOG_ALMOSTALL : null)
-
+			for(var/datum/reagent/R as anything in reagents.reagent_list)
+				if(initial(R.id) == "????") // Yes this is a specific case that we don't really want
+					continue
+				reagents.reaction(M, REAGENT_INGEST, 0.1)
 		return TRUE
+
+/obj/item/reagent_containers/hypospray/attack(mob/living/M, mob/user)
+	return apply(M, user)
+
+/obj/item/reagent_containers/hypospray/attack_self(mob/user)
+	return apply(user, user)
 
 /obj/item/reagent_containers/hypospray/on_reagent_change()
 	if(safety_hypo && !emagged)
 		var/found_forbidden_reagent = FALSE
 		for(var/datum/reagent/R in reagents.reagent_list)
-			if(!GLOB.safe_chem_list.Find(R.id))
+			if(!safe_chem_list.Find(R.id))
 				reagents.del_reagent(R.id)
 				found_forbidden_reagent = TRUE
 		if(found_forbidden_reagent)
@@ -76,17 +90,23 @@
 
 /obj/item/reagent_containers/hypospray/safety/ert
 	name = "medical hypospray (Omnizine)"
+	icon_state = "ert_hypo"
 	list_reagents = list("omnizine" = 30)
 
 /obj/item/reagent_containers/hypospray/CMO
+	name = "advanced hypospray"
 	list_reagents = list("omnizine" = 30)
 	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | ACID_PROOF
+
+/obj/item/reagent_containers/hypospray/CMO/Initialize(mapload)
+	. = ..()
+	RegisterSignal(src, COMSIG_PARENT_QDELETING, PROC_REF(alert_admins_on_destroy))
 
 /obj/item/reagent_containers/hypospray/combat
 	name = "combat stimulant injector"
 	desc = "A modified air-needle autoinjector, used by support operatives to quickly heal injuries in combat."
 	amount_per_transfer_from_this = 15
-	possible_transfer_amounts = list(15)
+	possible_transfer_amounts = null
 	icon_state = "combat_hypo"
 	volume = 90
 	ignore_flags = 1 // So they can heal their comrades.
@@ -94,32 +114,37 @@
 
 /obj/item/reagent_containers/hypospray/combat/nanites
 	desc = "A modified air-needle autoinjector for use in combat situations. Prefilled with expensive medical nanites for rapid healing."
+	icon_state = "nanites_hypo"
 	volume = 100
 	list_reagents = list("nanites" = 100)
 
-/obj/item/reagent_containers/hypospray/autoinjector
-	name = "emergency autoinjector"
-	desc = "A rapid and safe way to stabilize patients in critical condition for personnel without advanced medical knowledge."
+/obj/item/reagent_containers/hypospray/autoinjector // This is an empty variant
+	name = "empty autoinjector"
+	desc = "A rapid and safe way to inject chemicals into humanoids. This one is empty."
 	icon_state = "autoinjector"
 	item_state = "autoinjector"
 	belt_icon = "autoinjector"
 	amount_per_transfer_from_this = 10
-	possible_transfer_amounts = list(10)
+	possible_transfer_amounts = null
 	volume = 10
 	ignore_flags = TRUE //so you can medipen through hardsuits
 	container_type = DRAWABLE
 	flags = null
-	list_reagents = list("epinephrine" = 10)
 
 /obj/item/reagent_containers/hypospray/autoinjector/attack(mob/M, mob/user)
 	if(!reagents.total_volume)
 		to_chat(user, "<span class='warning'>[src] is empty!</span>")
 		return
 	..()
-	update_icon()
+	update_icon(UPDATE_ICON_STATE)
 	return TRUE
 
-/obj/item/reagent_containers/hypospray/autoinjector/update_icon()
+/obj/item/reagent_containers/hypospray/autoinjector/attack_self(mob/user)
+	..()
+	update_icon(UPDATE_ICON_STATE)
+	return TRUE
+
+/obj/item/reagent_containers/hypospray/autoinjector/update_icon_state()
 	if(reagents.total_volume > 0)
 		icon_state = initial(icon_state)
 	else
@@ -131,6 +156,11 @@
 		. += "<span class='notice'>It is currently loaded.</span>"
 	else
 		. += "<span class='notice'>It is spent.</span>"
+
+/obj/item/reagent_containers/hypospray/autoinjector/epinephrine
+	name = "emergency autoinjector"
+	desc = "A rapid and safe way to stabilize patients in critical condition for personnel without advanced medical knowledge."
+	list_reagents = list("epinephrine" = 10)
 
 /obj/item/reagent_containers/hypospray/autoinjector/teporone //basilisks
 	name = "teporone autoinjector"
@@ -149,26 +179,32 @@
 /obj/item/reagent_containers/hypospray/autoinjector/stimulants
 	name = "Stimulants autoinjector"
 	desc = "Rapidly stimulates and regenerates the body's organ system."
-	icon_state = "stimpen"
+	icon_state = "stimulantspen"
 	amount_per_transfer_from_this = 50
-	possible_transfer_amounts = list(50)
 	volume = 50
 	list_reagents = list("stimulants" = 50)
 
 /obj/item/reagent_containers/hypospray/autoinjector/survival
 	name = "survival medipen"
 	desc = "A medipen for surviving in the harshest of environments, heals and protects from environmental hazards. <br><span class='boldwarning'>WARNING: Do not inject more than one pen in quick succession.</span>"
-	icon_state = "stimpen"
+	icon_state = "survpen"
 	volume = 42
 	amount_per_transfer_from_this = 42
-	list_reagents = list("salbutamol" = 10, "teporone" = 15, "epinephrine" = 10, "lavaland_extract" = 2, "weak_omnizine" = 5) //Short burst of healing, followed by minor healing from the saline
+	list_reagents = list("salbutamol" = 10, "teporone" = 15, "epinephrine" = 10, "lavaland_extract" = 2, "weak_omnizine" = 5)
+
+/obj/item/reagent_containers/hypospray/autoinjector/emergency_nuclear
+	name = "emergency stabilization medipen"
+	desc = "A fast acting life-saving emergency autoinjector. Effective in combat situations, made by the syndicate for the syndicate."
+	icon_state = "stimpen"
+	volume = 12
+	amount_per_transfer_from_this = 12
+	list_reagents = list("perfluorodecalin" = 3, "teporone" = 3, "atropine" = 3, "mannitol" = 3)
 
 /obj/item/reagent_containers/hypospray/autoinjector/nanocalcium
-	name = "nanocalcium autoinjector"
-	desc = "After a short period of time the nanites will slow the body's systems and assist with bone repair. Nanomachines son."
+	name = "protoype nanite autoinjector"
+	desc = "A highly experimental prototype chemical designed to fully mend limbs and organs of soldiers in the field, shuts down body systems whilst aiding in repair.<br><span class='boldwarning'>WARNING: Side effects can cause temporary paralysis, loss of co-ordination and sickness. Do not use with any kind of stimulant or drugs. Serious damage can occur!</span>"
 	icon_state = "bonepen"
 	amount_per_transfer_from_this = 30
-	possible_transfer_amounts = list(30)
 	volume = 30
 	list_reagents = list("nanocalcium" = 30)
 

@@ -43,7 +43,7 @@
 		return TRUE
 	if(istype(mover, /mob/living/simple_animal/hostile/poison/giant_spider) || isterrorspider(mover))
 		return TRUE
-	else if(istype(mover, /mob/living))
+	else if(isliving(mover))
 		if(prob(50))
 			to_chat(mover, "<span class='danger'>You get stuck in [src] for a moment.</span>")
 			return FALSE
@@ -56,10 +56,9 @@
 	desc = "They seem to pulse slightly with an inner life"
 	icon_state = "eggs"
 	var/amount_grown = 0
-	var/player_spiders = 0
-	///Was this egg laid by a xenobiology mob? Used for mob capping
-	var/xenobiology_spawned = FALSE
+	var/player_spiders = FALSE
 	var/list/faction = list("spiders")
+	flags_2 = CRITICAL_ATOM_2
 
 /obj/structure/spider/eggcluster/Initialize(mapload)
 	. = ..()
@@ -79,7 +78,6 @@
 			var/obj/structure/spider/spiderling/S = new /obj/structure/spider/spiderling(loc)
 			S.faction = faction.Copy()
 			S.master_commander = master_commander
-			S.xenobiology_spawned = xenobiology_spawned
 			if(player_spiders)
 				S.player_spiders = TRUE
 		qdel(src)
@@ -88,14 +86,14 @@
 	name = "spiderling"
 	desc = "It never stays still for long."
 	icon_state = "spiderling"
-	anchored = 0
+	anchored = FALSE
 	layer = 2.75
 	max_integrity = 3
 	var/amount_grown = 0
 	var/grow_as = null
 	var/obj/machinery/atmospherics/unary/vent_pump/entry_vent
-	var/travelling_in_vent = 0
-	var/player_spiders = 0
+	var/travelling_in_vent = FALSE
+	var/player_spiders = FALSE
 	var/list/faction = list("spiders")
 	var/selecting_player = 0
 	///Is this spiderling created from a xenobiology mob?
@@ -107,11 +105,15 @@
 	pixel_y = rand(6,-6)
 	START_PROCESSING(SSobj, src)
 	AddComponent(/datum/component/swarming)
+	ADD_TRAIT(src, TRAIT_EDIBLE_BUG, "edible_bug") // Normally this is just used for mobs, but spiderlings are kind of that...
 
 /obj/structure/spider/spiderling/Destroy()
 	STOP_PROCESSING(SSobj, src)
+	// Release possible ref if a walk is still being processed
+	walk_to(src, 0)
 	entry_vent = null
-	new /obj/effect/decal/cleanable/spiderling_remains(get_turf(src))
+	if(amount_grown < 100)
+		new /obj/effect/decal/cleanable/spiderling_remains(get_turf(src))
 	return ..()
 
 /obj/structure/spider/spiderling/Bump(atom/user)
@@ -122,8 +124,8 @@
 
 /obj/structure/spider/spiderling/process()
 	if(travelling_in_vent)
-		if(istype(loc, /turf))
-			travelling_in_vent = 0
+		if(isturf(loc))
+			travelling_in_vent = FALSE
 			entry_vent = null
 	else if(entry_vent)
 		if(get_dist(src, entry_vent) <= 1)
@@ -180,7 +182,7 @@
 				qdel(src)
 				return
 			if(!grow_as)
-				grow_as = pick(typesof(/mob/living/simple_animal/hostile/poison/giant_spider))
+				grow_as = pick(typesof(/mob/living/simple_animal/hostile/poison/giant_spider) - /mob/living/simple_animal/hostile/poison/giant_spider/hunter/infestation_spider)
 			var/mob/living/simple_animal/hostile/poison/giant_spider/S = new grow_as(loc)
 			S.faction = faction.Copy()
 			S.master_commander = master_commander
@@ -196,6 +198,7 @@
 						var/mob/C = pick(candidates)
 						if(C)
 							S.key = C.key
+							dust_if_respawnable(C)
 							if(S.master_commander)
 								to_chat(S, "<span class='biggerdanger'>You are a spider who is loyal to [S.master_commander], obey [S.master_commander]'s every order and assist [S.master_commander.p_them()] in completing [S.master_commander.p_their()] goals at any cost.</span>")
 			qdel(src)
@@ -213,11 +216,11 @@
 	return TRUE
 
 /obj/structure/spider/spiderling/decompile_act(obj/item/matter_decompiler/C, mob/user)
-	if(!istype(user, /mob/living/silicon/robot/drone))
+	if(!isdrone(user))
 		user.visible_message("<span class='notice'>[user] sucks [src] into its decompiler. There's a horrible crunching noise.</span>", \
-		"<span class='warning'>It's a bit of a struggle, but you manage to suck [user] into your decompiler. It makes a series of visceral crunching noises.</span>")
-		C.stored_comms["wood"] += 2
-		C.stored_comms["glass"] += 2
+		"<span class='warning'>It's a bit of a struggle, but you manage to suck [src] into your decompiler. It makes a series of visceral crunching noises.</span>")
+		C.stored_comms["metal"] += 2
+		C.stored_comms["glass"] += 1
 		qdel(src)
 		return TRUE
 	return ..()
@@ -227,7 +230,6 @@
 	desc = "Green squishy mess."
 	icon = 'icons/effects/effects.dmi'
 	icon_state = "greenshatter"
-	anchored = 1
 
 /obj/structure/spider/cocoon
 	name = "cocoon"

@@ -53,6 +53,7 @@ GLOBAL_LIST_EMPTY(bad_blocks)
 	var/datum/dna/new_dna = new()
 	new_dna.unique_enzymes = unique_enzymes
 	new_dna.struc_enzymes_original = struc_enzymes_original // will make clone's SE the same as the original, do we want this?
+	new_dna.default_blocks = default_blocks
 	new_dna.blood_type = blood_type
 	new_dna.real_name = real_name
 	new_dna.species = new species.type
@@ -128,6 +129,9 @@ GLOBAL_LIST_EMPTY(bad_blocks)
 	SetUIValueRange(DNA_UI_HEAD_MARK_STYLE,	head_marks,		GLOB.marking_styles_list.len,		1)
 	SetUIValueRange(DNA_UI_BODY_MARK_STYLE,	body_marks,		GLOB.marking_styles_list.len,		1)
 	SetUIValueRange(DNA_UI_TAIL_MARK_STYLE,	tail_marks,		GLOB.marking_styles_list.len,		1)
+
+	SetUIValueRange(DNA_UI_PHYSIQUE, GLOB.character_physiques.Find(character.physique),	length(GLOB.character_physiques), 1)
+	SetUIValueRange(DNA_UI_HEIGHT, GLOB.character_heights.Find(character.height),	length(GLOB.character_heights), 1)
 
 	var/list/bodyacc = GLOB.body_accessory_by_name.Find(character.body_accessory?.name || "None")
 	SetUIValueRange(DNA_UI_BACC_STYLE, bodyacc, length(GLOB.body_accessory_by_name), 1)
@@ -363,7 +367,7 @@ GLOBAL_LIST_EMPTY(bad_blocks)
 
 
 /proc/EncodeDNABlock(value)
-	return add_zero2(num2hex(value, 1), 3)
+	return num2hex(value, 3)
 
 /datum/dna/proc/UpdateUI()
 	uni_identity = ""
@@ -414,7 +418,6 @@ GLOBAL_LIST_EMPTY(bad_blocks)
 	SE_original = SE.Copy()
 
 	unique_enzymes = md5(character.real_name)
-	GLOB.reg_dna[unique_enzymes] = character.real_name
 
 // Hmm, I wonder how to go about this without a huge convention break
 /datum/dna/serialize()
@@ -445,7 +448,7 @@ GLOBAL_LIST_EMPTY(bad_blocks)
 		return
 
 	// We manually set the species to ensure all proper species change procs are called.
-	destination.set_species(species.type, retain_damage = TRUE)
+	destination.set_species(species.type, retain_damage = TRUE, keep_missing_bodyparts = TRUE)
 	var/datum/dna/new_dna = Clone()
 	new_dna.species = destination.dna.species
 	destination.dna = new_dna

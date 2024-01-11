@@ -46,11 +46,17 @@
 	SSpersistent_data.register(src)
 	..()
 
+/mob/living/simple_animal/pet/cat/Runtime/Destroy()
+	SSpersistent_data.registered_atoms -= src
+	return ..()
+
 /mob/living/simple_animal/pet/cat/Runtime/persistent_load()
 	read_memory()
 	deploy_the_cats()
 
 /mob/living/simple_animal/pet/cat/Runtime/persistent_save()
+	if(SEND_SIGNAL(src, COMSIG_LIVING_WRITE_MEMORY) & COMPONENT_DONT_WRITE_MEMORY)
+		return FALSE
 	write_memory(FALSE)
 
 /mob/living/simple_animal/pet/cat/Runtime/make_babies()
@@ -62,7 +68,6 @@
 /mob/living/simple_animal/pet/cat/Runtime/death()
 	if(can_die())
 		write_memory(TRUE)
-		SSpersistent_data.registered_atoms -= src // We just saved. Dont save at round end
 	return ..()
 
 /mob/living/simple_animal/pet/cat/Runtime/proc/read_memory()
@@ -100,21 +105,32 @@
 	..()
 	make_babies()
 
+/mob/living/simple_animal/pet/cat/verb/sit()
+	set name = "Sit Down"
+	set category = "IC"
+
+	if(resting)
+		resting = FALSE
+		stand_up()
+		return
+
+	lay_down()
+	resting = TRUE
+	custom_emote(EMOTE_VISIBLE, pick("sits down.", "crouches on its hind legs.", "looks alert."))
+	icon_state = "[icon_living]_sit"
+	collar_type = "[initial(collar_type)]_sit"
+
 /mob/living/simple_animal/pet/cat/handle_automated_action()
 	if(!stat && !buckled)
 		if(prob(1))
 			custom_emote(EMOTE_VISIBLE, pick("stretches out for a belly rub.", "wags its tail.", "lies down."))
-			StartResting()
+			lay_down()
 		else if(prob(1))
-			custom_emote(EMOTE_VISIBLE, pick("sits down.", "crouches on its hind legs.", "looks alert."))
-			icon_state = "[icon_living]_sit"
-			collar_type = "[initial(collar_type)]_sit"
-			resting = TRUE
-			update_canmove()
+			sit()
 		else if(prob(1))
-			if(resting)
+			if(IS_HORIZONTAL(src))
 				custom_emote(EMOTE_VISIBLE, pick("gets up and meows.", "walks around.", "stops resting."))
-				StopResting()
+				stand_up()
 			else
 				custom_emote(EMOTE_VISIBLE, pick("grooms its fur.", "twitches its whiskers.", "shakes out its coat."))
 
@@ -126,7 +142,7 @@
 				M.death()
 				M.splat()
 				movement_target = null
-				stop_automated_movement = 0
+				stop_automated_movement = FALSE
 				break
 		for(var/obj/item/toy/cattoy/T in view(1, src))
 			if(T.cooldown < (world.time - 400))
@@ -135,30 +151,37 @@
 
 /mob/living/simple_animal/pet/cat/handle_automated_movement()
 	. = ..()
-	if(!stat && !resting && !buckled)
-		turns_since_scan++
-		if(turns_since_scan > 5)
-			walk_to(src,0)
-			turns_since_scan = 0
-			if((movement_target) && !(isturf(movement_target.loc) || ishuman(movement_target.loc) ))
-				movement_target = null
-				stop_automated_movement = 0
-			if( !movement_target || !(movement_target.loc in oview(src, 3)) )
-				movement_target = null
-				stop_automated_movement = 0
-				for(var/mob/living/simple_animal/mouse/snack in oview(src,3))
-					if(isturf(snack.loc) && !snack.stat)
-						movement_target = snack
-						break
-			if(movement_target)
-				stop_automated_movement = 1
-				walk_to(src,movement_target,0,3)
+	if(stat || IS_HORIZONTAL(src) || buckled)
+		return
+
+	turns_since_scan++
+	if(turns_since_scan > 5)
+		walk_to(src,0)
+		turns_since_scan = 0
+	if((movement_target) && !(isturf(movement_target.loc) || ishuman(movement_target.loc)))
+		movement_target = null
+		stop_automated_movement = FALSE
+	if(!movement_target || !(movement_target.loc in oview(src, 3)))
+		movement_target = null
+		stop_automated_movement = FALSE
+		for(var/mob/living/simple_animal/mouse/snack in oview(src,3))
+			if(isturf(snack.loc) && !snack.stat)
+				movement_target = snack
+				break
+	if(movement_target)
+		stop_automated_movement = TRUE
+		walk_to(src,movement_target,0,3)
 
 /mob/living/simple_animal/pet/cat/Proc
 	name = "Proc"
 	gender = MALE
 	gold_core_spawnable = NO_SPAWN
 	unique_pet = TRUE
+
+/mob/living/simple_animal/pet/cat/Var
+	name = "Var"
+	desc = "Maintenance Cat!"
+	gold_core_spawnable = NO_SPAWN
 
 /mob/living/simple_animal/pet/cat/kitten
 	name = "kitten"
@@ -168,7 +191,7 @@
 	icon_dead = "kitten_dead"
 	icon_resting = null
 	gender = NEUTER
-	density = 0
+	density = FALSE
 	pass_flags = PASSMOB
 	collar_type = "kitten"
 

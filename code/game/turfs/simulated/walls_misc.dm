@@ -5,7 +5,8 @@
 	icon_state = "cult_wall-0"
 	base_icon_state = "cult_wall"
 	smoothing_flags = SMOOTH_BITMASK
-	canSmoothWith = null
+	smoothing_groups = list(SMOOTH_GROUP_SIMULATED_TURFS, SMOOTH_GROUP_WALLS, SMOOTH_GROUP_CULT_WALLS)
+	canSmoothWith = list(SMOOTH_GROUP_WALLS, SMOOTH_GROUP_REGULAR_WALLS, SMOOTH_GROUP_REINFORCED_WALLS)
 	sheet_type = /obj/item/stack/sheet/runed_metal
 	sheet_amount = 1
 	girder_type = /obj/structure/girder/cult
@@ -32,28 +33,6 @@
 
 /turf/simulated/wall/cult/devastate_wall()
 	new sheet_type(get_turf(src), sheet_amount)
-
-/turf/simulated/wall/rust
-	name = "!deprecated, use rust spawner! rusted wall"
-	icon_state = "outdated"
-	icon = 'icons/turf/walls.dmi'
-	smoothing_flags = null
-
-/turf/simulated/wall/rust/Initialize(mapload)
-	. = ..()
-	var/turf/simulated/wall/target = ChangeTurf(/turf/simulated/wall)
-	target.rust()
-
-/turf/simulated/wall/r_wall/rust
-	name = "!deprecated, use rust spawner! rusted reinforced wall"
-	icon = 'icons/turf/walls.dmi'
-	icon_state = "outdated"
-	smoothing_flags = null
-
-/turf/simulated/wall/r_wall/rust/Initialize(mapload)
-	. = ..()
-	var/turf/simulated/wall/r_wall/target = ChangeTurf(/turf/simulated/wall/r_wall)
-	target.rust()
 
 //Clockwork walls
 /turf/simulated/wall/clockwork
@@ -90,7 +69,7 @@
 		var/previouscolor = color
 		color = "#960000"
 		animate(src, color = previouscolor, time = 8)
-		addtimer(CALLBACK(src, /atom/proc/update_atom_colour), 8)
+		addtimer(CALLBACK(src, TYPE_PROC_REF(/atom, update_atom_colour)), 8)
 
 /turf/simulated/wall/clockwork/devastate_wall()
 	for(var/i in 1 to 2)
@@ -112,3 +91,21 @@
 	if(heated)
 		to_chat(M.occupant, "<span class='userdanger'>The wall's intense heat completely reflects your [M.name]'s attack!</span>")
 		M.take_damage(20, BURN)
+
+/turf/simulated/wall/boss
+	name = "ancient wall"
+	desc = "A thick metal wall, it look very old."
+	icon = 'icons/turf/walls/boss_wall.dmi'
+	icon_state = "boss_wall-0"
+	base_icon_state = "boss_wall"
+	explosion_block = 2
+	damage_cap = 600
+	hardness = 10
+	heat_resistance = 20000
+	can_dismantle_with_welder = FALSE
+	smoothing_flags = SMOOTH_BITMASK
+	smoothing_groups = list(SMOOTH_GROUP_WALLS, SMOOTH_GROUP_BOSS_WALLS)
+	canSmoothWith = list(SMOOTH_GROUP_BOSS_WALLS)
+	sheet_type = /obj/item/stack/sheet/runed_metal
+	sheet_amount = 1
+	girder_type = /obj/structure/girder/cult

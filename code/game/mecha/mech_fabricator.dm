@@ -15,9 +15,8 @@
 	icon_state = "fab-idle"
 	density = TRUE
 	anchored = TRUE
-	use_power = IDLE_POWER_USE
-	idle_power_usage = 20
-	active_power_usage = 5000
+	idle_power_consumption = 20
+	active_power_consumption = 5000
 	// Settings
 	/// Bitflags of design types that can be produced.
 	var/allowed_design_types = MECHFAB
@@ -49,12 +48,13 @@
 	/// Whether the queue is currently being processed.
 	var/processing_queue = FALSE
 
-/obj/machinery/mecha_part_fabricator/New()
+/obj/machinery/mecha_part_fabricator/Initialize(mapload)
+	. = ..()
 	// Set up some datums
-	var/datum/component/material_container/materials = AddComponent(/datum/component/material_container, list(MAT_METAL, MAT_GLASS, MAT_SILVER, MAT_GOLD, MAT_DIAMOND, MAT_PLASMA, MAT_URANIUM, MAT_BANANIUM, MAT_TRANQUILLITE, MAT_TITANIUM, MAT_BLUESPACE), 0, FALSE, /obj/item/stack, CALLBACK(src, .proc/can_insert_materials), CALLBACK(src, .proc/on_material_insert))
+	var/datum/component/material_container/materials = AddComponent(/datum/component/material_container, list(MAT_METAL, MAT_GLASS, MAT_SILVER, MAT_GOLD, MAT_DIAMOND, MAT_PLASMA, MAT_URANIUM, MAT_BANANIUM, MAT_TRANQUILLITE, MAT_TITANIUM, MAT_BLUESPACE), 0, FALSE, /obj/item/stack, CALLBACK(src, PROC_REF(can_insert_materials)), CALLBACK(src, PROC_REF(on_material_insert)))
 	materials.precise_insertion = TRUE
 	local_designs = new /datum/research(src)
-	..()
+
 	// Components
 	component_parts = list()
 	component_parts += new /obj/item/circuitboard/mechfab(null)
@@ -65,11 +65,11 @@
 	component_parts += new /obj/item/stack/sheet/glass(null)
 	RefreshParts()
 
-/obj/machinery/mecha_part_fabricator/Initialize(mapload)
-	. = ..()
 	categories = list(
 		"Cyborg",
 		"Cyborg Repair",
+		"MODsuit Construction",
+		"MODsuit Modules",
 		"Ripley",
 		"Firefighter",
 		"Odysseus",
@@ -180,6 +180,9 @@
 	if(!can_afford_design(D))
 		atom_say("Error: Insufficient materials to build [D.name]!")
 		return
+	if(stat & NOPOWER)
+		atom_say("Error: Insufficient power!")
+		return
 
 	// Subtract the materials from the holder
 	var/list/final_cost = get_design_cost(D)
@@ -192,9 +195,9 @@
 	build_start = world.time
 	build_end = build_start + build_time
 	desc = "It's building \a [initial(D.name)]."
-	use_power = ACTIVE_POWER_USE
+	change_power_mode(ACTIVE_POWER_USE)
 	add_overlay("fab-active")
-	addtimer(CALLBACK(src, .proc/build_design_timer_finish, D, final_cost), build_time)
+	addtimer(CALLBACK(src, PROC_REF(build_design_timer_finish), D, final_cost), build_time)
 
 	return TRUE
 
@@ -208,21 +211,26 @@
 /obj/machinery/mecha_part_fabricator/proc/build_design_timer_finish(datum/design/D, list/final_cost)
 	// Spawn the item (in a lockbox if restricted) OR mob (e.g. IRC body)
 	var/atom/A = new D.build_path(get_step(src, output_dir))
-	if(istype(A, /obj/item))
+	if(isitem(A))
 		var/obj/item/I = A
 		I.materials = final_cost
 		if(D.locked)
-			var/obj/item/storage/lockbox/research/large/L = new(get_step(src, output_dir))
+			var/obj/item/storage/lockbox/research/modsuit/L = new(get_step(src, output_dir))
 			I.forceMove(L)
 			L.name += " ([I.name])"
 			L.origin_tech = I.origin_tech
+			L.req_access = D.access_requirement
+			var/list/lockbox_access
+			for(var/access in L.req_access)
+				lockbox_access += "[get_access_desc(access)] "
+				L.desc = "A locked box. It is locked to [lockbox_access]access."
 
 	// Clean up
 	being_built = null
 	build_start = 0
 	build_end = 0
 	desc = initial(desc)
-	use_power = IDLE_POWER_USE
+	change_power_mode(IDLE_POWER_USE)
 	cut_overlays()
 	atom_say("[A] is complete.")
 
@@ -235,7 +243,7 @@
   * Syncs the R&D designs from the first [/obj/machinery/computer/rdconsole] in the area.
   */
 /obj/machinery/mecha_part_fabricator/proc/sync()
-	addtimer(CALLBACK(src, .proc/sync_timer_finish), 3 SECONDS)
+	addtimer(CALLBACK(src, PROC_REF(sync_timer_finish)), 3 SECONDS)
 	syncing = TRUE
 
 /**
@@ -263,7 +271,7 @@
 /obj/machinery/mecha_part_fabricator/proc/on_material_insert(type_inserted, id_inserted, amount_inserted)
 	var/stack_name = copytext(id_inserted, 2)
 	add_overlay("fab-load-[stack_name]")
-	addtimer(CALLBACK(src, .proc/on_material_insert_timer_finish), 1 SECONDS)
+	addtimer(CALLBACK(src, PROC_REF(on_material_insert_timer_finish)), 1 SECONDS)
 	process_queue()
 	SStgui.update_uis(src)
 
@@ -458,10 +466,10 @@
   *
   * Upgraded variant of [/obj/machinery/mecha_part_fabricator].
   */
-/obj/machinery/mecha_part_fabricator/upgraded/New()
-	..()
+/obj/machinery/mecha_part_fabricator/upgraded/Initialize(mapload)
+	. = ..()
 	// Upgraded components
-	QDEL_LIST(component_parts)
+	QDEL_LIST_CONTENTS(component_parts)
 	component_parts = list()
 	component_parts += new /obj/item/circuitboard/mechfab(null)
 	component_parts += new /obj/item/stock_parts/matter_bin/super(null)

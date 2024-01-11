@@ -37,8 +37,8 @@
 	precondition = _precondition
 	after_insert = _after_insert
 
-	RegisterSignal(parent, COMSIG_PARENT_ATTACKBY, .proc/OnAttackBy)
-	RegisterSignal(parent, COMSIG_PARENT_EXAMINE, .proc/OnExamine)
+	RegisterSignal(parent, COMSIG_PARENT_ATTACKBY, PROC_REF(OnAttackBy))
+	RegisterSignal(parent, COMSIG_PARENT_EXAMINE, PROC_REF(OnExamine))
 
 	var/list/possible_mats = list()
 	for(var/mat_type in subtypesof(/datum/material))
@@ -65,7 +65,9 @@
 	var/list/tc = allowed_typecache
 	if(disable_attackby)
 		return
-	if(user.a_intent != INTENT_HELP)
+	// Allow tools to be inserted on harm and help intent since they might be used for construction
+	// otherwise user needs to be on help intent
+	if(!((I.tool_behaviour && user.a_intent == INTENT_HARM) || user.a_intent == INTENT_HELP))
 		return
 	if(I.flags & ABSTRACT)
 		return
@@ -319,6 +321,8 @@
 /datum/component/material_container/proc/get_item_material_amount(obj/item/I)
 	if(!istype(I))
 		return FALSE
+	if(!I.materials) // some objects have no materials and this will cause runtimes without this check
+		return 0
 	var/material_amount = 0
 	for(var/MAT in materials)
 		material_amount += I.materials[MAT]
@@ -384,7 +388,7 @@
 /datum/material/bluespace
 	name = "Bluespace Mesh"
 	id = MAT_BLUESPACE
-	sheet_type = /obj/item/stack/sheet/bluespace_crystal
+	sheet_type = /obj/item/stack/ore/bluespace_crystal/refined
 	ore_type = /obj/item/stack/ore/bluespace_crystal
 
 /datum/material/bananium

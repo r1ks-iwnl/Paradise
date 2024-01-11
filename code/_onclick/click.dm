@@ -3,11 +3,6 @@
 	~Sayu
 */
 
-
-// THESE DO NOT AFFECT THE BASE 1 DECISECOND DELAY OF NEXT_CLICK
-/mob/var/next_move_adjust = 0 //Amount to adjust action delays by, + or -
-/mob/var/next_move_modifier = 1 //Value to multiply action delays by
-
 //Delays the mob's next action by num deciseconds
 // eg: 10-3 = 7 deciseconds of delay
 // eg: 10*0.5 = 5 deciseconds of delay
@@ -15,14 +10,6 @@
 
 /mob/proc/changeNext_move(num)
 	next_move = world.time + ((num+next_move_adjust)*next_move_modifier)
-
-// 1 decisecond click delay (above and beyond mob/next_move)
-//This is mainly modified by click code, to modify click delays elsewhere, use next_move and changeNext_move()
-/mob/var/next_click	= 0
-
-// THESE DO AFFECT THE BASE 1 DECISECOND DELAY OF NEXT_CLICK
-/mob/var/next_click_adjust = 0
-/mob/var/next_click_modifier = 1 //Value to multiply click delays by
 
 //Delays the mob's next click by num deciseconds
 // eg: 10-3 = 7 deciseconds of delay
@@ -101,7 +88,7 @@
 		CtrlClickOn(A)
 		return
 
-	if(incapacitated(ignore_restraints = 1, ignore_grab = 1, ignore_lying = 1))
+	if(incapacitated(ignore_restraints = 1, ignore_grab = 1))
 		return
 
 	face_atom(A)
@@ -112,7 +99,7 @@
 	if(!modifiers["catcher"] && A.IsObscured())
 		return
 
-	if(istype(loc,/obj/mecha))
+	if(ismecha(loc))
 		if(!locate(/turf) in list(A,A.loc)) // Prevents inventory from being drilled
 			return
 		var/obj/mecha/M = loc
@@ -155,7 +142,7 @@
 		return
 
 	if(!isturf(loc)) // This is going to stop you from telekinesing from inside a closet, but I don't shed many tears for that
-		return
+		return TRUE
 
 	// Allows you to click on a box's contents, if that box is on the ground, but no deeper than that
 	sdepth = A.storage_depth_turf()
@@ -223,7 +210,8 @@
 	animals lunging, etc.
 */
 /mob/proc/RangedAttack(atom/A, params)
-	SEND_SIGNAL(src, COMSIG_MOB_ATTACK_RANGED, A, params)
+	if(SEND_SIGNAL(src, COMSIG_MOB_ATTACK_RANGED, A, params) & COMPONENT_CANCEL_ATTACK_CHAIN)
+		return TRUE
 /*
 	Restrained ClickOn
 
@@ -243,6 +231,9 @@
 
 // See click_override.dm
 /mob/living/MiddleClickOn(atom/A)
+	. = SEND_SIGNAL(src, COMSIG_MOB_MIDDLECLICKON, A, src)
+	if(. & COMSIG_MOB_CANCEL_CLICKON)
+		return
 	if(middleClickOverride)
 		middleClickOverride.onClick(A, src)
 	else
@@ -261,11 +252,9 @@
 		return
 	var/face_dir = get_cardinal_dir(src, A)
 	if(!face_dir || forced_look == face_dir || A == src)
-		forced_look = null
-		to_chat(src, "<span class='notice'>Cancelled direction lock.</span>")
+		clear_forced_look()
 		return
-	forced_look = face_dir
-	to_chat(src, "<span class='userdanger'>You are now facing [dir2text(forced_look)]. To cancel this, shift-middleclick yourself.</span>")
+	set_forced_look(A, FALSE)
 
 /*
 	Middle shift-control-click
@@ -275,13 +264,13 @@
 	return
 
 /mob/living/MiddleShiftControlClickOn(atom/A)
+	if(incapacitated())
+		return
 	var/face_uid = A.UID()
 	if(forced_look == face_uid || A == src)
-		forced_look = null
-		to_chat(src, "<span class='notice'>Cancelled direction lock.</span>")
+		clear_forced_look()
 		return
-	forced_look = face_uid
-	to_chat(src, "<span class='userdanger'>You are now facing [A]. To cancel this, shift-middleclick yourself.</span>")
+	set_forced_look(A, TRUE)
 
 // In case of use break glass
 /*
@@ -318,7 +307,6 @@
 
 /*
 	Alt click
-	Unused except for AI
 */
 /mob/proc/AltClickOn(atom/A)
 	A.AltClick(src)
@@ -326,13 +314,16 @@
 
 // See click_override.dm
 /mob/living/AltClickOn(atom/A)
-	if(middleClickOverride)
-		middleClickOverride.onClick(A, src)
-	else
-		..()
+	. = SEND_SIGNAL(src, COMSIG_MOB_ALTCLICKON, A, src)
+	if(. & COMSIG_MOB_CANCEL_CLICKON)
+		return
+	if(middleClickOverride && middleClickOverride.onClick(A, src))
+		return
+	..()
 
 /atom/proc/AltClick(mob/user)
-	SEND_SIGNAL(src, COMSIG_CLICK_ALT, user)
+	if(SEND_SIGNAL(src, COMSIG_CLICK_ALT, user) & COMPONENT_CANCEL_ALTCLICK)
+		return
 	var/turf/T = get_turf(src)
 	if(T && (isturf(loc) || isturf(src)) && user.TurfAdjacent(T))
 		user.listed_turf = T
@@ -389,6 +380,7 @@
 	playsound(usr.loc, 'sound/weapons/taser2.ogg', 75, 1)
 
 	LE.firer = src
+	LE.firer_source_atom = src
 	LE.def_zone = ran_zone(zone_selected)
 	LE.original = A
 	LE.current = T
@@ -398,7 +390,7 @@
 
 // Simple helper to face what you clicked on, in case it should be needed in more than one place
 /mob/proc/face_atom(atom/A)
-	if( stat || buckled || !A || !x || !y || !A.x || !A.y ) return
+	if(stat || buckled || !A || !x || !y || !A.x || !A.y) return
 	var/dx = A.x - x
 	var/dy = A.y - y
 	if(!dx && !dy) return
@@ -418,6 +410,12 @@
 	plane = CLICKCATCHER_PLANE
 	mouse_opacity = MOUSE_OPACITY_OPAQUE
 	screen_loc = "CENTER"
+
+/obj/screen/click_catcher/MouseEntered(location, control, params)
+	return
+
+/obj/screen/click_catcher/MouseExited(location, control, params)
+	return
 
 #define MAX_SAFE_BYOND_ICON_SCALE_TILES (MAX_SAFE_BYOND_ICON_SCALE_PX / world.icon_size)
 #define MAX_SAFE_BYOND_ICON_SCALE_PX (33 * 32)			//Not using world.icon_size on purpose.
@@ -439,7 +437,7 @@
 
 /obj/screen/click_catcher/Click(location, control, params)
 	var/list/modifiers = params2list(params)
-	if(modifiers["middle"] && istype(usr, /mob/living/carbon))
+	if(modifiers["middle"] && iscarbon(usr))
 		var/mob/living/carbon/C = usr
 		C.swap_hand()
 	else

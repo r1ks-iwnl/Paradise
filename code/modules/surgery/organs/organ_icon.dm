@@ -1,11 +1,9 @@
-GLOBAL_LIST_EMPTY(limb_icon_cache)
-
 /obj/item/organ/external/proc/compile_icon()
 	// I do this so the head's overlays don't get obliterated
 	for(var/child_i in child_icons)
 		overlays -= child_i
 	child_icons.Cut()
-	 // This is a kludge, only one icon has more than one generation of children though.
+	// This is a kludge, only one icon has more than one generation of children though.
 	for(var/obj/item/organ/external/organ in contents)
 		if(organ.children && organ.children.len)
 			for(var/obj/item/organ/external/child in organ.children)
@@ -185,7 +183,8 @@ GLOBAL_LIST_EMPTY(limb_icon_cache)
 
 // new damage icon system
 // adjusted to set damage_state to brute/burn code only (without r_name0 as before)
-/obj/item/organ/external/update_icon()
+
+/obj/item/organ/external/proc/update_state()
 	var/n_is = damage_state_text()
 	if(n_is != damage_state)
 		damage_state = n_is

@@ -11,16 +11,23 @@
 	throw_speed = 3
 	var/obj/item/pen/containedpen
 	var/obj/item/toppaper
-	slot_flags = SLOT_BELT
+	slot_flags = SLOT_FLAG_BELT
 	resistance_flags = FLAMMABLE
 
 /obj/item/clipboard/New()
 	..()
 	update_icon()
 
-/obj/item/clipboard/verb/removePen(mob/user)
-	set category = "Object"
-	set name = "Remove clipboard pen"
+/obj/item/clipboard/AltClick(mob/user)
+	if(in_range(user, src) && !user.incapacitated())
+		if(is_pen(user.get_active_hand()))
+			penPlacement(user, user.get_active_hand(), TRUE)
+		else
+			removePen(user)
+		return
+	. = ..()
+
+/obj/item/clipboard/proc/removePen(mob/user)
 	if(!ishuman(user) || user.incapacitated())
 		return
 	penPlacement(user, containedpen, FALSE)
@@ -33,6 +40,7 @@
 
 /obj/item/clipboard/examine(mob/user)
 	. = ..()
+	. += "<span class='info'><b>Alt-Click</b> to remove its pen.</span>"
 	if(in_range(user, src) && toppaper)
 		. += toppaper.examine(user)
 
@@ -70,15 +78,21 @@
 	popup.set_content(dat)
 	popup.open()
 
-/obj/item/clipboard/update_icon()
-	overlays.Cut()
+/obj/item/clipboard/update_overlays()
+	. = ..()
 	if(toppaper)
-		overlays += toppaper.icon_state
-		overlays += toppaper.overlays
+		. += toppaper.icon_state
+		. += toppaper.overlays
 	if(containedpen)
-		overlays += "clipboard_pen"
-	overlays += "clipboard_over"
-	..()
+		. += "clipboard_pen"
+	for(var/obj/O in src)
+		if(istype(O, /obj/item/photo))
+			var/image/img = image('icons/obj/bureaucracy.dmi')
+			var/obj/item/photo/Ph = O
+			img = Ph.tiny
+			. += img
+			break
+	. += "clipboard_over"
 
 /obj/item/clipboard/attackby(obj/item/W, mob/user)
 	if(isPaperwork(W)) //If it's a photo, paper bundle, or piece of paper, place it on the clipboard.
@@ -93,19 +107,9 @@
 		if(!toppaper) //If there's no paper we can write on, just stick the pen into the clipboard
 			penPlacement(user, W, TRUE)
 			return
-		if(containedpen) //If there's a pen in the clipboard, let's just let them write and not bother asking about the pen
-			toppaper.attackby(W, user)
-			return
-		var/writeonwhat = input(user, "Write on [toppaper.name], or place your pen in [src]?", "Pick one!") as null|anything in list("Write", "Place pen")
 		if(!Adjacent(user) || user.incapacitated())
 			return
-		switch(writeonwhat)
-			if("Write")
-				toppaper.attackby(W, user)
-			if("Place pen")
-				penPlacement(user, W, TRUE)
-			else
-				return
+		toppaper.attackby(W, user)
 	else if(istype(W, /obj/item/stamp) && toppaper) //We can stamp the topmost piece of paper
 		toppaper.attackby(W, user)
 		update_icon()

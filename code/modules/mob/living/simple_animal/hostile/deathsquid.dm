@@ -17,7 +17,7 @@
 
 	attacktext = "slices"
 	attack_sound = 'sound/weapons/bladeslice.ogg'
-	armour_penetration = 25
+	armour_penetration_percentage = 40
 	melee_damage_lower = 10
 	melee_damage_upper = 100
 	environment_smash = ENVIRONMENT_SMASH_RWALLS
@@ -29,7 +29,7 @@
 
 	see_in_dark = 8
 	mob_size = MOB_SIZE_LARGE
-	ventcrawler = 0
+	ventcrawler = VENTCRAWLER_NONE
 	gold_core_spawnable = NO_SPAWN
 
 
@@ -46,7 +46,7 @@
 	maxHealth = 200
 	health = 200
 	speed = 3
-	armour_penetration = 5
+	armour_penetration_flat = 5
 	melee_damage_lower = 10
 	melee_damage_upper = 20
 	environment_smash = 2

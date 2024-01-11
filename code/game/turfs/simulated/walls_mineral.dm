@@ -3,7 +3,7 @@
 	desc = "This shouldn't exist"
 	icon_state = ""
 	var/last_event = 0
-	var/active = null
+	var/active = FALSE
 	smoothing_flags = SMOOTH_BITMASK
 	canSmoothWith = null
 
@@ -75,13 +75,13 @@
 
 /turf/simulated/wall/mineral/uranium/proc/radiate()
 	if(!active)
-		if(world.time > last_event + 15)
-			active = 1
+		if(world.time > last_event + 1.5 SECONDS)
+			active = TRUE
 			radiation_pulse(src, 40)
 			for(var/turf/simulated/wall/mineral/uranium/T in orange(1, src))
 				T.radiate()
 			last_event = world.time
-			active = null
+			active = FALSE
 
 /turf/simulated/wall/mineral/uranium/attack_hand(mob/user as mob)
 	radiate()
@@ -106,12 +106,12 @@
 	smoothing_groups = list(SMOOTH_GROUP_SIMULATED_TURFS, SMOOTH_GROUP_WALLS, SMOOTH_GROUP_PLASMA_WALLS)
 	canSmoothWith = list(SMOOTH_GROUP_PLASMA_WALLS)
 
-/turf/simulated/wall/mineral/plasma/attackby(obj/item/W as obj, mob/user as mob)
-	if(is_hot(W) > 300)//If the temperature of the object is over 300, then ignite
-		message_admins("Plasma wall ignited by [key_name_admin(user)] in ([x], [y], [z] - <A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[x];Y=[y];Z=[z]'>JMP</a>)",0,1)
+/turf/simulated/wall/mineral/plasma/attackby(obj/item/W, mob/user)
+	if(W.get_heat() > 300)//If the temperature of the object is over 300, then ignite
+		message_admins("Plasma wall ignited by [key_name_admin(user)] in ([x], [y], [z] - <a href='?_src_=holder;adminplayerobservecoodjump=1;X=[x];Y=[y];Z=[z]'>JMP</a>)",0,1)
 		log_game("Plasma wall ignited by [key_name(user)] in ([x], [y], [z])")
 		investigate_log("was <font color='red'><b>ignited</b></font> by [key_name(user)]","atmos")
-		ignite(is_hot(W))
+		ignite(W.get_heat())
 		return
 	..()
 
@@ -174,7 +174,7 @@
 /turf/simulated/wall/mineral/wood/attackby(obj/item/W, mob/user)
 	if(W.sharp && W.force)
 		var/duration = (48 / W.force) * 2 //In seconds, for now.
-		if(istype(W, /obj/item/hatchet) || istype(W, /obj/item/twohanded/fireaxe))
+		if(istype(W, /obj/item/hatchet) || istype(W, /obj/item/fireaxe))
 			duration /= 4 //Much better with hatchets and axes.
 		if(do_after(user, duration * 10, target = src)) //Into deciseconds.
 			dismantle_wall(FALSE, FALSE)

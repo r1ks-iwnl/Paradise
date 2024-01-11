@@ -26,7 +26,7 @@
 			return
 
 		var/datum/mind/player_mind = new /datum/mind(key_of_revenant)
-		player_mind.active = 1
+		player_mind.active = TRUE
 		var/list/spawn_locs = list()
 		for(var/obj/effect/landmark/spawner/rev/R in GLOB.landmarks_list)
 			spawn_locs += get_turf(R)
@@ -37,6 +37,7 @@
 			return
 		var/mob/living/simple_animal/revenant/revvie = new /mob/living/simple_animal/revenant/(pick(spawn_locs))
 		player_mind.transfer_to(revvie)
+		dust_if_respawnable(C)
 		player_mind.assigned_role = SPECIAL_ROLE_REVENANT
 		player_mind.special_role = SPECIAL_ROLE_REVENANT
 		SSticker.mode.traitors |= player_mind

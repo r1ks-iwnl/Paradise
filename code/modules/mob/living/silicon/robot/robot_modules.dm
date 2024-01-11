@@ -5,6 +5,7 @@
 	w_class = 100
 	item_state = "electronic"
 	flags = CONDUCT
+	var/module_armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, RAD = 0, FIRE = 0, ACID = 0)
 
 	/// Has the AI hacked the borg module, allowing access to the malf AI exclusive item.
 	var/malfhacked = FALSE
@@ -15,6 +16,10 @@
 	var/list/basic_modules = list()
 	/// A list of modules the robot gets when emagged.
 	var/list/emag_modules = list()
+	/// A list of modules the robot gets when Safety Overridden.
+	var/list/override_modules = list()
+	/// A list of modules the robot gets when either emagged or Safety Overridden.
+	var/list/emag_override_modules = list()
 	/// A list of modules that the robot gets when malf AI buys it.
 	var/list/malf_modules = list()
 	/// A list of modules that require special recharge handling. Examples include things like flashes, sprays and welding tools.
@@ -42,11 +47,20 @@
 		basic_modules += I
 		basic_modules -= i
 
+	for(var/i in override_modules)
+		var/obj/item/I = new i(src)
+		override_modules += I
+		override_modules -= i
 	// Even though these are created here the robot won't be able to see and equip them until they actually get emagged/hacked.
 	for(var/i in emag_modules)
 		var/obj/item/I = new i(src)
 		emag_modules += I
 		emag_modules -= i
+
+	for(var/i in emag_override_modules)
+		var/obj/item/I = new i(src)
+		emag_override_modules += I
+		emag_override_modules -= i
 
 	for(var/i in malf_modules)
 		var/obj/item/I = new i(src)
@@ -58,7 +72,7 @@
 	special_rechargables += /obj/item/flash/cyborg
 
 	// This is done so we can loop through this list later and call cyborg_recharge() on the items while the borg is recharging.
-	var/all_modules = basic_modules | emag_modules | malf_modules
+	var/all_modules = basic_modules | override_modules | emag_modules | emag_override_modules | malf_modules
 	for(var/path in special_rechargables)
 		var/obj/item/I = locate(path) in all_modules
 		if(I) // If it exists, add the object reference.
@@ -77,15 +91,19 @@
 
 /obj/item/robot_module/Destroy()
 	// These can all contain actual objects, so we need to null them out.
-	QDEL_LIST(modules)
-	QDEL_LIST(basic_modules)
-	QDEL_LIST(emag_modules)
-	QDEL_LIST(malf_modules)
-	QDEL_LIST(storages)
-	QDEL_LIST(special_rechargables)
+	QDEL_LIST_CONTENTS(modules)
+	QDEL_LIST_CONTENTS(basic_modules)
+	QDEL_LIST_CONTENTS(override_modules)
+	QDEL_LIST_CONTENTS(emag_modules)
+	QDEL_LIST_CONTENTS(emag_override_modules)
+	QDEL_LIST_CONTENTS(malf_modules)
+	QDEL_LIST_CONTENTS(storages)
+	QDEL_LIST_CONTENTS(special_rechargables)
 	return ..()
 
-
+/obj/item/robot_module/Initialize(mapload)
+	. = ..()
+	module_armor = getArmor(arglist(module_armor))
 /**
  * Searches through the various module lists for the given `item_type`, deletes and removes the item from all supplied lists, if the item is found.
  *
@@ -98,7 +116,9 @@
 /obj/item/robot_module/proc/remove_item_from_lists(item_or_item_type)
 	var/list/lists = list(
 		basic_modules,
+		override_modules,
 		emag_modules,
+		emag_override_modules,
 		malf_modules,
 		storages,
 		special_rechargables
@@ -167,7 +187,7 @@
 	return I
 
 /**
- * Builds the usable module list from the modules we have in `basic_modules`, `emag_modules` and `malf_modules`
+ * Builds the usable module list from the modules we have in `basic_modules`, `override_modules`, `emag_modules`, `emag_override_modules` and `malf_modules`
  */
 /obj/item/robot_module/proc/rebuild_modules()
 	var/mob/living/silicon/robot/R = loc
@@ -182,8 +202,16 @@
 	for(var/item in basic_modules)
 		add_module(item, FALSE)
 
-	if(R.emagged || R.weapons_unlock)
+	if(R.weapons_unlock)
+		for(var/item in override_modules)
+			add_module(item, FALSE)
+
+	if(R.emagged)
 		for(var/item in emag_modules)
+			add_module(item, FALSE)
+
+	if(R.weapons_unlock || R.emagged)
+		for(var/item in emag_override_modules)
 			add_module(item, FALSE)
 
 	if(malfhacked)
@@ -263,6 +291,11 @@
 	R.add_language("Clownish", 0)
 	R.add_language("Tkachi", 0)
 
+///Adds armor to a cyborg. Normaly resets it to 0 across the board, unless the module has an armor defined.
+/obj/item/robot_module/proc/add_armor(mob/living/silicon/robot/R)
+	R.armor = module_armor
+
+
 /// Adds anything in `subsystems` to the robot's verbs, and grants any actions that are in `module_actions`.
 /obj/item/robot_module/proc/add_subsystems_and_actions(mob/living/silicon/robot/R)
 	R.verbs |= subsystems
@@ -317,21 +350,25 @@
 		/obj/item/stack/medical/ointment/advanced/cyborg,
 		/obj/item/stack/medical/splint/cyborg,
 		/obj/item/stack/nanopaste/cyborg,
-		/obj/item/gripper/medical
+		/obj/item/gripper_medical
 	)
-	emag_modules = list(/obj/item/reagent_containers/spray/cyborg_facid)
+	emag_override_modules = list(/obj/item/reagent_containers/spray/cyborg_facid)
 	special_rechargables = list(/obj/item/reagent_containers/spray/cyborg_facid, /obj/item/extinguisher/mini)
 
 // Disable safeties on the borg's defib.
-/obj/item/robot_module/medical/emag_act()
+/obj/item/robot_module/medical/emag_act(mob/user)
 	. = ..()
 	for(var/obj/item/borg_defib/F in modules)
-		F.safety = FALSE
+		F.emag_act()
+	for(var/obj/item/reagent_containers/borghypo/F in modules)
+		F.emag_act()
 
 // Enable safeties on the borg's defib.
 /obj/item/robot_module/medical/unemag()
 	for(var/obj/item/borg_defib/F in modules)
-		F.safety = TRUE
+		F.emag_act()
+	for(var/obj/item/reagent_containers/borghypo/F in modules)
+		F.emag_act()
 	return ..()
 
 // Fluorosulphuric acid spray bottle.
@@ -348,10 +385,9 @@
 	name = "engineering robot module"
 	module_type = "Engineer"
 	subsystems = list(/mob/living/silicon/proc/subsystem_power_monitor)
-	module_actions = list(/datum/action/innate/robot_sight/meson)
+	module_actions = list(/datum/action/innate/robot_sight/meson, /datum/action/innate/robot_magpulse)
 	basic_modules = list(
 		/obj/item/flash/cyborg,
-		/obj/item/rcd/borg,
 		/obj/item/rpd,
 		/obj/item/extinguisher,
 		/obj/item/weldingtool/largetank/cyborg,
@@ -364,23 +400,25 @@
 		/obj/item/analyzer,
 		/obj/item/geiger_counter/cyborg,
 		/obj/item/holosign_creator/engineering,
-		/obj/item/gripper,
+		/obj/item/gripper_engineering,
 		/obj/item/matter_decompiler,
 		/obj/item/painter,
 		/obj/item/areaeditor/blueprints/cyborg,
 		/obj/item/stack/sheet/metal/cyborg,
 		/obj/item/stack/rods/cyborg,
 		/obj/item/stack/tile/plasteel/cyborg,
+		/obj/item/stack/tile/catwalk/cyborg,
 		/obj/item/stack/cable_coil/cyborg,
 		/obj/item/stack/sheet/glass/cyborg,
 		/obj/item/stack/sheet/rglass/cyborg
 	)
-	emag_modules = list(/obj/item/borg/stun, /obj/item/restraints/handcuffs/cable/zipties/cyborg)
+	emag_modules = list(/obj/item/borg/stun, /obj/item/restraints/handcuffs/cable/zipties/cyborg, /obj/item/rcd/borg)
+	override_modules = list(/obj/item/gun/energy/emitter/cyborg/proto)
 	malf_modules = list(/obj/item/gun/energy/emitter/cyborg)
 	special_rechargables = list(/obj/item/extinguisher, /obj/item/weldingtool/largetank/cyborg, /obj/item/gun/energy/emitter/cyborg)
 
 /obj/item/robot_module/engineering/handle_death(mob/living/silicon/robot/R, gibbed)
-	var/obj/item/gripper/G = locate(/obj/item/gripper) in modules
+	var/obj/item/gripper_engineering/G = locate(/obj/item/gripper_engineering) in modules
 	if(G)
 		G.drop_gripped_item(silent = TRUE)
 
@@ -397,7 +435,7 @@
 		/obj/item/holosign_creator/security,
 		/obj/item/clothing/mask/gas/sechailer/cyborg
 	)
-	emag_modules = list(/obj/item/gun/energy/laser/cyborg)
+	emag_override_modules = list(/obj/item/gun/energy/laser/cyborg)
 	special_rechargables = list(
 		/obj/item/melee/baton/loaded,
 		/obj/item/gun/energy/disabler/cyborg,
@@ -422,7 +460,8 @@
 		/obj/item/holosign_creator/janitor,
 		/obj/item/extinguisher/mini
 	)
-	emag_modules = list(/obj/item/reagent_containers/spray/cyborg_lube, /obj/item/restraints/handcuffs/cable/zipties/cyborg)
+	emag_override_modules = list(/obj/item/reagent_containers/spray/cyborg_lube)
+	emag_modules = list(/obj/item/restraints/handcuffs/cable/zipties/cyborg)
 	special_rechargables = list(
 		/obj/item/lightreplacer,
 		/obj/item/reagent_containers/spray/cyborg_lube,
@@ -432,7 +471,7 @@
 /obj/item/robot_module/janitor/Initialize(mapload)
 	. = ..()
 	var/mob/living/silicon/robot/R = loc
-	RegisterSignal(R, COMSIG_MOVABLE_MOVED, .proc/on_cyborg_move)
+	RegisterSignal(R, COMSIG_MOVABLE_MOVED, PROC_REF(on_cyborg_move))
 
 /**
  * Proc called after the janitor cyborg has moved, in order to clean atoms at it's new location.
@@ -443,7 +482,7 @@
 /obj/item/robot_module/janitor/proc/on_cyborg_move(mob/living/silicon/robot/R)
 	SIGNAL_HANDLER
 
-	if(R.stat == DEAD || !isturf(R.loc))
+	if(R.stat == DEAD || !isturf(R.loc) || !R.floorbuffer)
 		return
 	var/turf/tile = R.loc
 	for(var/A in tile)
@@ -461,18 +500,10 @@
 			I.clean_blood()
 		else if(ishuman(A))
 			var/mob/living/carbon/human/cleaned_human = A
-			if(!cleaned_human.lying)
+			if(!IS_HORIZONTAL(cleaned_human))
 				continue
 			cleaned_human.clean_blood()
 			to_chat(cleaned_human, "<span class='danger'>[src] cleans your face!</span>")
-
-/obj/item/reagent_containers/spray/cyborg_lube
-	name = "Lube spray"
-	list_reagents = list("lube" = 250)
-
-/obj/item/reagent_containers/spray/cyborg_lube/cyborg_recharge(coeff, emagged)
-	if(emagged)
-		reagents.check_and_add("lube", volume, 2 * coeff)
 
 // Service cyborg module.
 /obj/item/robot_module/butler
@@ -482,25 +513,24 @@
 		/obj/item/flash/cyborg,
 		/obj/item/handheld_chem_dispenser/booze,
 		/obj/item/handheld_chem_dispenser/soda,
-		/obj/item/pen,
+		/obj/item/pen/multi,
 		/obj/item/razor,
 		/obj/item/instrument/piano_synth,
 		/obj/item/healthanalyzer/advanced,
 		/obj/item/reagent_scanner/adv,
-		/obj/item/rsf/cyborg,
+		/obj/item/rsf,
 		/obj/item/reagent_containers/dropper/cyborg,
 		/obj/item/lighter/zippo,
 		/obj/item/storage/bag/tray/cyborg,
 		/obj/item/reagent_containers/food/drinks/shaker
 	)
-	emag_modules = list(/obj/item/reagent_containers/food/drinks/cans/beer/sleepy_beer, /obj/item/restraints/handcuffs/cable/zipties/cyborg)
+	emag_override_modules = list(/obj/item/reagent_containers/food/drinks/cans/beer/sleepy_beer)
+	emag_modules = list(/obj/item/restraints/handcuffs/cable/zipties/cyborg)
 	special_rechargables = list(
 		/obj/item/reagent_containers/food/condiment/enzyme,
 		/obj/item/reagent_containers/food/drinks/cans/beer/sleepy_beer
 	)
 
-/obj/item/rsf/cyborg
-	matter = 30
 
 // This is a special type of beer given when emagged, one sip and the target falls asleep.
 /obj/item/reagent_containers/food/drinks/cans/beer/sleepy_beer
@@ -539,6 +569,7 @@
 /obj/item/robot_module/miner
 	name = "miner robot module"
 	module_type = "Miner"
+	module_armor = list(MELEE = 20, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, RAD = 0, FIRE = 0, ACID = 0)
 	module_actions = list(/datum/action/innate/robot_sight/meson)
 	custom_removals = list("KA modkits")
 	basic_modules = list(
@@ -576,6 +607,7 @@
 	if(component_id == "KA modkits")
 		for(var/obj/item/gun/energy/kinetic_accelerator/cyborg/D in src)
 			D.crowbar_act(user, W)
+		to_chat(user, "You remove the KPA modkits.")
 		return TRUE
 	return ..()
 
@@ -583,7 +615,7 @@
 /obj/item/robot_module/deathsquad
 	name = "NT advanced combat module"
 	module_type = "Malf"
-	module_actions = list(/datum/action/innate/robot_sight/thermal)
+	module_actions = list(/datum/action/innate/robot_sight/thermal, /datum/action/innate/robot_magpulse)
 	basic_modules = list(
 		/obj/item/flash/cyborg,
 		/obj/item/melee/energy/sword/cyborg,
@@ -636,13 +668,13 @@
 		/obj/item/stack/nanopaste/cyborg/syndicate,
 		/obj/item/gun/medbeam,
 		/obj/item/extinguisher/mini,
-		/obj/item/gripper/medical
+		/obj/item/gripper_medical
 	)
 	special_rechargables = list(/obj/item/extinguisher/mini)
 
 // Sydicate engineer/sabotuer cyborg module.
 /obj/item/robot_module/syndicate_saboteur
-	name = "engineering robot module" //to disguise in examine
+	name = "saboteur robot module" // Disguises are handled in the actual cyborg projector
 	module_type = "Malf"
 	basic_modules = list(
 		/obj/item/flash/cyborg,
@@ -657,7 +689,7 @@
 		/obj/item/multitool/cyborg,
 		/obj/item/t_scanner,
 		/obj/item/analyzer,
-		/obj/item/gripper,
+		/obj/item/gripper_engineering,
 		/obj/item/melee/energy/sword/cyborg,
 		/obj/item/card/emag,
 		/obj/item/borg_chameleon,
@@ -674,7 +706,7 @@
 /obj/item/robot_module/destroyer
 	name = "destroyer robot module"
 	module_type = "Malf"
-	module_actions = list(/datum/action/innate/robot_sight/thermal)
+	module_actions = list(/datum/action/innate/robot_sight/thermal, /datum/action/innate/robot_magpulse)
 	basic_modules = list(
 		/obj/item/flash/cyborg,
 		/obj/item/gun/energy/immolator/multi/cyborg, // See comments on /robot_module/combat below
@@ -691,6 +723,7 @@
 /obj/item/robot_module/combat
 	name = "combat robot module"
 	module_type = "Malf"
+	module_actions = list(/datum/action/innate/robot_magpulse)
 	basic_modules = list(
 		/obj/item/flash/cyborg,
 		/obj/item/gun/energy/immolator/multi/cyborg, // primary weapon, strong at close range (ie: against blob/terror/xeno), but consumes a lot of energy per shot.
@@ -718,7 +751,7 @@
 		/obj/item/reagent_containers/spray/alien/stun,
 		/obj/item/reagent_containers/spray/alien/smoke,
 	)
-	emag_modules = list(/obj/item/reagent_containers/spray/alien/acid)
+	emag_override_modules = list(/obj/item/reagent_containers/spray/alien/acid)
 	special_rechargables = list(
 		/obj/item/reagent_containers/spray/alien/acid,
 		/obj/item/reagent_containers/spray/alien/stun,
@@ -741,7 +774,7 @@
 		/obj/item/wirecutters/cyborg/drone,
 		/obj/item/multitool/cyborg/drone,
 		/obj/item/lightreplacer/cyborg,
-		/obj/item/gripper,
+		/obj/item/gripper_engineering,
 		/obj/item/matter_decompiler,
 		/obj/item/reagent_containers/spray/cleaner/drone,
 		/obj/item/soap,
@@ -751,6 +784,7 @@
 		/obj/item/stack/sheet/metal/cyborg,
 		/obj/item/stack/rods/cyborg,
 		/obj/item/stack/tile/plasteel/cyborg,
+		/obj/item/stack/tile/catwalk/cyborg,
 		/obj/item/stack/cable_coil/cyborg,
 		/obj/item/stack/sheet/glass/cyborg,
 		/obj/item/stack/sheet/rglass/cyborg,
@@ -764,13 +798,13 @@
 	)
 
 /obj/item/robot_module/drone/handle_death(mob/living/silicon/robot/R, gibbed)
-	var/obj/item/gripper/G = locate(/obj/item/gripper) in modules
+	var/obj/item/gripper_engineering/G = locate(/obj/item/gripper_engineering) in modules
 	if(G)
 		G.drop_gripped_item(silent = TRUE)
 
 /// Checks whether this item is a module of the robot it is located in.
 /obj/item/proc/is_robot_module()
-	if(!istype(loc, /mob/living/silicon/robot))
+	if(!isrobot(loc))
 		return FALSE
 
 	var/mob/living/silicon/robot/R = loc
@@ -840,6 +874,11 @@
 /datum/robot_energy_storage/rods
 	name = "Rod Synthesizer"
 	statpanel_name = "Rods"
+
+/datum/robot_energy_storage/catwalk
+	name= "Catwalk Synthesizer"
+	statpanel_name = "Catwalk Tiles"
+	max_energy = 60
 
 /datum/robot_energy_storage/glass
 	name = "Glass Synthesizer"

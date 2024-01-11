@@ -12,7 +12,7 @@
 	probability = _probability
 	flags = _flags
 
-	RegisterSignal(parent, list(COMSIG_MOVABLE_CROSSED), .proc/Crossed)
+	RegisterSignal(parent, list(COMSIG_MOVABLE_CROSSED), PROC_REF(Crossed))
 
 /datum/component/caltrop/proc/Crossed(datum/source, atom/movable/AM)
 	var/atom/A = parent
@@ -44,6 +44,9 @@
 
 		if(H.flying || H.floating || H.buckled)
 			return
+
+		if(IS_HORIZONTAL(H) && HAS_TRAIT(H, TRAIT_CONTORTED_BODY))
+			return TRUE
 
 		var/damage = rand(min_damage, max_damage)
 
